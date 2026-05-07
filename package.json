@@ -2,4 +2,5 @@
   "name": "truss-calculator",
   "private": true,
   "workspaces": ["packages/*"]
-}{} 
+}
+
