@@ -1,5 +1,5 @@
-import type { TrussType } from '../types.js'
-import { getTrussProperties } from '../materials/database.js'
+import type { TrussType } from '../types'
+import { getTrussProperties } from '../materials/database'
 
 // Teilsicherheitsbeiwerte nach DIN EN 1990
 export const GAMMA_G = 1.35   // ständige Lasten

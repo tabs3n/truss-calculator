@@ -1,4 +1,4 @@
-import type { TrussType } from '../types.js'
+import type { TrussType } from '../types'
 
 export interface TrussProperties {
   label: string

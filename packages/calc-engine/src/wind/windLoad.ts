@@ -1,4 +1,4 @@
-import type { TerrainCategory, WindZone } from '../types.js'
+import type { TerrainCategory, WindZone } from '../types'
 
 // Luftdichte nach DIN EN 1991-1-4
 const AIR_DENSITY = 1.25 // kg/m³

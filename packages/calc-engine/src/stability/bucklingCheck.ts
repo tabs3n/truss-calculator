@@ -1,5 +1,5 @@
-import type { TrussType } from '../types.js'
-import { getTrussProperties } from '../materials/database.js'
+import type { TrussType } from '../types'
+import { getTrussProperties } from '../materials/database'
 
 // Teilsicherheitsbeiwert Aluminium Stabilitätsnachweis nach DIN EN 1999-1-1
 const GAMMA_M2 = 1.25

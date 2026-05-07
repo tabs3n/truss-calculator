@@ -1,4 +1,4 @@
-import type { SlidingResult } from '../types.js'
+import type { SlidingResult } from '../types'
 
 const G = 9.81 // m/s²
 

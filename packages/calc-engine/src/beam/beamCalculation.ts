@@ -1,5 +1,5 @@
-import type { TrussType } from '../types.js'
-import { getTrussProperties } from '../materials/database.js'
+import type { TrussType } from '../types'
+import { getTrussProperties } from '../materials/database'
 
 export interface BeamInternalForces {
   maxBendingMomentKNm: number

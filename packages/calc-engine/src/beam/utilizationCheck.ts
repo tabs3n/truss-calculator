@@ -1,6 +1,6 @@
-import type { TrussType } from '../types.js'
-import { getTrussProperties } from '../materials/database.js'
-import type { BeamInternalForces } from './beamCalculation.js'
+import type { TrussType } from '../types'
+import { getTrussProperties } from '../materials/database'
+import type { BeamInternalForces } from './beamCalculation'
 
 export interface UtilizationResult {
   bendingUtilization: number   // η = MEd / MRd

@@ -1,4 +1,4 @@
-export * from './types.js'
+export * from './types'
 
 import type {
   StructureInput,
@@ -6,16 +6,16 @@ import type {
   BeamResult,
   SupportResult,
   WindLoadResult,
-} from './types.js'
+} from './types'
 
-import { getPeakVelocityPressure, calculateWindForce } from './wind/windLoad.js'
-import { getDesignLoad, getBeamSelfWeight, G, GAMMA_G, GAMMA_Q, DYNAMIC_FACTOR } from './loads/loadCombinations.js'
-import { calculateBeam } from './beam/beamCalculation.js'
-import { checkBeamUtilization } from './beam/utilizationCheck.js'
-import { checkBuckling } from './stability/bucklingCheck.js'
-import { calculateTippingAllDirections } from './tipping/tippingCheck.js'
-import { checkSliding } from './sliding/slidingCheck.js'
-import { getTrussProperties } from './materials/database.js'
+import { getPeakVelocityPressure, calculateWindForce } from './wind/windLoad'
+import { getDesignLoad, getBeamSelfWeight, G, GAMMA_G, GAMMA_Q, DYNAMIC_FACTOR } from './loads/loadCombinations'
+import { calculateBeam } from './beam/beamCalculation'
+import { checkBeamUtilization } from './beam/utilizationCheck'
+import { checkBuckling } from './stability/bucklingCheck'
+import { calculateTippingAllDirections } from './tipping/tippingCheck'
+import { checkSliding } from './sliding/slidingCheck'
+import { getTrussProperties } from './materials/database'
 
 /**
  * Hauptberechnungsfunktion – orchestriert alle Module.
