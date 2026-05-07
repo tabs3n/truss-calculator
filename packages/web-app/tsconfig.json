@@ -19,7 +19,9 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@calc-engine": ["../calc-engine/src/index.ts"],
+      "@calc-engine/*": ["../calc-engine/src/*"]
     }
   },
   "include": [

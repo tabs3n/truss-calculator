@@ -1,21 +1,22 @@
 "use client"
 
-import { useCallback, useState } from "react"
+import { useCallback, useState, type SetStateAction } from "react"
 
+import { calculate } from "@truss-calculator/calc-engine"
 import { defaultInput } from "@/lib/defaultInput"
 import type { CalculationResult, StructureInput } from "@/lib/types-bridge"
-
-// Platzhalter bis calc-engine fertig ist.
-function calculate(_input: StructureInput): CalculationResult {
-  void _input
-  throw new Error("calc-engine noch nicht verbunden")
-}
 
 export function useCalculation() {
   const [input, setInput] = useState<StructureInput>(defaultInput)
   const [result, setResult] = useState<CalculationResult | null>(null)
   const [isCalculating, setIsCalculating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const updateInput = useCallback((next: SetStateAction<StructureInput>) => {
+    setInput((current) => (typeof next === "function" ? next(current) : next))
+    setResult(null)
+    setError(null)
+  }, [])
 
   const runCalculation = useCallback(() => {
     setIsCalculating(true)
@@ -31,5 +32,5 @@ export function useCalculation() {
     }
   }, [input])
 
-  return { input, setInput, result, isCalculating, error, runCalculation }
+  return { input, setInput: updateInput, result, isCalculating, error, runCalculation }
 }

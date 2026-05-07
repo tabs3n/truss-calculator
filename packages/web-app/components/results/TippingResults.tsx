@@ -1,10 +1,110 @@
-import type { CalculationResult } from "@/lib/types-bridge"
+import type { CalculationResult, TippingDirectionResult } from "@/lib/types-bridge"
+
+const directionLabels = {
+  windPlusX: "Wind +X",
+  windPlusY: "Wind +Y",
+  windMinusX: "Wind -X",
+  windMinusY: "Wind -Y",
+} as const
+
+function DirectionCard({
+  label,
+  value,
+  governing,
+}: {
+  label: string
+  value: TippingDirectionResult
+  governing: boolean
+}) {
+  const progress = `${Math.min(value.utilization, 1.3) * 100}%`
+
+  return (
+    <article
+      className={`rounded-2xl border p-4 ${
+        governing
+          ? "border-primary bg-primary/5 shadow-sm"
+          : "border-border bg-background/85"
+      }`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-base font-semibold">{label}</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Kippachse: {value.tippingAxisSupportIds.join(" - ")}
+          </p>
+        </div>
+        <div
+          className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${
+            value.isOk ? "bg-emerald-100 text-emerald-700" : "bg-destructive/10 text-destructive"
+          }`}
+        >
+          {value.isOk ? "OK" : "kritisch"}
+        </div>
+      </div>
+
+      <div className="mt-4 space-y-3">
+        <div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Ausnutzung eta</span>
+            <span className="font-semibold">{value.utilization.toFixed(2)}</span>
+          </div>
+          <div className="mt-2 h-2 rounded-full bg-muted">
+            <div
+              className={`h-2 rounded-full ${
+                value.utilization <= 1 ? "bg-emerald-500" : "bg-destructive"
+              }`}
+              style={{ width: progress }}
+            />
+          </div>
+        </div>
+
+        <dl className="grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <dt className="text-muted-foreground">Rz,min</dt>
+            <dd className="font-semibold">{value.minVerticalReactionKN.toFixed(2)} kN</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Ballast gesamt</dt>
+            <dd className="font-semibold">{value.requiredBallastTotalKg.toFixed(0)} kg</dd>
+          </div>
+        </dl>
+      </div>
+    </article>
+  )
+}
 
 export function TippingResults({ result }: { result: CalculationResult | null }) {
+  if (!result) {
+    return (
+      <div className="rounded-[1.5rem] border border-dashed p-4 text-sm text-muted-foreground">
+        Kippsicherheitskarten erscheinen nach der Berechnung.
+      </div>
+    )
+  }
+
   return (
-    <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-      Kippsicherheitskarten folgen mit der echten Ergebnisanzeige.
-      {result ? " Ergebnisdaten liegen bereits vor." : ""}
-    </div>
+    <section className="rounded-[1.5rem] border border-border/80 bg-card/90 p-5 shadow-sm">
+      <div className="mb-4">
+        <h2 className="text-xl font-semibold">Kippsicherheit</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Vier Lastfaelle mit hervorgehobenem massgebenden Nachweis.
+        </p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        {(
+          Object.entries(directionLabels) as Array<
+            [keyof typeof directionLabels, (typeof directionLabels)[keyof typeof directionLabels]]
+          >
+        ).map(([key, label]) => (
+          <DirectionCard
+            key={key}
+            label={label}
+            value={result.tipping[key]}
+            governing={result.tipping.governingDirection === key}
+          />
+        ))}
+      </div>
+    </section>
   )
 }

@@ -1,10 +1,103 @@
 import type { CalculationResult } from "@/lib/types-bridge"
 
-export function BeamResults({ result }: { result: CalculationResult | null }) {
+function UtilizationBar({
+  value,
+  tone,
+}: {
+  value: number
+  tone: "emerald" | "amber" | "destructive"
+}) {
+  const width = `${Math.min(value, 1.3) * 100}%`
+  const color =
+    tone === "emerald"
+      ? "bg-emerald-500"
+      : tone === "amber"
+        ? "bg-amber-500"
+        : "bg-destructive"
+
   return (
-    <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-      Traversenergebnisse folgen nach der Anbindung der Berechnung.
-      {result ? " Ergebnisdaten liegen bereits vor." : ""}
+    <div className="mt-2 h-2 rounded-full bg-muted">
+      <div className={`h-2 rounded-full ${color}`} style={{ width }} />
     </div>
+  )
+}
+
+export function BeamResults({ result }: { result: CalculationResult | null }) {
+  if (!result) {
+    return (
+      <div className="rounded-[1.5rem] border border-dashed p-4 text-sm text-muted-foreground">
+        Traversenergebnisse erscheinen nach der Berechnung.
+      </div>
+    )
+  }
+
+  const beamLabelById = new Map(result.input.beams.map((beam) => [beam.id, beam.label]))
+
+  return (
+    <section className="rounded-[1.5rem] border border-border/80 bg-card/90 p-5 shadow-sm">
+      <div className="mb-4">
+        <h2 className="text-xl font-semibold">Traversenausnutzung</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Biegung, Querkraft und Durchbiegung je Traverse.
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        {result.beams.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border p-4 text-sm text-muted-foreground">
+            Keine Traversenergebnisse vorhanden.
+          </div>
+        ) : null}
+
+        {result.beams.map((beam) => {
+          const governing = Math.max(beam.bendingUtilization, beam.shearUtilization)
+          const tone =
+            governing <= 0.8 ? "emerald" : governing <= 1 ? "amber" : "destructive"
+
+          return (
+            <article key={beam.beamId} className="rounded-2xl border border-border bg-background/85 p-4">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold">
+                    {beamLabelById.get(beam.beamId) ?? beam.beamId}
+                  </h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {beam.isOk ? "Nachweis innerhalb der Grenzwerte" : beam.failureReason ?? "Nachweis nicht erfuellt"}
+                  </p>
+                </div>
+                <div
+                  className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${
+                    beam.isOk ? "bg-emerald-100 text-emerald-700" : "bg-destructive/10 text-destructive"
+                  }`}
+                >
+                  {beam.isOk ? "OK" : "Nicht OK"}
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Biegung eta</p>
+                  <p className="mt-1 text-lg font-semibold">{beam.bendingUtilization.toFixed(2)}</p>
+                  <UtilizationBar value={beam.bendingUtilization} tone={tone} />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Querkraft eta</p>
+                  <p className="mt-1 text-lg font-semibold">{beam.shearUtilization.toFixed(2)}</p>
+                  <UtilizationBar value={beam.shearUtilization} tone={tone} />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">M_max</p>
+                  <p className="mt-1 text-lg font-semibold">{beam.maxBendingMomentKNm.toFixed(2)} kNm</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Durchbiegung</p>
+                  <p className="mt-1 text-lg font-semibold">{beam.maxDeflectionMm.toFixed(1)} mm</p>
+                </div>
+              </div>
+            </article>
+          )
+        })}
+      </div>
+    </section>
   )
 }

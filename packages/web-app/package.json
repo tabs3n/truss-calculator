@@ -11,6 +11,7 @@
   "dependencies": {
     "@base-ui/react": "^1.4.1",
     "@react-pdf/renderer": "^4.5.1",
+    "@truss-calculator/calc-engine": "file:../calc-engine",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.14.0",
