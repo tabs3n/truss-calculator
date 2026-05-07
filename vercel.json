@@ -1,0 +1,4 @@
+{
+  "buildCommand": "npm install && npm run build --workspace=packages/web-app",
+  "outputDirectory": "packages/web-app/.next"
+} 
