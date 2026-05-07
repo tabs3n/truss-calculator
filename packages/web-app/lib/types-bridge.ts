@@ -1,20 +1,22 @@
-// Temporaerer Re-Export bis calc-engine fertig ist.
-// Sobald calc-engine gebaut ist: diesen Import ersetzen durch:
-// export * from "../../calc-engine/src/index"
+// Public type bridge for the shared calc-engine package.
 export type {
   Beam,
+  BeamResult,
   CalculationResult,
   FootType,
   HangingLoad,
   ReportConfig,
   ReportData,
+  SlidingResult,
   StructureInput,
   Support,
+  SupportResult,
   TerrainCategory,
   TippingDirectionResult,
   TippingResult,
   TrussType,
   VWExportData,
+  WindLoadResult,
   WindSurface,
   WindZone,
-} from "../../calc-engine/src/types"
+} from "@truss-calculator/calc-engine"

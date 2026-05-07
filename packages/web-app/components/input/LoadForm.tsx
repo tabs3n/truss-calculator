@@ -11,11 +11,13 @@ const fieldClassName =
 
 export function LoadForm({
   load,
+  minPosition,
   maxPosition,
   onChange,
   onRemove,
 }: {
   load: HangingLoad
+  minPosition: number
   maxPosition: number
   onChange: (load: HangingLoad) => void
   onRemove: () => void
@@ -24,10 +26,10 @@ export function LoadForm({
     label: load.label.trim() ? "" : "Bezeichnung fehlt.",
     position:
       Number.isFinite(load.positionAlongBeam) &&
-      load.positionAlongBeam >= 0 &&
+      load.positionAlongBeam >= minPosition &&
       load.positionAlongBeam <= maxPosition
         ? ""
-        : `Position muss zwischen 0 und ${maxPosition.toFixed(2)} m liegen.`,
+        : `Position muss zwischen ${minPosition.toFixed(2)} und ${maxPosition.toFixed(2)} m liegen.`,
     weight:
       Number.isFinite(load.weight) && load.weight > 0 ? "" : "Gewicht muss groesser als 0 sein.",
   }
@@ -38,7 +40,7 @@ export function LoadForm({
         <div>
           <h4 className="text-sm font-semibold">{load.label || "Neue Haengelast"}</h4>
           <p className="mt-1 text-xs text-muted-foreground">
-            Position entlang der Traverse inklusive Auskragungen.
+            Position ab linkem Auflager. Linke Auskragungen werden negativ eingegeben.
           </p>
         </div>
         <Button type="button" variant="outline" size="icon" onClick={onRemove}>
@@ -56,11 +58,12 @@ export function LoadForm({
           {errors.label ? <p className="mt-2 text-xs text-destructive">{errors.label}</p> : null}
         </label>
         <label className="block text-sm font-medium">
-          Position auf Traverse (m)
+          Position ab linkem Auflager (m)
           <input
             className={cn(fieldClassName, errors.position && "border-destructive/60")}
             type="number"
-            min="0"
+            min={minPosition}
+            max={maxPosition}
             step="0.05"
             value={load.positionAlongBeam}
             onChange={(event) =>

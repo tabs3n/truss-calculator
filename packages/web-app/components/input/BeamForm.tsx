@@ -22,8 +22,10 @@ function distanceBetweenSupports(beam: Beam, supports: Support[]) {
   return Math.hypot(end.position.x - start.position.x, end.position.y - start.position.y)
 }
 
-function validateBeam(beam: Beam, supports: Support[], totalLength: number) {
+function validateBeam(beam: Beam, supports: Support[], spanLength: number) {
   const errors: Record<string, string> = {}
+  const minLoadPosition = -beam.cantileverStart
+  const maxLoadPosition = spanLength + beam.cantileverEnd
 
   if (!beam.label.trim()) errors.label = "Label ist erforderlich."
   if (!beam.startSupportId) errors.startSupportId = "Startstuetze auswaehlen."
@@ -37,8 +39,9 @@ function validateBeam(beam: Beam, supports: Support[], totalLength: number) {
 
   beam.loads.forEach((load) => {
     if (!load.label.trim()) errors[`load-${load.id}-label`] = "Label fehlt."
-    if (load.positionAlongBeam < 0 || load.positionAlongBeam > totalLength) {
-      errors[`load-${load.id}-position`] = "Lastposition liegt ausserhalb der Traverse."
+    if (load.positionAlongBeam < minLoadPosition || load.positionAlongBeam > maxLoadPosition) {
+      errors[`load-${load.id}-position`] =
+        `Lastposition muss zwischen ${minLoadPosition.toFixed(2)} m und ${maxLoadPosition.toFixed(2)} m liegen.`
     }
     if (load.weight <= 0) errors[`load-${load.id}-weight`] = "Lastgewicht muss groesser als 0 sein."
   })
@@ -98,7 +101,9 @@ export function BeamForm({
     () => Math.max(0, spanLength + draft.cantileverStart + draft.cantileverEnd),
     [draft.cantileverEnd, draft.cantileverStart, spanLength],
   )
-  const errors = useMemo(() => validateBeam(draft, supports, totalLength), [draft, supports, totalLength])
+  const minLoadPosition = -draft.cantileverStart
+  const maxLoadPosition = spanLength + draft.cantileverEnd
+  const errors = useMemo(() => validateBeam(draft, supports, spanLength), [draft, supports, spanLength])
 
   if (!open) return null
 
@@ -257,7 +262,8 @@ export function BeamForm({
                 <LoadForm
                   key={load.id}
                   load={load}
-                  maxPosition={Math.max(totalLength, 0.01)}
+                  minPosition={minLoadPosition}
+                  maxPosition={maxLoadPosition}
                   onChange={(nextLoad) =>
                     updateField(
                       "loads",

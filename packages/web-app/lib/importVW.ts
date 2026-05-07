@@ -101,16 +101,17 @@ export function importFromVW(data: VWExportData): StructureInput {
   const supportIds = new Set(supports.map((support) => support.id))
 
   const beams = data.beams
-    .filter((beam) => {
+    .map((beam, originalIndex) => ({ beam, originalIndex }))
+    .filter(({ beam }) => {
       const valid = supportIds.has(beam.startId) && supportIds.has(beam.endId)
       if (!valid) {
         warnings.push(`Traverse "${beam.label || beam.id}" wurde uebersprungen, weil Start- oder Endstuetze fehlt.`)
       }
       return valid
     })
-    .map((beam, index) => ({
+    .map(({ beam, originalIndex }) => ({
       id: beam.id,
-      label: beam.label || `Traverse ${index + 1}`,
+      label: beam.label || `Traverse ${originalIndex + 1}`,
       startSupportId: beam.startId,
       endSupportId: beam.endId,
       trussType: mapTrussType(beam.trussType, warnings),

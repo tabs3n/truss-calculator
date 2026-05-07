@@ -9,6 +9,13 @@ function supportColor(support: Support, result: CalculationResult | null) {
   return supportResult.isOk ? "#15803d" : "#dc2626"
 }
 
+const windDirectionLabels: Record<NonNullable<CalculationResult["tipping"]["governingDirection"]>, string> = {
+  windPlusX: "Wind +X",
+  windPlusY: "Wind +Y",
+  windMinusX: "Wind -X",
+  windMinusY: "Wind -Y",
+}
+
 export function StructureRenderer({
   input,
   result,
@@ -136,7 +143,7 @@ export function StructureRenderer({
         {windDirection ? (
           <g>
             <text x="24" y="28" className="fill-red-600 text-[12px] font-semibold">
-              Massgebender Wind: {windDirection}
+              Massgebender Wind: {windDirectionLabels[windDirection]}
             </text>
             <line
               x1={56}

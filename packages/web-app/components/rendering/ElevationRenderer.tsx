@@ -104,8 +104,11 @@ export function ElevationRenderer({
               </text>
 
               {beam.loads.map((load) => {
-                const ratio = beam.loads.length > 0 ? load.positionAlongBeam / Math.max(beam.cantileverStart + beam.cantileverEnd + Math.hypot(end.position.x - start.position.x, end.position.y - start.position.y), 0.01) : 0
-                const x = startX + (endX - startX) * ratio
+                const spanLength = Math.hypot(end.position.x - start.position.x, end.position.y - start.position.y)
+                const totalBeamLength = beam.cantileverStart + spanLength + beam.cantileverEnd
+                const ratio = (load.positionAlongBeam + beam.cantileverStart) / Math.max(totalBeamLength, 0.01)
+                const clampedRatio = Math.min(1, Math.max(0, ratio))
+                const x = startX + (endX - startX) * clampedRatio
 
                 return (
                   <g key={load.id}>
