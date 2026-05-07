@@ -1,0 +1,251 @@
+"use client"
+
+import { useMemo, useState } from "react"
+import { X } from "lucide-react"
+
+import { Button } from "@/components/ui/button"
+import { FOOT_OPTIONS, FOOT_LABELS, TRUSS_OPTIONS } from "@/lib/constants"
+import type { FootType, Support, TrussType } from "@/lib/types-bridge"
+import { cn } from "@/lib/utils"
+
+const fieldClassName =
+  "mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 text-sm shadow-sm transition-colors focus:border-primary focus:outline-none"
+
+function validateSupport(support: Support) {
+  const errors: Record<string, string> = {}
+
+  if (!support.label.trim()) errors.label = "Label ist erforderlich."
+  if (!Number.isFinite(support.position.x)) errors.x = "X muss eine Zahl sein."
+  if (!Number.isFinite(support.position.y)) errors.y = "Y muss eine Zahl sein."
+  if (!Number.isFinite(support.height) || support.height <= 0) {
+    errors.height = "Hoehe muss groesser als 0 sein."
+  }
+  if (!Number.isFinite(support.existingBallast) || support.existingBallast < 0) {
+    errors.existingBallast = "Ballast darf nicht negativ sein."
+  }
+  if (support.footType === "BASEPLATE") {
+    if (!Number.isFinite(support.baseplateSize) || (support.baseplateSize ?? 0) <= 0) {
+      errors.baseplateSize = "Plattengroesse fuer Bodenplatte angeben."
+    }
+    if (
+      support.outriggerLength !== undefined &&
+      (!Number.isFinite(support.outriggerLength) || support.outriggerLength < 0)
+    ) {
+      errors.outriggerLength = "Auslegerlaenge darf nicht negativ sein."
+    }
+  }
+
+  return errors
+}
+
+function normalizeSupport(support: Support): Support {
+  if (support.footType !== "BASEPLATE") {
+    return {
+      ...support,
+      baseplateSize: undefined,
+      outriggerLength: undefined,
+    }
+  }
+
+  return support
+}
+
+function ErrorText({ text }: { text?: string }) {
+  return text ? <p className="mt-2 text-xs text-destructive">{text}</p> : null
+}
+
+export function SupportForm({
+  open,
+  support,
+  onClose,
+  onSave,
+}: {
+  open: boolean
+  support: Support
+  onClose: () => void
+  onSave: (support: Support) => void
+}) {
+  const [draft, setDraft] = useState<Support>(() => support)
+
+  const errors = useMemo(() => validateSupport(draft), [draft])
+
+  if (!open) return null
+
+  const updateField = <K extends keyof Support>(key: K, value: Support[K]) => {
+    setDraft((current) => ({ ...current, [key]: value }))
+  }
+
+  const updatePosition = (key: "x" | "y", value: number) => {
+    setDraft((current) => ({
+      ...current,
+      position: { ...current.position, [key]: value },
+    }))
+  }
+
+  const canSave = Object.keys(errors).length === 0
+
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end bg-black/40">
+      <div className="flex h-full w-full max-w-xl flex-col overflow-y-auto border-l border-border bg-background shadow-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-5">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+              Stuetzenformular
+            </p>
+            <h3 className="mt-2 text-2xl font-semibold">{draft.label || "Neue Stuetze"}</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Position, Hoehe, Traversentyp und Fussdetail pflegen.
+            </p>
+          </div>
+          <Button type="button" variant="ghost" size="icon" onClick={onClose} aria-label="Schliessen">
+            <X />
+          </Button>
+        </div>
+
+        <div className="space-y-5 px-6 py-6">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block text-sm font-medium sm:col-span-2">
+              Label
+              <input
+                className={cn(fieldClassName, errors.label && "border-destructive/60")}
+                value={draft.label}
+                onChange={(event) => updateField("label", event.target.value)}
+              />
+              <ErrorText text={errors.label} />
+            </label>
+
+            <label className="block text-sm font-medium">
+              X (m)
+              <input
+                className={cn(fieldClassName, errors.x && "border-destructive/60")}
+                type="number"
+                step="0.1"
+                value={draft.position.x}
+                onChange={(event) => updatePosition("x", Number(event.target.value))}
+              />
+              <ErrorText text={errors.x} />
+            </label>
+
+            <label className="block text-sm font-medium">
+              Y (m)
+              <input
+                className={cn(fieldClassName, errors.y && "border-destructive/60")}
+                type="number"
+                step="0.1"
+                value={draft.position.y}
+                onChange={(event) => updatePosition("y", Number(event.target.value))}
+              />
+              <ErrorText text={errors.y} />
+            </label>
+
+            <label className="block text-sm font-medium">
+              Hoehe (m)
+              <input
+                className={cn(fieldClassName, errors.height && "border-destructive/60")}
+                type="number"
+                min="0"
+                step="0.1"
+                value={draft.height}
+                onChange={(event) => updateField("height", Number(event.target.value))}
+              />
+              <ErrorText text={errors.height} />
+            </label>
+
+            <label className="block text-sm font-medium">
+              Ballast vorhanden (kg)
+              <input
+                className={cn(fieldClassName, errors.existingBallast && "border-destructive/60")}
+                type="number"
+                min="0"
+                step="1"
+                value={draft.existingBallast}
+                onChange={(event) => updateField("existingBallast", Number(event.target.value))}
+              />
+              <ErrorText text={errors.existingBallast} />
+            </label>
+
+            <label className="block text-sm font-medium">
+              Traversentyp
+              <select
+                className={fieldClassName}
+                value={draft.trussType}
+                onChange={(event) => updateField("trussType", event.target.value as TrussType)}
+              >
+                {TRUSS_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block text-sm font-medium">
+              Fuss
+              <select
+                className={fieldClassName}
+                value={draft.footType}
+                onChange={(event) => updateField("footType", event.target.value as FootType)}
+              >
+                {FOOT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-2 text-xs text-muted-foreground">{FOOT_LABELS[draft.footType]}</p>
+            </label>
+          </div>
+
+          {draft.footType === "BASEPLATE" ? (
+            <div className="rounded-2xl border border-border bg-muted/30 p-4">
+              <h4 className="text-sm font-semibold">Bodenplattenparameter</h4>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <label className="block text-sm font-medium">
+                  Kantenlaenge Platte (m)
+                  <input
+                    className={cn(fieldClassName, errors.baseplateSize && "border-destructive/60")}
+                    type="number"
+                    min="0"
+                    step="0.05"
+                    value={draft.baseplateSize ?? ""}
+                    onChange={(event) => updateField("baseplateSize", Number(event.target.value))}
+                  />
+                  <ErrorText text={errors.baseplateSize} />
+                </label>
+
+                <label className="block text-sm font-medium">
+                  Outrigger-Laenge (m)
+                  <input
+                    className={cn(fieldClassName, errors.outriggerLength && "border-destructive/60")}
+                    type="number"
+                    min="0"
+                    step="0.05"
+                    value={draft.outriggerLength ?? ""}
+                    onChange={(event) => updateField("outriggerLength", Number(event.target.value))}
+                  />
+                  <ErrorText text={errors.outriggerLength} />
+                </label>
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mt-auto flex flex-col gap-3 border-t border-border px-6 py-5 sm:flex-row sm:justify-end">
+          <Button type="button" variant="outline" onClick={onClose}>
+            Abbrechen
+          </Button>
+          <Button
+            type="button"
+            disabled={!canSave}
+            onClick={() => {
+              if (!canSave) return
+              onSave(normalizeSupport(draft))
+            }}
+          >
+            Stuetze speichern
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}

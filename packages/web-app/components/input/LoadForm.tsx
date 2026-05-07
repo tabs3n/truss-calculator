@@ -1,0 +1,87 @@
+"use client"
+
+import { Trash2 } from "lucide-react"
+
+import { Button } from "@/components/ui/button"
+import type { HangingLoad } from "@/lib/types-bridge"
+import { cn } from "@/lib/utils"
+
+const fieldClassName =
+  "mt-2 h-10 w-full rounded-xl border border-border bg-background px-3 text-sm shadow-sm transition-colors focus:border-primary focus:outline-none"
+
+export function LoadForm({
+  load,
+  maxPosition,
+  onChange,
+  onRemove,
+}: {
+  load: HangingLoad
+  maxPosition: number
+  onChange: (load: HangingLoad) => void
+  onRemove: () => void
+}) {
+  const errors = {
+    label: load.label.trim() ? "" : "Bezeichnung fehlt.",
+    position:
+      Number.isFinite(load.positionAlongBeam) &&
+      load.positionAlongBeam >= 0 &&
+      load.positionAlongBeam <= maxPosition
+        ? ""
+        : `Position muss zwischen 0 und ${maxPosition.toFixed(2)} m liegen.`,
+    weight:
+      Number.isFinite(load.weight) && load.weight > 0 ? "" : "Gewicht muss groesser als 0 sein.",
+  }
+
+  return (
+    <div className="rounded-2xl border border-border bg-background/85 p-4">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h4 className="text-sm font-semibold">{load.label || "Neue Haengelast"}</h4>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Position entlang der Traverse inklusive Auskragungen.
+          </p>
+        </div>
+        <Button type="button" variant="outline" size="icon" onClick={onRemove}>
+          <Trash2 />
+        </Button>
+      </div>
+      <div className="mt-4 grid gap-4 md:grid-cols-3">
+        <label className="block text-sm font-medium">
+          Label
+          <input
+            className={cn(fieldClassName, errors.label && "border-destructive/60")}
+            value={load.label}
+            onChange={(event) => onChange({ ...load, label: event.target.value })}
+          />
+          {errors.label ? <p className="mt-2 text-xs text-destructive">{errors.label}</p> : null}
+        </label>
+        <label className="block text-sm font-medium">
+          Position auf Traverse (m)
+          <input
+            className={cn(fieldClassName, errors.position && "border-destructive/60")}
+            type="number"
+            min="0"
+            step="0.05"
+            value={load.positionAlongBeam}
+            onChange={(event) =>
+              onChange({ ...load, positionAlongBeam: Number(event.target.value) })
+            }
+          />
+          {errors.position ? <p className="mt-2 text-xs text-destructive">{errors.position}</p> : null}
+        </label>
+        <label className="block text-sm font-medium">
+          Gewicht (kg)
+          <input
+            className={cn(fieldClassName, errors.weight && "border-destructive/60")}
+            type="number"
+            min="0"
+            step="1"
+            value={load.weight}
+            onChange={(event) => onChange({ ...load, weight: Number(event.target.value) })}
+          />
+          {errors.weight ? <p className="mt-2 text-xs text-destructive">{errors.weight}</p> : null}
+        </label>
+      </div>
+    </div>
+  )
+}
