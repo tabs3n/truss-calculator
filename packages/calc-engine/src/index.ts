@@ -1,71 +1,132 @@
 export * from './types'
 
 import type {
-  StructureInput,
-  CalculationResult,
   BeamResult,
+  CalculationResult,
+  SlidingResult,
+  StructureInput,
   SupportResult,
+  TippingDirectionResult,
+  TippingResult,
   WindLoadResult,
 } from './types'
 
-import { getPeakVelocityPressure, calculateWindForce } from './wind/windLoad'
-import { getDesignLoad, getBeamSelfWeight, G, GAMMA_G, GAMMA_Q, DYNAMIC_FACTOR } from './loads/loadCombinations'
 import { calculateBeam } from './beam/beamCalculation'
 import { checkBeamUtilization } from './beam/utilizationCheck'
+import { getBeamSelfWeight, G, GAMMA_G, getDesignLoad } from './loads/loadCombinations'
+import { getTrussProperties } from './materials/database'
+import { checkSliding } from './sliding/slidingCheck'
 import { checkBuckling } from './stability/bucklingCheck'
 import { calculateTippingAllDirections } from './tipping/tippingCheck'
-import { checkSliding } from './sliding/slidingCheck'
-import { getTrussProperties } from './materials/database'
+import { calculateWindForce, getPeakVelocityPressure } from './wind/windLoad'
+
+const normReferences = [
+  'DIN EN 1991-1-4: Windlasten',
+  'DIN EN 1993-1 (EC3): Stahlbau',
+  'DIN EN 1999-1-1 (EC9): Aluminiumbau',
+  'DIN EN 17879: Event-Strukturen',
+  'DIN EN 13814: Reibbeiwerte',
+  'DGUV Information 215-313: Dynamikzuschlag',
+]
+
+function emptyTippingDirection(): TippingDirectionResult {
+  return {
+    minVerticalReactionKN: 0,
+    tippingAxisSupportIds: ['', ''],
+    ballastSupportIds: [],
+    requiredBallastPerSupportKg: 0,
+    requiredBallastTotalKg: 0,
+    utilization: Infinity,
+    isOk: false,
+  }
+}
+
+function emptyTippingResult(): TippingResult {
+  const windPlusX = emptyTippingDirection()
+  const windPlusY = emptyTippingDirection()
+  const windMinusX = emptyTippingDirection()
+  const windMinusY = emptyTippingDirection()
+
+  return {
+    windPlusX,
+    windPlusY,
+    windMinusX,
+    windMinusY,
+    governing: windPlusX,
+    governingDirection: 'windPlusX',
+  }
+}
+
+function failedCalculationResult(
+  input: StructureInput,
+  warnings: string[],
+  errors: string[],
+): CalculationResult {
+  return {
+    input,
+    normReferences,
+    windLoad: {
+      peakVelocityPressure: 0,
+      referenceHeight: 0,
+      windForceX: 0,
+      windForceY: 0,
+    },
+    beams: [],
+    supports: [],
+    tipping: emptyTippingResult(),
+    sliding: {
+      resultingHorizontalForceKN: 0,
+      requiredBallastKg: 0,
+      isOk: false,
+      frictionCoefficientUsed: input.frictionCoefficient,
+    },
+    overallOk: false,
+    requiredBallastTotalKg: 0,
+    ballastPerSupport: [],
+    calculatedAt: new Date().toISOString(),
+    warnings,
+    errors,
+  }
+}
 
 /**
- * Hauptberechnungsfunktion – orchestriert alle Module.
- * Gibt ein vollständiges CalculationResult zurück.
+ * Hauptberechnungsfunktion: orchestriert Wind, Tragwerk, Kippen, Gleiten und Ballast.
  */
 export function calculate(input: StructureInput): CalculationResult {
   const warnings: string[] = []
   const errors: string[] = []
-  const normReferences = [
-    'DIN EN 1991-1-4: Windlasten',
-    'DIN EN 1993-1 (EC3): Stahlbau',
-    'DIN EN 1999-1-1 (EC9): Aluminiumbau',
-    'DIN EN 17879: Event-Strukturen',
-    'DIN EN 13814: Reibbeiwerte',
-    'DGUV Information 215-313: Dynamikzuschlag',
-  ]
 
   if (input.supports.length < 2) {
-    errors.push('Mindestens 2 Stützen erforderlich')
+    errors.push('Mindestens 2 Stuetzen erforderlich')
+    return failedCalculationResult(input, warnings, errors)
   }
 
-  // ── Schritt 1: Windlast ──────────────────────────────────────────────────
-  // Maßgebende Höhe = maximale Stützenhöhe
-  const maxSupportHeight = Math.max(...input.supports.map(s => s.height))
+  const maxSupportHeight = Math.max(...input.supports.map(support => support.height))
 
   let windQp = 0
   try {
     windQp = getPeakVelocityPressure(input.windZone, input.terrainCategory, maxSupportHeight)
-  } catch (e) {
-    errors.push(`Windlastberechnung: ${(e as Error).message}`)
+  } catch (error) {
+    errors.push(`Windlastberechnung: ${(error as Error).message}`)
   }
 
-  // Windkraft aus Flächen
   let totalWindAreaX = 0
   let totalWindAreaY = 0
   for (const beam of input.beams) {
-    for (const ws of beam.windSurfaces) {
-      totalWindAreaX += ws.width * ws.height
-      totalWindAreaY += ws.width * ws.height
+    for (const windSurface of beam.windSurfaces) {
+      const area = windSurface.width * windSurface.height
+      totalWindAreaX += area
+      totalWindAreaY += area
     }
   }
-  // Traverseneigenwindfläche: konservativ Breite×Höhe aus Traversenbreite (ca. 0.4m) × Höhe
-  // Stützenfläche (vereinfacht 0.4m Breite je Stütze)
+
   for (const support of input.supports) {
     totalWindAreaX += 0.4 * support.height
     totalWindAreaY += 0.4 * support.height
   }
 
   const windForceX = calculateWindForce(windQp, 1, 1) * totalWindAreaX
-  const windForceY = windForceX // symmetrisch für rechteckige Aufstellung
+  const windForceY = calculateWindForce(windQp, 1, 1) * totalWindAreaY
 
   const windLoad: WindLoadResult = {
     peakVelocityPressure: windQp,
@@ -74,8 +135,6 @@ export function calculate(input: StructureInput): CalculationResult {
     windForceY,
   }
 
-  // ── Schritt 2: Auflagerkräfte (vereinfacht: gleichmäßige Verteilung) ─────
-  // Eigengewichte Stützen
   let totalPermanentKN = 0
   for (const support of input.supports) {
     const props = getTrussProperties(support.trussType)
@@ -84,21 +143,20 @@ export function calculate(input: StructureInput): CalculationResult {
     totalPermanentKN += (support.existingBallast * G * GAMMA_G) / 1000
   }
 
-  // Eigengewichte + Nutzlasten Traversen
   for (const beam of input.beams) {
-    const startSupport = input.supports.find(s => s.id === beam.startSupportId)
-    const endSupport = input.supports.find(s => s.id === beam.endSupportId)
+    const startSupport = input.supports.find(support => support.id === beam.startSupportId)
+    const endSupport = input.supports.find(support => support.id === beam.endSupportId)
     if (!startSupport || !endSupport) {
-      errors.push(`Traverse ${beam.id}: Stütze nicht gefunden`)
+      errors.push(`Traverse ${beam.id}: Stuetze nicht gefunden`)
       continue
     }
-    const span = Math.sqrt(
-      (endSupport.position.x - startSupport.position.x) ** 2 +
-      (endSupport.position.y - startSupport.position.y) ** 2,
+
+    const span = Math.hypot(
+      endSupport.position.x - startSupport.position.x,
+      endSupport.position.y - startSupport.position.y,
     )
     const totalLength = beam.cantileverStart + span + beam.cantileverEnd
-    const selfWeightKN = getBeamSelfWeight(beam.trussType, totalLength)
-    totalPermanentKN += selfWeightKN * GAMMA_G
+    totalPermanentKN += getBeamSelfWeight(beam.trussType, totalLength) * GAMMA_G
 
     for (const load of beam.loads) {
       const loadKN = (load.weight * G) / 1000
@@ -106,25 +164,21 @@ export function calculate(input: StructureInput): CalculationResult {
     }
   }
 
-  // Gleichmäßige Verteilung auf alle Stützen
   const reactionPerSupport = totalPermanentKN / input.supports.length
   const supportVerticalReactions = new Map<string, number>(
-    input.supports.map(s => [s.id, reactionPerSupport]),
+    input.supports.map(support => [support.id, reactionPerSupport]),
   )
 
-  // ── Schritt 3: Balkenberechnungen ────────────────────────────────────────
   const beamResults: BeamResult[] = []
-
   for (const beam of input.beams) {
-    const startSupport = input.supports.find(s => s.id === beam.startSupportId)
-    const endSupport = input.supports.find(s => s.id === beam.endSupportId)
+    const startSupport = input.supports.find(support => support.id === beam.startSupportId)
+    const endSupport = input.supports.find(support => support.id === beam.endSupportId)
     if (!startSupport || !endSupport) continue
 
-    const span = Math.sqrt(
-      (endSupport.position.x - startSupport.position.x) ** 2 +
-      (endSupport.position.y - startSupport.position.y) ** 2,
+    const span = Math.hypot(
+      endSupport.position.x - startSupport.position.x,
+      endSupport.position.y - startSupport.position.y,
     )
-
     const selfWeightPerMKNm = getBeamSelfWeight(beam.trussType, 1) * GAMMA_G
     const pointLoads = beam.loads.map(load => ({
       positionM: load.positionAlongBeam,
@@ -141,8 +195,7 @@ export function calculate(input: StructureInput): CalculationResult {
         selfWeightPerMKNm,
       )
       const utilization = checkBeamUtilization(beam.trussType, forces)
-
-      beamResults.push({
+      const beamResult: BeamResult = {
         beamId: beam.id,
         maxBendingMomentKNm: forces.maxBendingMomentKNm,
         maxShearForceKN: forces.maxShearForceKN,
@@ -150,83 +203,120 @@ export function calculate(input: StructureInput): CalculationResult {
         shearUtilization: utilization.shearUtilization,
         maxDeflectionMm: forces.maxDeflectionMm,
         isOk: utilization.isOk,
-        failureReason: utilization.failureReason,
-      })
+        ...(utilization.failureReason ? { failureReason: utilization.failureReason } : {}),
+      }
+      beamResults.push(beamResult)
 
       if (!utilization.isOk) {
         errors.push(`Traverse ${beam.id}: ${utilization.failureReason}`)
       }
-    } catch (e) {
-      errors.push(`Traverse ${beam.id}: ${(e as Error).message}`)
+    } catch (error) {
+      errors.push(`Traverse ${beam.id}: ${(error as Error).message}`)
     }
   }
 
-  // ── Schritt 4: Knicknachweis Stützen ─────────────────────────────────────
   const supportResults: SupportResult[] = []
-
   for (const support of input.supports) {
-    const Rz = supportVerticalReactions.get(support.id) ?? 0
-    let bucklingUtil = 0
+    const verticalReactionKN = supportVerticalReactions.get(support.id) ?? 0
+    let bucklingUtilization = 0
     let isOk = true
     let failureReason: string | undefined
 
     try {
-      const buckling = checkBuckling(support.trussType, support.height, 2.0, Math.abs(Rz))
-      bucklingUtil = buckling.utilization
+      const buckling = checkBuckling(
+        support.trussType,
+        support.height,
+        2,
+        Math.abs(verticalReactionKN),
+      )
+      bucklingUtilization = buckling.utilization
       isOk = buckling.isOk
+
       if (!buckling.isOk) {
-        failureReason = `Knicken: η=${bucklingUtil.toFixed(2)} > 1.0`
-        errors.push(`Stütze ${support.id}: ${failureReason}`)
+        failureReason = `Knicken: eta=${bucklingUtilization.toFixed(2)} > 1.0`
+        errors.push(`Stuetze ${support.id}: ${failureReason}`)
       }
-    } catch (e) {
-      errors.push(`Stütze ${support.id}: ${(e as Error).message}`)
+    } catch (error) {
+      failureReason = (error as Error).message
+      errors.push(`Stuetze ${support.id}: ${failureReason}`)
       isOk = false
     }
 
-    supportResults.push({
+    const supportResult: SupportResult = {
       supportId: support.id,
-      verticalReactionKN: Rz,
+      verticalReactionKN,
       horizontalReactionXKN: windForceX / input.supports.length,
       horizontalReactionYKN: windForceY / input.supports.length,
-      bucklingUtilization: bucklingUtil,
+      bucklingUtilization,
       isOk,
-      failureReason,
-    })
+      ...(failureReason ? { failureReason } : {}),
+    }
+    supportResults.push(supportResult)
   }
 
-  // ── Schritt 5: Kippsicherheit ─────────────────────────────────────────────
-  const windAppHeight = maxSupportHeight * 0.6 // konservativ: 60% der Stützenhöhe
   const totalWindForce = Math.max(windForceX, windForceY)
-
+  const windApplicationHeightM = maxSupportHeight * 0.6
   const tipping = calculateTippingAllDirections(
     input.supports,
     totalWindForce,
-    windAppHeight,
+    windApplicationHeightM,
     supportVerticalReactions,
   )
 
-  // ── Schritt 6: Gleitnachweis ─────────────────────────────────────────────
-  const totalVerticalKN = totalPermanentKN
-  const sliding = checkSliding(totalWindForce, totalVerticalKN, input.frictionCoefficient)
+  if (!tipping.governing.isOk) {
+    errors.push(
+      `Kippsicherheit ${tipping.governingDirection}: eta=${tipping.governing.utilization.toFixed(2)}, Zusatzballast ${tipping.governing.requiredBallastTotalKg.toFixed(0)} kg`,
+    )
+  }
 
-  // ── Schritt 7: Ballast zusammenstellen ───────────────────────────────────
+  let sliding: SlidingResult
+  try {
+    sliding = checkSliding(totalWindForce, totalPermanentKN, input.frictionCoefficient)
+    if (!sliding.isOk) {
+      errors.push(`Gleitnachweis: Zusatzballast ${Math.max(0, sliding.requiredBallastKg).toFixed(0)} kg erforderlich`)
+    }
+  } catch (error) {
+    errors.push(`Gleitnachweis: ${(error as Error).message}`)
+    sliding = {
+      resultingHorizontalForceKN: totalWindForce,
+      requiredBallastKg: 0,
+      isOk: false,
+      frictionCoefficientUsed: input.frictionCoefficient,
+    }
+  }
+
   const ballastKippen = tipping.governing.requiredBallastTotalKg
   const ballastGleiten = Math.max(0, sliding.requiredBallastKg)
   const requiredBallastTotalKg = Math.max(ballastKippen, ballastGleiten)
+  const tippingBallastSupportIds = new Set(
+    tipping.governing.ballastSupportIds.length > 0
+      ? tipping.governing.ballastSupportIds
+      : input.supports.map(support => support.id),
+  )
+  const tippingGoverns = ballastKippen >= ballastGleiten && ballastKippen > 0
 
-  // Pro Stütze: gleichmäßige Aufteilung
-  const ballastPerSupport = input.supports.map(s => {
-    const perSupport = requiredBallastTotalKg / input.supports.length
+  const ballastPerSupport = input.supports.map(support => {
+    const requiredBallastKg = tippingGoverns
+      ? tippingBallastSupportIds.has(support.id)
+        ? tipping.governing.requiredBallastPerSupportKg
+        : 0
+      : requiredBallastTotalKg / input.supports.length
+
     return {
-      supportId: s.id,
-      supportLabel: s.label,
-      requiredBallastKg: perSupport,
-      existingBallastKg: s.existingBallast,
-      additionalBallastNeededKg: Math.max(0, perSupport - s.existingBallast),
+      supportId: support.id,
+      supportLabel: support.label,
+      requiredBallastKg,
+      existingBallastKg: support.existingBallast,
+      additionalBallastNeededKg: Math.max(0, requiredBallastKg - support.existingBallast),
     }
   })
 
-  const overallOk = errors.length === 0
+  const overallOk =
+    errors.length === 0 &&
+    beamResults.every(result => result.isOk) &&
+    supportResults.every(result => result.isOk) &&
+    tipping.governing.isOk &&
+    sliding.isOk
 
   return {
     input,

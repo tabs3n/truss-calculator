@@ -1,43 +1,69 @@
 import type { Support, TippingDirectionResult } from '../types'
 
-const G = 9.81 // m/s²
+const G = 9.81
 
-/**
- * Projiziert alle Stützenpositionen auf die Windrichtung und bestimmt
- * die zwei "vordersten" (windseitigen) Stützen als Kippachse.
- *
- * windAngleDeg: 0° = Wind in +X, 90° = Wind in +Y, 180° = Wind in -X, 270° = Wind in -Y
- */
+type DirectionKey = 'windPlusX' | 'windPlusY' | 'windMinusX' | 'windMinusY'
+
 function findTippingAxis(
   supports: Support[],
   windAngleDeg: number,
 ): [string, string] {
   const rad = (windAngleDeg * Math.PI) / 180
-  // Windrichtungsvektor (Anströmrichtung)
-  const wx = Math.cos(rad)
-  const wy = Math.sin(rad)
+  const windVector = { x: Math.cos(rad), y: Math.sin(rad) }
 
-  // Projektion jeder Stütze auf Windrichtung; größte Projektion = windseitig vorne
-  const projections = supports.map(s => ({
-    id: s.id,
-    proj: s.position.x * wx + s.position.y * wy,
+  const projections = supports.map(support => ({
+    id: support.id,
+    proj: support.position.x * windVector.x + support.position.y * windVector.y,
   }))
-  projections.sort((a, b) => b.proj - a.proj) // absteigend
+  projections.sort((a, b) => b.proj - a.proj)
 
   const first = projections[0]
   const second = projections[1]
   if (!first || !second) {
-    throw new Error('Mindestens 2 Stützen erforderlich für Kippsicherheitsnachweis')
+    throw new Error('Mindestens 2 Stuetzen erforderlich fuer Kippsicherheitsnachweis')
   }
+
   return [first.id, second.id]
 }
 
+function signedDistanceToAxis(
+  support: Support,
+  axisOrigin: Support,
+  normalVec: { x: number; y: number },
+) {
+  const dx = support.position.x - axisOrigin.position.x
+  const dy = support.position.y - axisOrigin.position.y
+
+  return dx * normalVec.x + dy * normalVec.y
+}
+
+function buildLeewardNormal(
+  axisSupports: [Support, Support],
+  windAngleDeg: number,
+) {
+  const axisVec = {
+    x: axisSupports[1].position.x - axisSupports[0].position.x,
+    y: axisSupports[1].position.y - axisSupports[0].position.y,
+  }
+  const axisLen = Math.hypot(axisVec.x, axisVec.y)
+  const baseNormal = axisLen > 0
+    ? { x: axisVec.y / axisLen, y: -axisVec.x / axisLen }
+    : { x: 1, y: 0 }
+
+  const rad = (windAngleDeg * Math.PI) / 180
+  const windVector = { x: Math.cos(rad), y: Math.sin(rad) }
+
+  // Stabilisierender Ballast liegt auf der Leeseite, also entgegen der Windrichtung.
+  const pointsLeeward = baseNormal.x * windVector.x + baseNormal.y * windVector.y <= 0
+  return pointsLeeward ? baseNormal : { x: -baseNormal.x, y: -baseNormal.y }
+}
+
 /**
- * Kippsicherheitsnachweis für eine Windrichtung.
+ * Kippsicherheitsnachweis fuer eine Windrichtung.
  *
- * Kippmoment: Fw × Angriffshöhe (um Kippachse)
- * Stabilisierendes Moment: Summe (Rz,i × Abstand zur Kippachse)
- * Rz,min: kleinste (negativste) Auflagerkraft nach Gleichgewicht
+ * Der erforderliche Zusatzballast wird aus dem Momentendefizit gegenueber dem
+ * stabilisierenden Moment berechnet. Ballast direkt auf der Kippachse hat
+ * keinen wirksamen Hebelarm und darf daher nicht stabilisierend angesetzt werden.
  */
 export function calculateTipping(
   supports: Support[],
@@ -47,76 +73,68 @@ export function calculateTipping(
   supportVerticalReactions: Map<string, number>,
 ): TippingDirectionResult {
   if (supports.length < 2) {
-    throw new Error('Mindestens 2 Stützen erforderlich')
+    throw new Error('Mindestens 2 Stuetzen erforderlich')
   }
 
   const tippingAxisIds = findTippingAxis(supports, windDirectionAngleDeg)
-
-  // Stützen der Kippachse
   const axisSupports = tippingAxisIds.map(id => {
-    const s = supports.find(sup => sup.id === id)
-    if (!s) throw new Error(`Stütze ${id} nicht gefunden`)
-    return s
-  })
+    const support = supports.find(candidate => candidate.id === id)
+    if (!support) throw new Error(`Stuetze ${id} nicht gefunden`)
+    return support
+  }) as [Support, Support]
 
-  // Kippachsenlinie: Vektor zwischen den zwei Kippachsen-Stützen
-  const s0 = axisSupports[0]!
-  const s1 = axisSupports[1]!
-  const axisVec = { x: s1.position.x - s0.position.x, y: s1.position.y - s0.position.y }
-  const axisLen = Math.sqrt(axisVec.x ** 2 + axisVec.y ** 2)
+  const normalVec = buildLeewardNormal(axisSupports, windDirectionAngleDeg)
+  const axisOrigin = axisSupports[0]
+  const offAxisSupports = supports.filter(support => !tippingAxisIds.includes(support.id))
+  const leewardSupports = offAxisSupports
+    .map(support => ({
+      support,
+      leverArmM: signedDistanceToAxis(support, axisOrigin, normalVec),
+    }))
+    .filter(entry => entry.leverArmM > 0)
 
-  // Normalvektor zur Kippachse (windwärts zeigend)
-  const normalVec = axisLen > 0
-    ? { x: axisVec.y / axisLen, y: -axisVec.x / axisLen }
-    : { x: 1, y: 0 }
-
-  // Abstände der leeward Stützen zur Kippachse (Hebelarm für stabilisierendes Moment)
-  const leewardSupports = supports.filter(s => !tippingAxisIds.includes(s.id))
-
-  // Kippmoment [kN·m] = Fw × Angriffshöhe
-  const tippingMoment = totalWindForceKN * windApplicationHeightM
-
-  // Stabilisierendes Moment = Summe (Rz,i × Abstand zur Kippachse)
-  let stabilizingMoment = 0
-  for (const support of leewardSupports) {
-    const Rz = supportVerticalReactions.get(support.id) ?? 0
-    // Abstand zur Kippachse: senkrechter Abstand vom Punkt zur Linie durch s0, s1
-    const dx = support.position.x - s0.position.x
-    const dy = support.position.y - s0.position.y
-    const dist = Math.abs(dx * normalVec.x + dy * normalVec.y)
-    stabilizingMoment += Math.abs(Rz) * dist
-  }
-
-  // Minimale Auflagerkraft (ungünstigste Stütze der Kippachse)
-  const reactionsOnAxis = tippingAxisIds.map(id => supportVerticalReactions.get(id) ?? 0)
-  const minVerticalReaction = Math.min(...reactionsOnAxis)
-
-  // Erforderlicher Ballast: |Rz,min| × 2 / g [kg]
-  const requiredBallastPerSupportKg = minVerticalReaction < 0
-    ? Math.abs(minVerticalReaction) * 1000 / G  // kN→N, dann ÷g
-    : 0
-  const requiredBallastTotalKg = requiredBallastPerSupportKg * 2
-
-  // Ausnutzung: kippendes Moment / stabilisierendes Moment (inkl. vorhandenem Ballast)
-  const existingBallastForce = tippingAxisIds.reduce((sum, id) => {
-    const support = supports.find(s => s.id === id)
-    return sum + (support ? (support.existingBallast * G) / 1000 : 0)
+  const tippingMomentKNm = Math.max(0, totalWindForceKN * windApplicationHeightM)
+  const stabilizingMomentKNm = leewardSupports.reduce((sum, entry) => {
+    const verticalReactionKN = Math.max(0, supportVerticalReactions.get(entry.support.id) ?? 0)
+    return sum + verticalReactionKN * entry.leverArmM
   }, 0)
 
-  const totalStabilizing = stabilizingMoment + existingBallastForce * (axisLen / 2 || 1)
-  const utilization = totalStabilizing > 0 ? tippingMoment / totalStabilizing : Infinity
+  const maxLeverArmM = leewardSupports.reduce(
+    (max, entry) => Math.max(max, entry.leverArmM),
+    0,
+  )
+  const momentDeficitKNm = Math.max(0, tippingMomentKNm - stabilizingMomentKNm)
+
+  const requiredBallastTotalKg = maxLeverArmM > 0
+    ? (momentDeficitKNm * 1000) / (G * maxLeverArmM)
+    : (momentDeficitKNm * 1000) / G
+  const ballastSupportIds = leewardSupports.map(entry => entry.support.id)
+  const ballastSupportCount = ballastSupportIds.length > 0 ? ballastSupportIds.length : tippingAxisIds.length
+  const requiredBallastPerSupportKg = requiredBallastTotalKg / ballastSupportCount
+
+  const upliftFromWindKN = maxLeverArmM > 0
+    ? momentDeficitKNm / maxLeverArmM
+    : tippingMomentKNm
+  const reactionsOnAxis = tippingAxisIds.map(id => supportVerticalReactions.get(id) ?? 0)
+  const minVerticalReaction = Math.min(...reactionsOnAxis) - upliftFromWindKN / tippingAxisIds.length
+  const utilization = tippingMomentKNm === 0
+    ? 0
+    : stabilizingMomentKNm > 0
+      ? tippingMomentKNm / stabilizingMomentKNm
+      : Infinity
 
   return {
     minVerticalReactionKN: minVerticalReaction,
     tippingAxisSupportIds: tippingAxisIds,
+    ballastSupportIds,
     requiredBallastPerSupportKg,
     requiredBallastTotalKg,
     utilization,
-    isOk: minVerticalReaction >= 0 && utilization <= 1.0,
+    isOk: minVerticalReaction >= 0 && utilization <= 1,
   }
 }
 
-/** Berechnet alle 4 Windrichtungen und gibt maßgebenden Lastfall zurück */
+/** Berechnet alle 4 Windrichtungen und gibt den massgebenden Lastfall zurueck. */
 export function calculateTippingAllDirections(
   supports: Support[],
   totalWindForceKN: number,
@@ -128,7 +146,7 @@ export function calculateTippingAllDirections(
   windMinusX: TippingDirectionResult
   windMinusY: TippingDirectionResult
   governing: TippingDirectionResult
-  governingDirection: 'windPlusX' | 'windPlusY' | 'windMinusX' | 'windMinusY'
+  governingDirection: DirectionKey
 } {
   const windPlusX = calculateTipping(supports, totalWindForceKN, 0, windApplicationHeightM, supportVerticalReactions)
   const windPlusY = calculateTipping(supports, totalWindForceKN, 90, windApplicationHeightM, supportVerticalReactions)
@@ -142,10 +160,16 @@ export function calculateTippingAllDirections(
     { key: 'windMinusY' as const, result: windMinusY },
   ]
 
-  // Maßgebend: größter erforderlicher Ballast
-  const governing = directions.reduce((prev, curr) =>
-    curr.result.requiredBallastTotalKg > prev.result.requiredBallastTotalKg ? curr : prev,
-  )
+  const governing = directions.reduce((prev, curr) => {
+    if (curr.result.requiredBallastTotalKg > prev.result.requiredBallastTotalKg) return curr
+    if (
+      curr.result.requiredBallastTotalKg === prev.result.requiredBallastTotalKg &&
+      curr.result.utilization > prev.result.utilization
+    ) {
+      return curr
+    }
+    return prev
+  })
 
   return {
     windPlusX,

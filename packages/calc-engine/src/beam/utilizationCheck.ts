@@ -27,10 +27,15 @@ export function checkBeamUtilization(
     failures.push(`Schub: η=${shearUtilization.toFixed(2)} > 1.0`)
   }
 
-  return {
+  const result: UtilizationResult = {
     bendingUtilization,
     shearUtilization,
     isOk: failures.length === 0,
-    failureReason: failures.length > 0 ? failures.join('; ') : undefined,
   }
+
+  if (failures.length > 0) {
+    result.failureReason = failures.join('; ')
+  }
+
+  return result
 }

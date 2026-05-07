@@ -10,13 +10,75 @@ export interface BeamInternalForces {
   maxDeflectionMm: number
 }
 
+interface MomentSample {
+  x: number
+  momentKNm: number
+}
+
+interface DeflectionSample extends MomentSample {
+  rawDeflectionM: number
+}
+
+function interpolateDeflection(samples: DeflectionSample[], targetX: number) {
+  const first = samples[0]
+  const last = samples[samples.length - 1]
+  if (!first || !last) return 0
+  if (targetX <= first.x) return first.rawDeflectionM
+  if (targetX >= last.x) return last.rawDeflectionM
+
+  for (let index = 1; index < samples.length; index += 1) {
+    const previous = samples[index - 1]!
+    const current = samples[index]!
+    if (targetX <= current.x) {
+      const ratio = (targetX - previous.x) / (current.x - previous.x || 1)
+      return previous.rawDeflectionM + (current.rawDeflectionM - previous.rawDeflectionM) * ratio
+    }
+  }
+
+  return last.rawDeflectionM
+}
+
+function calculateMaxDeflectionMm(momentSamples: MomentSample[], spanM: number, eiKNm2: number) {
+  if (eiKNm2 <= 0 || momentSamples.length < 2) return 0
+
+  const deflectionSamples: DeflectionSample[] = []
+  let rotation = 0
+  let rawDeflection = 0
+
+  for (let index = 0; index < momentSamples.length; index += 1) {
+    const sample = momentSamples[index]!
+    if (index > 0) {
+      const previous = momentSamples[index - 1]!
+      const dx = sample.x - previous.x
+      const previousCurvature = previous.momentKNm / eiKNm2
+      const currentCurvature = sample.momentKNm / eiKNm2
+      const nextRotation = rotation + ((previousCurvature + currentCurvature) / 2) * dx
+      rawDeflection += ((rotation + nextRotation) / 2) * dx
+      rotation = nextRotation
+    }
+
+    deflectionSamples.push({
+      ...sample,
+      rawDeflectionM: rawDeflection,
+    })
+  }
+
+  const supportDeflectionA = interpolateDeflection(deflectionSamples, 0)
+  const supportDeflectionB = interpolateDeflection(deflectionSamples, spanM)
+  let maxDeflectionM = 0
+
+  for (const sample of deflectionSamples) {
+    const supportChordM = supportDeflectionA + ((supportDeflectionB - supportDeflectionA) * sample.x) / spanM
+    maxDeflectionM = Math.max(maxDeflectionM, Math.abs(sample.rawDeflectionM - supportChordM))
+  }
+
+  return maxDeflectionM * 1000
+}
+
 /**
- * Analytische Balkenberechnung mit Superposition.
+ * Balkenberechnung mit Gleichgewicht und numerischer Integration der Kruemmung.
  * Koordinatensystem: x=0 am linken Auflager, x=L am rechten Auflager.
- * Auskragungen liegen bei x<0 (links) und x>L (rechts).
- *
- * Alle Einzellasten werden in Auflager-Koordinaten übergeben
- * (positionM = 0 entspricht linkem Auflager).
+ * Linke Auskragungen liegen bei x<0, rechte Auskragungen bei x>L.
  */
 export function calculateBeam(
   trussType: TrussType,
@@ -26,93 +88,70 @@ export function calculateBeam(
   pointLoads: { positionM: number; forceKN: number }[],
   distributedLoadKNm: number,
 ): BeamInternalForces {
-  if (spanM <= 0) throw new Error(`Ungültige Stützweite: ${spanM} m`)
+  if (spanM <= 0) throw new Error(`Ungueltige Stuetzweite: ${spanM} m`)
+  if (cantileverStartM < 0 || cantileverEndM < 0) {
+    throw new Error('Auskragungen duerfen nicht negativ sein')
+  }
 
-  const L = spanM
   const props = getTrussProperties(trussType)
-  const EI = props.eModulus * props.momentOfInertiaY // kN/cm² × cm⁴ = kN·cm²
-
-  // ── Auflagerkräfte ─────────────────────────────────────────────────────────
-  // Summe Momente um linkes Auflager (A) → Reaktion B, dann A aus ΣFv=0
+  const span = spanM
 
   let sumMomentsAroundA = 0
   let sumVerticalLoads = 0
 
-  // Einzellasten (inkl. Auskragungslasten, die außerhalb [0,L] liegen können)
   for (const load of pointLoads) {
     sumMomentsAroundA += load.forceKN * load.positionM
     sumVerticalLoads += load.forceKN
   }
 
-  // Streckenlast über gesamte Länge inkl. Auskragungen
-  const totalLength = cantileverStartM + L + cantileverEndM
+  const totalLength = cantileverStartM + span + cantileverEndM
   const totalDistributed = distributedLoadKNm * totalLength
-  // Schwerpunkt der Streckenlast bezogen auf linkes Auflager A
   const centroidOfDistributed = -cantileverStartM + totalLength / 2
   sumMomentsAroundA += totalDistributed * centroidOfDistributed
   sumVerticalLoads += totalDistributed
 
-  const reactionEnd = sumMomentsAroundA / L       // B
-  const reactionStart = sumVerticalLoads - reactionEnd  // A
+  const reactionEnd = sumMomentsAroundA / span
+  const reactionStart = sumVerticalLoads - reactionEnd
 
-  // ── Biegemoment-Verlauf ───────────────────────────────────────────────────
-  // Abtastung mit 1000 Punkten über Gesamtlänge
   const segments = 1000
   const xStart = -cantileverStartM
-  const xEnd = L + cantileverEndM
+  const xEnd = span + cantileverEndM
   const dx = (xEnd - xStart) / segments
 
   let maxMoment = 0
   let posOfMaxMoment = 0
   let maxShear = 0
+  const momentSamples: MomentSample[] = []
 
-  for (let i = 0; i <= segments; i++) {
-    const x = xStart + i * dx
+  for (let index = 0; index <= segments; index += 1) {
+    const x = xStart + index * dx
 
-    // Querkraft Q(x): Reaktion A wirkt bei x=0, Reaktion B bei x=L
-    let Q = -distributedLoadKNm * (x - xStart)
-    if (x >= 0) Q += reactionStart
-    if (x >= L) Q -= reactionEnd
+    let shearKN = -distributedLoadKNm * (x - xStart)
+    if (x >= 0) shearKN += reactionStart
+    if (x >= span) shearKN -= reactionEnd
     for (const load of pointLoads) {
-      if (x >= load.positionM) Q -= load.forceKN
+      if (x >= load.positionM) shearKN -= load.forceKN
     }
 
-    // Biegemoment M(x)
-    let M = -distributedLoadKNm * (x - xStart) * (x - xStart) / 2
-    if (x >= 0) M += reactionStart * x
-    if (x >= L) M -= reactionEnd * (x - L)
+    let momentKNm = -distributedLoadKNm * (x - xStart) ** 2 / 2
+    if (x >= 0) momentKNm += reactionStart * x
+    if (x >= span) momentKNm -= reactionEnd * (x - span)
     for (const load of pointLoads) {
-      if (x >= load.positionM) M -= load.forceKN * (x - load.positionM)
+      if (x >= load.positionM) momentKNm -= load.forceKN * (x - load.positionM)
     }
 
-    if (Math.abs(M) > Math.abs(maxMoment)) {
-      maxMoment = M
+    momentSamples.push({ x, momentKNm })
+
+    if (Math.abs(momentKNm) > Math.abs(maxMoment)) {
+      maxMoment = momentKNm
       posOfMaxMoment = x
     }
-    if (Math.abs(Q) > Math.abs(maxShear)) {
-      maxShear = Q
+    if (Math.abs(shearKN) > Math.abs(maxShear)) {
+      maxShear = shearKN
     }
   }
 
-  // ── Maximale Durchbiegung (vereinfacht: Einfeldträger mit Strecken- und Einzellasten)
-  // Analytische Formel für Einfeldträger; Auskragungsanteile werden konservativ addiert.
-  // EI in kN·cm², L in m → Konversion: L_cm = L*100
-  const L_cm = L * 100
-
-  // Streckenlast im Feld: w_field = distributedLoadKNm, δ_max = 5wL⁴/(384EI)
-  let deflectionCm = (5 * distributedLoadKNm * Math.pow(L_cm, 4)) / (384 * EI)
-
-  // Einzellasten im Feld: δ = Pa(3L²-4a²)/(48EI) für Mittellast, allgemein: Pb(3L²-b²-... )
-  // Näherung: Einzellast P bei Position a vom linken Auflager, b = L-a
-  for (const load of pointLoads) {
-    if (load.positionM >= 0 && load.positionM <= L) {
-      const a_cm = load.positionM * 100
-      const b_cm = L_cm - a_cm
-      // maximale Durchbiegung nach Superpositionsprinzip
-      const delta = (load.forceKN * a_cm * b_cm * Math.sqrt(3 * a_cm * a_cm + 2 * a_cm * b_cm + 3 * b_cm * b_cm - a_cm * b_cm)) / (27 * EI * L_cm)
-      deflectionCm += Math.abs(delta)
-    }
-  }
+  const eiKNm2 = props.eModulus * props.momentOfInertiaY * 1e-4
 
   return {
     maxBendingMomentKNm: Math.abs(maxMoment),
@@ -120,6 +159,6 @@ export function calculateBeam(
     reactionStartKN: reactionStart,
     reactionEndKN: reactionEnd,
     maxShearForceKN: Math.abs(maxShear),
-    maxDeflectionMm: deflectionCm * 10,
+    maxDeflectionMm: calculateMaxDeflectionMm(momentSamples, span, eiKNm2),
   }
 }

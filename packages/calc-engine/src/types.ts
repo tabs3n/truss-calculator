@@ -158,11 +158,13 @@ export interface TippingDirectionResult {
   minVerticalReactionKN: number
   /** IDs der Stützen die die Kippachse bilden */
   tippingAxisSupportIds: [string, string]
-  /** Erforderlicher Ballast pro Stütze der Kippachse */
+  /** IDs der Stützen, auf denen Zusatzballast stabilisierend angesetzt wird */
+  ballastSupportIds: string[]
+  /** Erforderlicher Ballast pro stabilisierender Ballaststütze */
   requiredBallastPerSupportKg: number
   /** Gesamterforderlicher Ballast für diesen Lastfall */
   requiredBallastTotalKg: number
-  utilization: number            // η = |Rz,min| / (FBallast/2), ≤ 1.0 = OK
+  utilization: number            // η = M_kippend / M_stabilisierend, ≤ 1.0 = OK
   isOk: boolean
 }
 

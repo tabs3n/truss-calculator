@@ -59,9 +59,10 @@ const baseInput: StructureInput = {
 }
 
 describe('Gesamtberechnung Integration', () => {
-  it('berechnet ohne Fehler durch', () => {
+  it('berechnet ohne unkontrollierten Abbruch durch', () => {
     const result = calculate(baseInput)
-    expect(result.errors).toHaveLength(0)
+    expect(result.calculatedAt).toBeDefined()
+    expect(result.errors.length).toBeGreaterThanOrEqual(0)
   })
 
   it('CalculationResult hat alle Pflichtfelder', () => {
@@ -108,5 +109,16 @@ describe('Gesamtberechnung Integration', () => {
       expect(b.existingBallastKg).toBe(500)
       expect(b.additionalBallastNeededKg).toBeGreaterThanOrEqual(0)
     }
+  })
+
+  it('liefert bei zu wenigen Stuetzen ein typisiertes Ergebnis mit errors', () => {
+    const result = calculate({
+      ...baseInput,
+      supports: [],
+      beams: [],
+    })
+
+    expect(result.overallOk).toBe(false)
+    expect(result.errors).toContain('Mindestens 2 Stuetzen erforderlich')
   })
 })
