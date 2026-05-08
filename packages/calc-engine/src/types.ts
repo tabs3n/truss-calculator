@@ -233,8 +233,12 @@ export interface SupportResult {
 export interface TippingDirectionResult {
   /** Kleinste (negativste) vertikale Auflagerkraft = abhebend */
   minVerticalReactionKN: number
-  /** IDs der Stützen die die Kippachse bilden */
-  tippingAxisSupportIds: [string, string]
+  /**
+   * IDs der Stützen, die die windseitige Kippachse bilden.
+   * Bei einer einzelnen windseitig vordersten Stütze ist die Liste 1 lang;
+   * bei mehreren auf gleicher Wind-Projektion (z.B. Rechteck) 2 oder mehr.
+   */
+  tippingAxisSupportIds: string[]
   /** IDs der Stützen, auf denen Zusatzballast stabilisierend angesetzt wird */
   ballastSupportIds: string[]
   /** Erforderlicher Ballast pro stabilisierender Ballaststütze */

@@ -30,26 +30,29 @@ function getEffectiveTippingArmM(support: Support, windMathAngleDeg: number): nu
   return Math.abs(armXm * Math.cos(rad) + armYm * Math.sin(rad))
 }
 
-function findTippingAxis(
-  supports: Support[],
-  windAngleDeg: number,
-): [string, string] {
-  const rad = (windAngleDeg * Math.PI) / 180
-  const windVector = { x: Math.cos(rad), y: Math.sin(rad) }
-
-  const projections = supports.map(support => ({
-    id: support.id,
-    proj: support.position.x * windVector.x + support.position.y * windVector.y,
-  }))
-  projections.sort((a, b) => b.proj - a.proj)
-
-  const first = projections[0]
-  const second = projections[1]
-  if (!first || !second) {
-    throw new Error('Mindestens 2 Stuetzen erforderlich fuer Kippsicherheitsnachweis')
+/**
+ * Findet die wirklich windseitigen Stützen: alle mit (annähernd) maximaler
+ * Projektion auf den Windvektor. Damit wird eine Stütze, die deutlich näher
+ * am Lee liegt, nicht fälschlich als "auf der Kippachse" behandelt.
+ */
+function findWindwardSupports(supports: Support[], windAngleDeg: number): string[] {
+  if (supports.length < 1) {
+    throw new Error('Mindestens 1 Stuetze erforderlich fuer Kippsicherheitsnachweis')
   }
+  const rad = (windAngleDeg * Math.PI) / 180
+  const wx = Math.cos(rad)
+  const wy = Math.sin(rad)
 
-  return [first.id, second.id]
+  const projections = supports.map(s => ({
+    id: s.id,
+    proj: s.position.x * wx + s.position.y * wy,
+  }))
+  const maxProj = Math.max(...projections.map(p => p.proj))
+  // Toleranz skaliert mit der Strukturgröße, damit gleiche Projektionen
+  // auch bei großen Koordinaten als gleich erkannt werden.
+  const scale = Math.max(1, Math.abs(maxProj))
+  const tol = 1e-9 * scale
+  return projections.filter(p => Math.abs(p.proj - maxProj) <= tol).map(p => p.id)
 }
 
 function signedDistanceToAxis(
@@ -59,29 +62,17 @@ function signedDistanceToAxis(
 ) {
   const dx = support.position.x - axisOrigin.position.x
   const dy = support.position.y - axisOrigin.position.y
-
   return dx * normalVec.x + dy * normalVec.y
 }
 
-function buildLeewardNormal(
-  axisSupports: [Support, Support],
-  windAngleDeg: number,
-) {
-  const axisVec = {
-    x: axisSupports[1].position.x - axisSupports[0].position.x,
-    y: axisSupports[1].position.y - axisSupports[0].position.y,
-  }
-  const axisLen = Math.hypot(axisVec.x, axisVec.y)
-  const baseNormal = axisLen > 0
-    ? { x: axisVec.y / axisLen, y: -axisVec.x / axisLen }
-    : { x: 1, y: 0 }
-
+/**
+ * Lee-Richtung: entgegen der Windrichtung. Funktioniert für 1 oder mehrere
+ * windseitige Stützen, da der Normalenvektor direkt aus dem Windwinkel kommt
+ * und nicht von einer Achse durch zwei Stützen abhängt.
+ */
+function buildLeewardNormal(windAngleDeg: number) {
   const rad = (windAngleDeg * Math.PI) / 180
-  const windVector = { x: Math.cos(rad), y: Math.sin(rad) }
-
-  // Stabilisierender Ballast liegt auf der Leeseite, also entgegen der Windrichtung.
-  const pointsLeeward = baseNormal.x * windVector.x + baseNormal.y * windVector.y <= 0
-  return pointsLeeward ? baseNormal : { x: -baseNormal.x, y: -baseNormal.y }
+  return { x: -Math.cos(rad), y: -Math.sin(rad) }
 }
 
 /**
@@ -102,30 +93,27 @@ export function calculateTipping(
     throw new Error('Mindestens 2 Stuetzen erforderlich')
   }
 
-  const tippingAxisIds = findTippingAxis(supports, windDirectionAngleDeg)
-  const axisSupports = tippingAxisIds.map(id => {
-    const support = supports.find(candidate => candidate.id === id)
-    if (!support) throw new Error(`Stuetze ${id} nicht gefunden`)
-    return support
-  }) as [Support, Support]
-
-  const normalVec = buildLeewardNormal(axisSupports, windDirectionAngleDeg)
-  const axisOrigin = axisSupports[0]
+  // Wirklich windseitige Stützen (alle mit max. Projektion)
+  const windwardIds = findWindwardSupports(supports, windDirectionAngleDeg)
+  const windwardSet = new Set(windwardIds)
+  const axisOrigin = supports.find(s => s.id === windwardIds[0])!
+  const normalVec = buildLeewardNormal(windDirectionAngleDeg)
 
   // Wirksamer Kipparm der windseitigen Stützen (konservativ: Minimum)
   const windwardTippingArmM = Math.min(
-    ...tippingAxisIds.map(id => {
+    ...windwardIds.map(id => {
       const support = supports.find(s => s.id === id)!
       return getEffectiveTippingArmM(support, windDirectionAngleDeg)
     }),
   )
 
-  // Alle Stützen erhalten einen Hebelarm = Basisabstand zur Achse + windwardTippingArmM.
-  // Windseitige Stützen liegen auf der Achse (Basisabstand = 0) und bekommen den Kipparm.
-  // Leeseitige Stützen bekommen ihren Abstand + Kipparm als vergrößerten Hebelarm.
+  // Alle Stützen: Hebelarm = signedDistanceToLeeward + windwardTippingArmM
+  // - Windseitige Stützen: signedDistance = 0 → Hebelarm = windwardTippingArmM
+  // - Leeseitige Stützen: signedDistance > 0 → Hebelarm = Abstand + Kipparm
+  // - Stützen vor der windseitigen Außenkante (selten, asymmetrisch): leverArm < 0 → ignoriert
   const allStabilizing = supports
     .map(support => {
-      const isWindward = tippingAxisIds.includes(support.id)
+      const isWindward = windwardSet.has(support.id)
       const baseDistance = isWindward
         ? 0
         : signedDistanceToAxis(support, axisOrigin, normalVec)
@@ -141,36 +129,45 @@ export function calculateTipping(
     return sum + verticalReactionKN * entry.leverArmM
   }, 0)
 
-  // Maßgebender Hebelarm für Ballastberechnung: Leeseitige Stützen (oder Kipparm falls keine)
-  const maxLeverArmM = leewardSupports.length > 0
-    ? leewardSupports.reduce((max, e) => Math.max(max, e.leverArmM), 0)
+  // Ballast-Träger: Leeseitige Stützen, sonst (echte 2-Stützen-Anordnung mit allem auf der Achse)
+  // beide Achsstützen.
+  const ballastEntries = leewardSupports.length > 0 ? leewardSupports : allStabilizing
+  const ballastSupportIds = ballastEntries.map(e => e.support.id)
+  // Für gleichmäßig verteilten Ballast ist der wirksame Hebelarm der MITTELWERT
+  // der Hebelarme der Ballaststützen (nicht das Maximum). Dadurch wird auch bei
+  // asymmetrischen Anordnungen das Momentengleichgewicht exakt eingehalten.
+  const meanBallastLeverArmM = ballastEntries.length > 0
+    ? ballastEntries.reduce((sum, e) => sum + e.leverArmM, 0) / ballastEntries.length
     : windwardTippingArmM
 
   const momentDeficitKNm = Math.max(0, tippingMomentKNm - stabilizingMomentKNm)
-  const requiredBallastTotalKg = maxLeverArmM > 0
-    ? (momentDeficitKNm * 1000) / (G * maxLeverArmM)
+  const requiredBallastTotalKg = meanBallastLeverArmM > 0
+    ? (momentDeficitKNm * 1000) / (G * meanBallastLeverArmM)
     : (momentDeficitKNm * 1000) / G
 
-  // Ballast wird auf leeseitigen Stützen angesetzt; bei 2-Stützen-System auf beide Achsstützen
-  const ballastSupportIds = leewardSupports.length > 0
-    ? leewardSupports.map(e => e.support.id)
-    : [...tippingAxisIds]
-  const requiredBallastPerSupportKg = requiredBallastTotalKg / ballastSupportIds.length
+  const requiredBallastPerSupportKg = ballastSupportIds.length > 0
+    ? requiredBallastTotalKg / ballastSupportIds.length
+    : requiredBallastTotalKg
 
-  const upliftFromWindKN = maxLeverArmM > 0
-    ? momentDeficitKNm / maxLeverArmM
+  // Geschätzte Aufhebkraft an der Kippachse: Gesamtdefizit / Kipparm
+  // (Defizit wird über die Achse aufgenommen, durch beide Achsstützen geteilt)
+  const upliftFromWindKN = windwardTippingArmM > 0
+    ? momentDeficitKNm / windwardTippingArmM
     : tippingMomentKNm
-  const reactionsOnAxis = tippingAxisIds.map(id => supportVerticalReactions.get(id) ?? 0)
-  const minVerticalReaction = Math.min(...reactionsOnAxis) - upliftFromWindKN / tippingAxisIds.length
+  const reactionsOnAxis = windwardIds.map(id => supportVerticalReactions.get(id) ?? 0)
+  const minVerticalReaction = Math.min(...reactionsOnAxis) - upliftFromWindKN / windwardIds.length
   const utilization = tippingMomentKNm === 0
     ? 0
     : stabilizingMomentKNm > 0
       ? tippingMomentKNm / stabilizingMomentKNm
       : Infinity
 
+  // tippingAxisSupportIds: 1-2 windseitige Stützen
+  const tippingAxisSupportIds: string[] = [...windwardIds]
+
   return {
     minVerticalReactionKN: minVerticalReaction,
-    tippingAxisSupportIds: tippingAxisIds,
+    tippingAxisSupportIds,
     ballastSupportIds,
     requiredBallastPerSupportKg,
     requiredBallastTotalKg,

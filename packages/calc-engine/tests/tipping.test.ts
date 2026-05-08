@@ -144,3 +144,73 @@ describe('calculateTippingAllDirections – Windrichtungsmodi', () => {
     })
   })
 })
+
+// 2 Stützen entlang der Windrichtung (klassisches Groundsupport-Profil)
+describe('calculateTipping – 2-Stützen-System entlang Windrichtung', () => {
+  // A bei x=0, B bei x=6, beide auf y=0; Bodenplatte (tippingArm=0.3 m)
+  const twoSupports: Support[] = [
+    { id: 'A', label: 'A', position: { x: 0, y: 0 }, trussType: 'PROLYTE_H40V', height: 4, footType: 'BASEPLATE', existingBallast: 0 },
+    { id: 'B', label: 'B', position: { x: 6, y: 0 }, trussType: 'PROLYTE_H40V', height: 4, footType: 'BASEPLATE', existingBallast: 0 },
+  ]
+  const reactions = new Map(twoSupports.map(s => [s.id, 1]))
+
+  it('Wind aus Osten (math 0°): nur B ist windseitig, A ist leeseitig mit Hebelarm = Spannweite + Kipparm', () => {
+    const result = calculateTipping(twoSupports, 10, 0, 4, reactions)
+    expect(result.tippingAxisSupportIds).toEqual(['B'])
+    expect(result.ballastSupportIds).toEqual(['A'])
+  })
+
+  it('Spannweite zählt als Hebelarm (statt früherem Verhalten "alles auf Achse")', () => {
+    // Stabilisierend: B(0.3) + A(6.3) = 6.6 kN·m
+    // Tippingmoment: 40 kN·m, Defizit 33.4 kN·m
+    // mean Hebelarm leeward = 6.3 (nur A)
+    // Ballast ≈ 33400 / (9.81 × 6.3) ≈ 540 kg
+    const result = calculateTipping(twoSupports, 10, 0, 4, reactions)
+    expect(result.requiredBallastTotalKg).toBeCloseTo(33400 / (9.81 * 6.3), 0)
+  })
+
+  it('2 Stützen senkrecht zum Wind: beide windseitig, beide auf der Achse', () => {
+    // A bei (0,0), B bei (0,4); Wind aus Osten → beide haben proj=0 → beide windseitig
+    const perp: Support[] = [
+      { ...twoSupports[0]! },
+      { ...twoSupports[1]!, position: { x: 0, y: 4 } },
+    ]
+    const r = new Map(perp.map(s => [s.id, 1]))
+    const result = calculateTipping(perp, 10, 0, 4, r)
+    expect(result.tippingAxisSupportIds.sort()).toEqual(['A', 'B'])
+    expect(result.ballastSupportIds.sort()).toEqual(['A', 'B'])  // Fallback auf Achsstützen
+  })
+})
+
+// Asymmetrische Stützenanordnung: leeseitige Stützen mit unterschiedlichen Hebelarmen
+describe('calculateTipping – asymmetrische Anordnung (mean lever arm)', () => {
+  // A(0,0), B(2,4), C(6,0); Wind aus Osten → C windseitig, A und B leeseitig
+  const asymmetric: Support[] = [
+    { id: 'A', label: 'A', position: { x: 0, y: 0 }, trussType: 'PROLYTE_H40V', height: 4, footType: 'BASEPLATE', existingBallast: 0 },
+    { id: 'B', label: 'B', position: { x: 2, y: 4 }, trussType: 'PROLYTE_H40V', height: 4, footType: 'BASEPLATE', existingBallast: 0 },
+    { id: 'C', label: 'C', position: { x: 6, y: 0 }, trussType: 'PROLYTE_H40V', height: 4, footType: 'BASEPLATE', existingBallast: 0 },
+  ]
+  const reactions = new Map(asymmetric.map(s => [s.id, 1]))
+
+  it('Hebelarme: A=6.3 m (signedDist 6), B=4.3 m (signedDist 4), C=0.3 m (windseitig)', () => {
+    // Verifizieren über Ergebnis: ballastSupportIds sind A und B
+    const result = calculateTipping(asymmetric, 10, 0, 4, reactions)
+    expect(result.tippingAxisSupportIds).toEqual(['C'])
+    expect(result.ballastSupportIds.sort()).toEqual(['A', 'B'])
+  })
+
+  it('Ballast aus mean(lever arm), nicht max → Momentengleichgewicht exakt eingehalten', () => {
+    // Stabilisierend (ohne Ballast): C(0.3) + A(6.3) + B(4.3) = 10.9 kN·m
+    // Tippingmoment: 40 kN·m, Defizit = 29.1 kN·m
+    // mean(leeward leverArms) = (6.3 + 4.3) / 2 = 5.3 m
+    // Ballast = 29100 / (9.81 × 5.3) ≈ 559.6 kg
+    const result = calculateTipping(asymmetric, 10, 0, 4, reactions)
+    expect(result.requiredBallastTotalKg).toBeCloseTo(29100 / (9.81 * 5.3), 0)
+
+    // Sanity-Check: verteilt der Ballast deckt das Defizit exakt
+    const perSupport = result.requiredBallastTotalKg / 2
+    const ballastWeightKN = perSupport * 9.81 / 1000
+    const stabilizingFromBallastKNm = ballastWeightKN * 6.3 + ballastWeightKN * 4.3
+    expect(stabilizingFromBallastKNm).toBeCloseTo(29.1, 1)
+  })
+})

@@ -237,3 +237,33 @@ export function getTrussProperties(trussType: TrussType): TrussProperties {
   }
   return props
 }
+
+// ─────────────────────────────────────────────
+// MATERIAL-KENNWERTE FÜR STABILITÄT (Knicken)
+// ─────────────────────────────────────────────
+
+export type MaterialId = TrussProperties['material']
+
+export interface MaterialProperties {
+  /** Streckgrenze fy in kN/cm² */
+  yieldStrength: number
+  /**
+   * Knickkurvenparameter nach EC9 Tab. 6.6 (Aluminium) bzw. EC3 Tab. 6.1 (Stahl).
+   * α = Imperfektionsbeiwert, lambda0 = Plateaugrenze.
+   */
+  imperfectionFactor: number
+  limitSlenderness: number
+}
+
+const MATERIAL_PROPERTIES: Record<MaterialId, MaterialProperties> = {
+  // EN AW-6082 T6: fy ≈ 26 kN/cm² (260 N/mm²); Klasse A → α=0.20, λ̄0=0.10
+  ALUMINIUM_6082_T6: { yieldStrength: 26.0, imperfectionFactor: 0.20, limitSlenderness: 0.10 },
+  // S235: fy = 23.5 kN/cm² (235 N/mm²); nahtloses Rohr → Kurve a (α=0.21, λ̄0=0.20)
+  STEEL_S235:        { yieldStrength: 23.5, imperfectionFactor: 0.21, limitSlenderness: 0.20 },
+  // S355: fy = 35.5 kN/cm²; nahtloses Rohr → Kurve a
+  STEEL_S355:        { yieldStrength: 35.5, imperfectionFactor: 0.21, limitSlenderness: 0.20 },
+}
+
+export function getMaterialProperties(material: MaterialId): MaterialProperties {
+  return MATERIAL_PROPERTIES[material]
+}

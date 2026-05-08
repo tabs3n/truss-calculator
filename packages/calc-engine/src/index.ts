@@ -14,7 +14,15 @@ import { getFrictionCoefficient } from './types'
 
 import { calculateBeam } from './beam/beamCalculation'
 import { checkBeamUtilization } from './beam/utilizationCheck'
-import { getBeamSelfWeight, G, GAMMA_G, getDesignLoad } from './loads/loadCombinations'
+import {
+  DYNAMIC_FACTOR,
+  G,
+  GAMMA_G,
+  GAMMA_G_INF,
+  GAMMA_Q,
+  getBeamSelfWeight,
+  getDesignLoad,
+} from './loads/loadCombinations'
 import { getGoverningIndoorLoad } from './loads/indoorLoads'
 import { getFootProperties, getFootWeightKg, getTrussProperties } from './materials/database'
 import { checkSliding } from './sliding/slidingCheck'
@@ -34,7 +42,7 @@ const normReferences = [
 function emptyTippingDirection(): TippingDirectionResult {
   return {
     minVerticalReactionKN: 0,
-    tippingAxisSupportIds: ['', ''],
+    tippingAxisSupportIds: [],
     ballastSupportIds: [],
     requiredBallastPerSupportKg: 0,
     requiredBallastTotalKg: 0,
@@ -116,17 +124,27 @@ export function calculate(input: StructureInput): CalculationResult {
     totalWindAreaY += 0.4 * support.height
   }
 
-  // ── Ständige + veränderliche Vertikallasten (Bemessungswerte) ───────────────
-  let totalPermanentKN = 0
+  // ── Vertikallasten in zwei Bemessungssituationen ──────────────────────────
+  // STR: Tragwerksnachweise (Beam, Knicken) → ungünstige Faktoren γG=1.35, γQ×Dyn=1.80
+  // EQU: Lagesicherheit (Kippen, Gleiten) → günstige Faktoren γG,inf=0.90, γQ,fav=0
+  let totalPermanentSTR_KN = 0
+  let totalPermanentEQU_KN = 0
   for (const support of input.supports) {
     const props = getTrussProperties(support.trussType)
     const selfWeightKN = (props.weightPerMeter * support.height * 1.05 * G) / 1000
-    totalPermanentKN += selfWeightKN * GAMMA_G
-    totalPermanentKN += (support.existingBallast * G * GAMMA_G) / 1000
-    // Fußsystem-Eigengewicht: zählt als Ballast und ständige Last (γG)
+    totalPermanentSTR_KN += selfWeightKN * GAMMA_G
+    totalPermanentEQU_KN += selfWeightKN * GAMMA_G_INF
+
+    const ballastKN = (support.existingBallast * G) / 1000
+    totalPermanentSTR_KN += ballastKN * GAMMA_G
+    totalPermanentEQU_KN += ballastKN * GAMMA_G_INF
+
+    // Fußsystem-Eigengewicht: zählt als Ballast und ständige Last
     const footProps = getFootProperties(support.footType)
     if (footProps.countsAsBallast) {
-      totalPermanentKN += (getFootWeightKg(support) * G * GAMMA_G) / 1000
+      const footKN = (getFootWeightKg(support) * G) / 1000
+      totalPermanentSTR_KN += footKN * GAMMA_G
+      totalPermanentEQU_KN += footKN * GAMMA_G_INF
     }
   }
   for (const beam of input.beams) {
@@ -141,9 +159,14 @@ export function calculate(input: StructureInput): CalculationResult {
       endSupport.position.y - startSupport.position.y,
     )
     const totalLength = beam.cantileverStart + span + beam.cantileverEnd
-    totalPermanentKN += getBeamSelfWeight(beam.trussType, totalLength) * GAMMA_G
+    const beamSelfKN = getBeamSelfWeight(beam.trussType, totalLength)
+    totalPermanentSTR_KN += beamSelfKN * GAMMA_G
+    totalPermanentEQU_KN += beamSelfKN * GAMMA_G_INF
     for (const load of beam.loads) {
-      totalPermanentKN += getDesignLoad((load.weight * G) / 1000, 'variable')
+      const loadKN = (load.weight * G) / 1000
+      totalPermanentSTR_KN += getDesignLoad(loadKN, 'variable')
+      // EQU: veränderliche Lasten, die GÜNSTIG (stabilisierend) wirken,
+      // werden nicht angesetzt (γQ,fav = 0).
     }
   }
 
@@ -160,7 +183,7 @@ export function calculate(input: StructureInput): CalculationResult {
 
     try {
       const indoorLoad = getGoverningIndoorLoad(
-        totalPermanentKN,
+        totalPermanentSTR_KN,
         maxSupportHeight,
         refArea,
         doorsCanOpen,
@@ -219,9 +242,14 @@ export function calculate(input: StructureInput): CalculationResult {
   }
 
   // ── Auflagerkräfte (vereinfacht: gleichmäßige Verteilung) ───────────────────
-  const reactionPerSupport = totalPermanentKN / input.supports.length
-  const supportVerticalReactions = new Map<string, number>(
-    input.supports.map(s => [s.id, reactionPerSupport]),
+  // STR: für Bauteilnachweise (Knicken). EQU: für Kipp-/Gleitnachweis (stabilisierend).
+  const reactionPerSupportSTR = totalPermanentSTR_KN / input.supports.length
+  const reactionPerSupportEQU = totalPermanentEQU_KN / input.supports.length
+  const supportVerticalReactionsSTR = new Map<string, number>(
+    input.supports.map(s => [s.id, reactionPerSupportSTR]),
+  )
+  const supportVerticalReactionsEQU = new Map<string, number>(
+    input.supports.map(s => [s.id, reactionPerSupportEQU]),
   )
 
   // ── Traversennachweise ───────────────────────────────────────────────────────
@@ -269,11 +297,11 @@ export function calculate(input: StructureInput): CalculationResult {
     }
   }
 
-  // ── Stützennachweise (Knicken) ───────────────────────────────────────────────
+  // ── Stützennachweise (Knicken, STR) ──────────────────────────────────────────
   const horizontalPerSupport = totalHorizontalForceKN / input.supports.length
   const supportResults: SupportResult[] = []
   for (const support of input.supports) {
-    const verticalReactionKN = supportVerticalReactions.get(support.id) ?? 0
+    const verticalReactionKN = supportVerticalReactionsSTR.get(support.id) ?? 0
     let bucklingUtilization = 0
     let isOk = true
     let failureReason: string | undefined
@@ -308,12 +336,18 @@ export function calculate(input: StructureInput): CalculationResult {
     })
   }
 
-  // ── Kippsicherheit ───────────────────────────────────────────────────────────
+  // ── Kippsicherheit (EQU, DIN EN 1990 Tab. A.1.2(A)) ──────────────────────────
+  // Destabilisierende Horizontalkraft mit γQ × Dynamikzuschlag (Outdoor: Wind);
+  // Indoor: Ersatzlast aus DIN EN 17879 ist bereits Bemessungswert.
+  const designFactorHorizontal = isIndoor ? 1.0 : GAMMA_Q * DYNAMIC_FACTOR
+  const getDesignHorizontalForceKN = (angleDeg: number): number =>
+    getHorizontalForceKN(angleDeg) * designFactorHorizontal
+
   const tipping = calculateTippingAllDirections(
     input.supports,
-    getHorizontalForceKN,
+    getDesignHorizontalForceKN,
     horizontalForceHeightM,
-    supportVerticalReactions,
+    supportVerticalReactionsEQU,  // stabilisierende ständige Lasten mit γG,inf
     input.windMode ?? 'AUTO',
     input.manualWindDirections,
   )
@@ -324,15 +358,19 @@ export function calculate(input: StructureInput): CalculationResult {
     )
   }
 
-  // Für Gleitnachweis: maßgebende Horizontalkraft = Maximum über alle berechneten Richtungen
-  if (!isIndoor && tipping.directions.length > 0) {
-    totalHorizontalForceKN = Math.max(...tipping.directions.map(d => getHorizontalForceKN(d.angleDeg)))
-  }
+  // Für Gleitnachweis: maßgebende destabilisierende Horizontalkraft = max über alle Richtungen
+  const totalDestabilizingHorizontalKN = tipping.directions.length > 0
+    ? Math.max(...tipping.directions.map(d => getDesignHorizontalForceKN(d.angleDeg)))
+    : totalHorizontalForceKN * designFactorHorizontal
 
-  // ── Gleitnachweis ────────────────────────────────────────────────────────────
+  // ── Gleitnachweis (EQU: Fh,d destabilisierend, Fv,EQU stabilisierend) ────────
   let sliding: SlidingResult
   try {
-    sliding = checkSliding(totalHorizontalForceKN, totalPermanentKN, input.frictionConfig)
+    sliding = checkSliding(
+      totalDestabilizingHorizontalKN,
+      totalPermanentEQU_KN,
+      input.frictionConfig,
+    )
     if (!sliding.isOk) {
       errors.push(
         `Gleitnachweis: Zusatzballast ${Math.max(0, sliding.requiredBallastKg).toFixed(0)} kg erforderlich`,
@@ -343,7 +381,7 @@ export function calculate(input: StructureInput): CalculationResult {
     let frictionCoefficientUsed = 0
     try { frictionCoefficientUsed = getFrictionCoefficient(input.frictionConfig) } catch {}
     sliding = {
-      resultingHorizontalForceKN: totalHorizontalForceKN,
+      resultingHorizontalForceKN: totalDestabilizingHorizontalKN,
       requiredBallastKg: 0,
       isOk: false,
       frictionCoefficientUsed,

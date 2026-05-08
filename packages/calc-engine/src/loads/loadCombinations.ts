@@ -2,8 +2,19 @@ import type { TrussType } from '../types'
 import { getTrussProperties } from '../materials/database'
 
 // Teilsicherheitsbeiwerte nach DIN EN 1990
-export const GAMMA_G = 1.35   // ständige Lasten
-export const GAMMA_Q = 1.50   // veränderliche Lasten
+// STR (Tragwerksnachweis – Beam, Knicken)
+export const GAMMA_G = 1.35   // ständige Lasten, ungünstig
+export const GAMMA_Q = 1.50   // veränderliche Lasten, ungünstig
+
+// EQU (Lagesicherheit – Kippen, Gleiten) Tab. A.1.2(A)
+export const GAMMA_G_INF = 0.90  // ständige Lasten, günstig (stabilisierend)
+export const GAMMA_G_SUP_EQU = 1.10  // ständige Lasten, ungünstig (destabilisierend)
+// Hinweis: Veränderliche Lasten, die GÜNSTIG wirken (z.B. stabilisierende Hängelasten),
+// dürfen im EQU nicht angesetzt werden (γQ,fav = 0).
+
+// Materialsicherheit Aluminium (EC9)
+export const GAMMA_M1 = 1.10   // Bauteilversagen (Stabilität)
+export const GAMMA_M2 = 1.25   // Querschnittsversagen / Verbindungen
 
 // Dynamikzuschlag nach DGUV Information 215-313
 export const DYNAMIC_FACTOR = 1.20
