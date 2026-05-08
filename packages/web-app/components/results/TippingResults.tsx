@@ -1,15 +1,23 @@
 import { WindSurfaceLoadList } from "@/components/results/WindSurfaceLoadList"
 import { getWindDirectionDisplay } from "@/lib/constants"
-import type { CalculationResult, TippingDirectionResult } from "@/lib/types-bridge"
+import type { CalculationResult, Support, TippingDirectionResult } from "@/lib/types-bridge"
+
+function getTippingAxisLabel(supports: Support[], tippingAxisSupportIds: [string, string]) {
+  return tippingAxisSupportIds
+    .map((id) => supports.find((support) => support.id === id)?.label ?? id)
+    .join(" - ")
+}
 
 function DirectionCard({
   label,
   value,
   governing,
+  supports,
 }: {
   label: string
   value: TippingDirectionResult
   governing: boolean
+  supports: Support[]
 }) {
   const progress = `${Math.min(value.utilization, 1.3) * 100}%`
 
@@ -25,7 +33,7 @@ function DirectionCard({
         <div>
           <h3 className="text-base font-semibold">{label}</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Kippachse: {value.tippingAxisSupportIds.join(" - ")}
+            Kippachse: {getTippingAxisLabel(supports, value.tippingAxisSupportIds)}
           </p>
         </div>
         <div
@@ -93,6 +101,7 @@ export function TippingResults({ result }: { result: CalculationResult | null })
             label={getWindDirectionDisplay(angleDeg)}
             value={directionResult}
             governing={result.tipping.governingAngleDeg === angleDeg}
+            supports={result.input.supports}
           />
         ))}
       </div>
