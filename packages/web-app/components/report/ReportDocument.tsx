@@ -51,8 +51,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8fafc",
   },
   h1: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: 700,
+    lineHeight: 1.2,
   },
   h2: {
     fontSize: 16,
@@ -131,6 +132,16 @@ const styles = StyleSheet.create({
     padding: 8,
     backgroundColor: "#f8fafc",
     alignItems: "center",
+  },
+  keyValueGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 6,
+  },
+  keyValueItem: {
+    width: "50%",
+    paddingRight: 12,
+    marginBottom: 4,
   },
   formulaCard: {
     border: "1 solid #dbe4ee",
@@ -487,18 +498,35 @@ export function ReportDocument({ data }: { data: ReportData }) {
 
       <Page size="A4" style={styles.page}>
         <Text style={styles.h2}>Systemuebersicht</Text>
-        <View style={styles.grid2}>
-          <View style={[styles.card, { flex: 1 }]}>
-            <Text style={styles.h3}>Standort und System</Text>
-            <Text>Umgebung: {result.input.environment === "INDOOR" ? "Indoor" : "Outdoor"}</Text>
-            <Text>Norm Horizontallasten: {horizontalLoadStandard}</Text>
-            <Text>Windzone: {result.input.windZone}</Text>
-            <Text>Gelaendekategorie: {TERRAIN_LABELS[result.input.terrainCategory]}</Text>
-            <Text>Stuetzen: {result.input.supports.length}</Text>
-            <Text>Traversen: {result.input.beams.length}</Text>
-            <Text>Reibungsbeiwert: {formatNumber(frictionCoefficient)}</Text>
+        <View style={styles.card}>
+          <Text style={styles.h3}>Standort und System</Text>
+          <View style={styles.keyValueGrid}>
+            <View style={styles.keyValueItem}>
+              <Text>Umgebung: {result.input.environment === "INDOOR" ? "Indoor" : "Outdoor"}</Text>
+            </View>
+            <View style={styles.keyValueItem}>
+              <Text>Norm Horizontallasten: {horizontalLoadStandard}</Text>
+            </View>
+            <View style={styles.keyValueItem}>
+              <Text>Windzone: {result.input.windZone}</Text>
+            </View>
+            <View style={styles.keyValueItem}>
+              <Text>Gelaendekategorie: {TERRAIN_LABELS[result.input.terrainCategory]}</Text>
+            </View>
+            <View style={styles.keyValueItem}>
+              <Text>Stuetzen: {result.input.supports.length}</Text>
+            </View>
+            <View style={styles.keyValueItem}>
+              <Text>Traversen: {result.input.beams.length}</Text>
+            </View>
+            <View style={styles.keyValueItem}>
+              <Text>Reibungsbeiwert: {formatNumber(frictionCoefficient)}</Text>
+            </View>
           </View>
-          <View style={[styles.card, styles.cardGap, { flex: 1.15 }]}>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.card}>
             <Text style={styles.h3}>Isometrische Skizze</Text>
             <View style={styles.sketchFrame}>
               <IsometricSketch result={result} width={340} height={227} />
