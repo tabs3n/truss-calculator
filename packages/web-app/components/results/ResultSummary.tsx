@@ -1,11 +1,5 @@
+import { getHorizontalLoadStandard, getWindDirectionDisplay } from "@/lib/constants"
 import type { CalculationResult } from "@/lib/types-bridge"
-
-const governingLabels: Record<CalculationResult["tipping"]["governingDirection"], string> = {
-  windPlusX: "Wind +X",
-  windPlusY: "Wind +Y",
-  windMinusX: "Wind -X",
-  windMinusY: "Wind -Y",
-}
 
 export function ResultSummary({ result }: { result: CalculationResult | null }) {
   if (!result) {
@@ -15,6 +9,9 @@ export function ResultSummary({ result }: { result: CalculationResult | null }) 
       </div>
     )
   }
+
+  const isIndoor = result.input.environment === "INDOOR"
+  const horizontalLoadStandard = getHorizontalLoadStandard(result.input.environment)
 
   return (
     <section
@@ -55,7 +52,7 @@ export function ResultSummary({ result }: { result: CalculationResult | null }) 
           <div className="rounded-2xl border border-white/50 bg-background/80 p-4">
             <p className="text-sm text-muted-foreground">Massgebender Lastfall</p>
             <p className="mt-2 text-lg font-semibold">
-              {governingLabels[result.tipping.governingDirection]}
+              {getWindDirectionDisplay(result.tipping.governingAngleDeg)}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
               Gleitballast: {Math.max(0, result.sliding.requiredBallastKg).toFixed(0)} kg
@@ -65,10 +62,26 @@ export function ResultSummary({ result }: { result: CalculationResult | null }) 
 
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="rounded-2xl border border-white/50 bg-background/80 p-4">
-            <p className="text-sm text-muted-foreground">Winddruck qp</p>
-            <p className="mt-1 text-xl font-semibold">
-              {result.windLoad.peakVelocityPressure.toFixed(2)} kN/m²
+            <p className="text-sm text-muted-foreground">
+              {isIndoor ? "Horizontallasten" : "Winddruck qp"}
             </p>
+            {isIndoor ? (
+              <>
+                <p className="mt-1 text-base font-semibold">{horizontalLoadStandard}</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {result.input.indoorConfig?.doorsCanOpen
+                    ? "Tore koennen sich oeffnen"
+                    : "Tore bleiben geschlossen"}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="mt-1 text-xl font-semibold">
+                  {result.windLoad.peakVelocityPressure.toFixed(2)} kN/m²
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">{horizontalLoadStandard}</p>
+              </>
+            )}
           </div>
           <div className="rounded-2xl border border-white/50 bg-background/80 p-4">
             <p className="text-sm text-muted-foreground">Gleiten</p>

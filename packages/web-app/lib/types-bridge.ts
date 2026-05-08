@@ -4,6 +4,8 @@ export type {
   BeamResult,
   CalculationResult,
   FootType,
+  FrictionConfig,
+  FrictionPreset,
   HangingLoad,
   ReportConfig,
   ReportData,

@@ -6,7 +6,7 @@ import { Plus, X } from "lucide-react"
 import { LoadForm } from "@/components/input/LoadForm"
 import { WindSurfaceForm } from "@/components/input/WindSurfaceForm"
 import { Button } from "@/components/ui/button"
-import { TRUSS_OPTIONS } from "@/lib/constants"
+import { getWindSurfaceTypeDragCoefficient, TRUSS_OPTIONS } from "@/lib/constants"
 import type { Beam, HangingLoad, Support, TrussType, WindSurface } from "@/lib/types-bridge"
 import { cn } from "@/lib/utils"
 
@@ -53,7 +53,10 @@ function validateBeam(beam: Beam, supports: Support[], spanLength: number) {
     if (windSurface.centerHeightAboveGround <= 0) {
       errors[`surface-${windSurface.id}-center`] = "Hoehe ueber Grund ist ungueltig."
     }
-    if (windSurface.dragCoefficient <= 0) {
+    if (!Number.isFinite(windSurface.surfaceOrientationDeg)) {
+      errors[`surface-${windSurface.id}-orientation`] = "Ausrichtung ist ungueltig."
+    }
+    if (windSurface.surfaceType === "CUSTOM" && windSurface.dragCoefficient <= 0) {
       errors[`surface-${windSurface.id}-drag`] = "c_f ist ungueltig."
     }
   })
@@ -77,7 +80,9 @@ function createWindSurface(index: number): WindSurface {
     width: 1,
     height: 1,
     centerHeightAboveGround: 4,
-    dragCoefficient: 1.3,
+    surfaceType: "BANNER_SOLID",
+    surfaceOrientationDeg: 0,
+    dragCoefficient: getWindSurfaceTypeDragCoefficient("BANNER_SOLID") ?? 1.3,
   }
 }
 

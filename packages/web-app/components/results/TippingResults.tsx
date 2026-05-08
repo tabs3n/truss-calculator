@@ -1,11 +1,6 @@
+import { WindSurfaceLoadList } from "@/components/results/WindSurfaceLoadList"
+import { getWindDirectionDisplay } from "@/lib/constants"
 import type { CalculationResult, TippingDirectionResult } from "@/lib/types-bridge"
-
-const directionLabels = {
-  windPlusX: "Wind +X",
-  windPlusY: "Wind +Y",
-  windMinusX: "Wind -X",
-  windMinusY: "Wind -Y",
-} as const
 
 function DirectionCard({
   label,
@@ -87,23 +82,23 @@ export function TippingResults({ result }: { result: CalculationResult | null })
       <div className="mb-4">
         <h2 className="text-xl font-semibold">Kippsicherheit</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Vier Lastfaelle mit hervorgehobenem massgebenden Nachweis.
+          Berechnete Lastfaelle mit hervorgehobenem massgebenden Nachweis.
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        {(
-          Object.entries(directionLabels) as Array<
-            [keyof typeof directionLabels, (typeof directionLabels)[keyof typeof directionLabels]]
-          >
-        ).map(([key, label]) => (
+        {result.tipping.directions.map(({ angleDeg, result: directionResult }) => (
           <DirectionCard
-            key={key}
-            label={label}
-            value={result.tipping[key]}
-            governing={result.tipping.governingDirection === key}
+            key={angleDeg}
+            label={getWindDirectionDisplay(angleDeg)}
+            value={directionResult}
+            governing={result.tipping.governingAngleDeg === angleDeg}
           />
         ))}
+      </div>
+
+      <div className="mt-4">
+        <WindSurfaceLoadList result={result} title="Windflaechen im massgebenden Lastfall" />
       </div>
     </section>
   )

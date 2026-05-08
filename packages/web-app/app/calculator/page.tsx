@@ -6,6 +6,7 @@ import { FileUp } from "lucide-react"
 import { ProjectForm } from "@/components/input/ProjectForm"
 import { BeamList } from "@/components/input/BeamList"
 import { SupportList } from "@/components/input/SupportList"
+import { TrussGateWizard } from "@/components/input/TrussGateWizard"
 import { ReportButton } from "@/components/report/ReportButton"
 import { ElevationRenderer } from "@/components/rendering/ElevationRenderer"
 import { StructureRenderer } from "@/components/rendering/StructureRenderer"
@@ -42,6 +43,14 @@ export default function CalculatorPage() {
 
   const updateBeams = (beams: Beam[]) => {
     setInput((current) => ({ ...current, beams }))
+  }
+
+  const applyTrussGateWizard = (next: Pick<StructureInput, "supports" | "beams">) => {
+    setInput((current) => ({
+      ...current,
+      supports: next.supports,
+      beams: next.beams,
+    }))
   }
 
   const handleImport = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -105,6 +114,10 @@ export default function CalculatorPage() {
         <div className="grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
           <div className="space-y-6">
             <ProjectForm input={input} onChange={updateInput} />
+            <TrussGateWizard
+              hasExistingStructure={input.supports.length > 0 || input.beams.length > 0}
+              onApply={applyTrussGateWizard}
+            />
             <SupportList supports={input.supports} onChange={updateSupports} />
             <BeamList beams={input.beams} supports={input.supports} onChange={updateBeams} />
             <div className="grid gap-6 xl:grid-cols-2">

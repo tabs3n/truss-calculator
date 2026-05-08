@@ -1,4 +1,5 @@
 import type { CalculationResult, StructureInput, Support } from "@/lib/types-bridge"
+import { compassAngleToVector, getWindDirectionDisplay, getWindDirectionLabel } from "@/lib/constants"
 
 function supportColor(support: Support, result: CalculationResult | null) {
   if (!result) return "#9ca3af"
@@ -7,13 +8,6 @@ function supportColor(support: Support, result: CalculationResult | null) {
   if (!supportResult) return "#9ca3af"
 
   return supportResult.isOk ? "#15803d" : "#dc2626"
-}
-
-const windDirectionLabels: Record<NonNullable<CalculationResult["tipping"]["governingDirection"]>, string> = {
-  windPlusX: "Wind +X",
-  windPlusY: "Wind +Y",
-  windMinusX: "Wind -X",
-  windMinusY: "Wind -Y",
 }
 
 export function StructureRenderer({
@@ -52,7 +46,8 @@ export function StructureRenderer({
   const tippingAxisSupports = tippingAxisIds?.map((id) => supportById.get(id)).filter(Boolean) as
     | Support[]
     | undefined
-  const windDirection = result?.tipping.governingDirection
+  const windDirections = result?.tipping.directions ?? []
+  const governingAngleDeg = result?.tipping.governingAngleDeg
 
   return (
     <section className="rounded-[1.5rem] border border-border/80 bg-card/90 p-5 shadow-sm">
@@ -73,7 +68,10 @@ export function StructureRenderer({
           <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse">
             <path d="M 24 0 L 0 0 0 24" fill="none" stroke="rgba(148, 163, 184, 0.18)" strokeWidth="1" />
           </pattern>
-          <marker id="wind-arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <marker id="wind-arrow-blue" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L6,3 z" fill="#2563eb" />
+          </marker>
+          <marker id="wind-arrow-red" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
             <path d="M0,0 L0,6 L6,3 z" fill="#dc2626" />
           </marker>
         </defs>
@@ -140,32 +138,54 @@ export function StructureRenderer({
           </g>
         ))}
 
-        {windDirection ? (
+        {windDirections.length > 0 && governingAngleDeg !== undefined ? (
           <g>
-            <text x="24" y="28" className="fill-red-600 text-[12px] font-semibold">
-              Massgebender Wind: {windDirectionLabels[windDirection]}
+            <text x="24" y="28" className="fill-slate-700 text-[12px] font-semibold">
+              Berechnete Windrichtungen: {windDirections.map(({ angleDeg }) => getWindDirectionLabel(angleDeg)).join(", ")}
             </text>
-            <line
-              x1={56}
-              y1={54}
-              x2={
-                windDirection === "windPlusX"
-                  ? 126
-                  : windDirection === "windMinusX"
-                    ? 16
-                    : 56
-              }
-              y2={
-                windDirection === "windPlusY"
-                  ? 14
-                  : windDirection === "windMinusY"
-                    ? 104
-                    : 54
-              }
-              stroke="#dc2626"
-              strokeWidth="3"
-              markerEnd="url(#wind-arrow)"
-            />
+            <text x="24" y="44" className="fill-red-600 text-[12px] font-semibold">
+              Massgebender Wind: {getWindDirectionDisplay(governingAngleDeg)}
+            </text>
+            <circle cx="82" cy="88" r="7" fill="#e2e8f0" stroke="#cbd5e1" strokeWidth="1.5" />
+            {windDirections.map(({ angleDeg }) => {
+              const vector = compassAngleToVector(angleDeg)
+              const isGoverning = angleDeg === governingAngleDeg
+
+              return (
+                <g key={angleDeg}>
+                  <line
+                    x1={82 + vector.x * 10}
+                    y1={88 + vector.y * 10}
+                    x2={82 + vector.x * 40}
+                    y2={88 + vector.y * 40}
+                    stroke="#2563eb"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    markerEnd="url(#wind-arrow-blue)"
+                  />
+                  {isGoverning ? (
+                    <line
+                      x1={82 + vector.x * 10}
+                      y1={88 + vector.y * 10}
+                      x2={82 + vector.x * 48}
+                      y2={88 + vector.y * 48}
+                      stroke="#dc2626"
+                      strokeWidth="4"
+                      strokeLinecap="round"
+                      markerEnd="url(#wind-arrow-red)"
+                    />
+                  ) : null}
+                  <text
+                    x={82 + vector.x * 60}
+                    y={88 + vector.y * 60 + 4}
+                    textAnchor="middle"
+                    className={isGoverning ? "fill-red-600 text-[11px] font-semibold" : "fill-blue-600 text-[11px] font-semibold"}
+                  >
+                    {getWindDirectionLabel(angleDeg)}
+                  </text>
+                </g>
+              )
+            })}
           </g>
         ) : (
           <text x="24" y="28" className="fill-slate-500 text-[12px] font-semibold">

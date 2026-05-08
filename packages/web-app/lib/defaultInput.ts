@@ -8,7 +8,16 @@ export const defaultInput: StructureInput = {
   preparedBy: "",
   windZone: 2,
   terrainCategory: "II",
+  windMode: "AUTO",
+  manualWindDirections: [],
+  environment: "OUTDOOR",
+  indoorConfig: {
+    doorsCanOpen: false,
+  },
   supports: [],
   beams: [],
-  frictionCoefficient: 0.3,
+  frictionConfig: {
+    mode: "CUSTOM",
+    customValue: 0.3,
+  },
 }

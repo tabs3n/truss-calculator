@@ -11,6 +11,9 @@ import { cn } from "@/lib/utils"
 const fieldClassName =
   "mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 text-sm shadow-sm transition-colors focus:border-primary focus:outline-none"
 
+const CONCRETE_BLOCK_WEIGHT_KG = 1250
+const CONCRETE_BLOCK_FOOTPRINT_MM = 1200
+
 function validateSupport(support: Support) {
   const errors: Record<string, string> = {}
 
@@ -22,6 +25,14 @@ function validateSupport(support: Support) {
   }
   if (!Number.isFinite(support.existingBallast) || support.existingBallast < 0) {
     errors.existingBallast = "Ballast darf nicht negativ sein."
+  }
+  if (support.footType === "CONCRETE_BLOCK_1250") {
+    if (
+      !Number.isFinite(support.numberOfConcreteBlocks) ||
+      (support.numberOfConcreteBlocks ?? 0) < 1
+    ) {
+      errors.numberOfConcreteBlocks = "Mindestens ein Betonblock ist erforderlich."
+    }
   }
   if (support.footType === "BASEPLATE") {
     if (!Number.isFinite(support.baseplateSize) || (support.baseplateSize ?? 0) <= 0) {
@@ -39,15 +50,31 @@ function validateSupport(support: Support) {
 }
 
 function normalizeSupport(support: Support): Support {
+  if (support.footType === "CONCRETE_BLOCK_1250") {
+    const numberOfConcreteBlocks = Math.max(1, support.numberOfConcreteBlocks ?? 1)
+
+    return {
+      ...support,
+      baseplateSize: undefined,
+      outriggerLength: undefined,
+      numberOfConcreteBlocks,
+      existingBallast: numberOfConcreteBlocks * CONCRETE_BLOCK_WEIGHT_KG,
+    }
+  }
+
   if (support.footType !== "BASEPLATE") {
     return {
       ...support,
       baseplateSize: undefined,
       outriggerLength: undefined,
+      numberOfConcreteBlocks: undefined,
     }
   }
 
-  return support
+  return {
+    ...support,
+    numberOfConcreteBlocks: undefined,
+  }
 }
 
 function ErrorText({ text }: { text?: string }) {
@@ -68,6 +95,10 @@ export function SupportForm({
   const [draft, setDraft] = useState<Support>(() => support)
 
   const errors = useMemo(() => validateSupport(draft), [draft])
+  const isBaseplate = draft.footType === "BASEPLATE"
+  const isConcreteBlock = draft.footType === "CONCRETE_BLOCK_1250"
+  const numberOfConcreteBlocks = Math.max(1, draft.numberOfConcreteBlocks ?? 1)
+  const concreteBlockBallastKg = numberOfConcreteBlocks * CONCRETE_BLOCK_WEIGHT_KG
 
   if (!open) return null
 
@@ -79,6 +110,53 @@ export function SupportForm({
     setDraft((current) => ({
       ...current,
       position: { ...current.position, [key]: value },
+    }))
+  }
+
+  const updateFootType = (footType: FootType) => {
+    setDraft((current) => {
+      if (footType === "CONCRETE_BLOCK_1250") {
+        const nextBlocks = Math.max(1, current.numberOfConcreteBlocks ?? 1)
+
+        return {
+          ...current,
+          footType,
+          numberOfConcreteBlocks: nextBlocks,
+          existingBallast: nextBlocks * CONCRETE_BLOCK_WEIGHT_KG,
+          baseplateSize: undefined,
+          outriggerLength: undefined,
+        }
+      }
+
+      if (footType === "BASEPLATE") {
+        return {
+          ...current,
+          footType,
+          existingBallast: current.existingBallast > 0 ? current.existingBallast : 0,
+          baseplateSize: current.baseplateSize ?? 0.6,
+          outriggerLength: current.outriggerLength ?? 0,
+          numberOfConcreteBlocks: undefined,
+        }
+      }
+
+      return {
+        ...current,
+        footType,
+        baseplateSize: undefined,
+        outriggerLength: undefined,
+        numberOfConcreteBlocks: undefined,
+      }
+    })
+  }
+
+  const updateConcreteBlockCount = (nextCount: number) => {
+    const numberOfBlocks = Math.max(1, nextCount)
+
+    setDraft((current) => ({
+      ...current,
+      footType: "CONCRETE_BLOCK_1250",
+      numberOfConcreteBlocks: numberOfBlocks,
+      existingBallast: numberOfBlocks * CONCRETE_BLOCK_WEIGHT_KG,
     }))
   }
 
@@ -151,18 +229,20 @@ export function SupportForm({
               <ErrorText text={errors.height} />
             </label>
 
-            <label className="block text-sm font-medium">
-              Ballast vorhanden (kg)
-              <input
-                className={cn(fieldClassName, errors.existingBallast && "border-destructive/60")}
-                type="number"
-                min="0"
-                step="1"
-                value={draft.existingBallast}
-                onChange={(event) => updateField("existingBallast", Number(event.target.value))}
-              />
-              <ErrorText text={errors.existingBallast} />
-            </label>
+            {!isConcreteBlock ? (
+              <label className="block text-sm font-medium">
+                Ballast vorhanden (kg)
+                <input
+                  className={cn(fieldClassName, errors.existingBallast && "border-destructive/60")}
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={draft.existingBallast}
+                  onChange={(event) => updateField("existingBallast", Number(event.target.value))}
+                />
+                <ErrorText text={errors.existingBallast} />
+              </label>
+            ) : null}
 
             <label className="block text-sm font-medium">
               Traversentyp
@@ -184,7 +264,7 @@ export function SupportForm({
               <select
                 className={fieldClassName}
                 value={draft.footType}
-                onChange={(event) => updateField("footType", event.target.value as FootType)}
+                onChange={(event) => updateFootType(event.target.value as FootType)}
               >
                 {FOOT_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -196,7 +276,47 @@ export function SupportForm({
             </label>
           </div>
 
-          {draft.footType === "BASEPLATE" ? (
+          {isConcreteBlock ? (
+            <div className="rounded-2xl border border-border bg-muted/30 p-4">
+              <h4 className="text-sm font-semibold">Betonblockparameter</h4>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div className="rounded-xl border border-border bg-background/80 p-3">
+                  <p className="text-sm font-medium">Eigengewicht</p>
+                  <p className="mt-1 text-lg font-semibold">1.250 kg</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Zaehlt als Ballast.</p>
+                </div>
+
+                <div className="rounded-xl border border-border bg-background/80 p-3">
+                  <p className="text-sm font-medium">Standflaeche</p>
+                  <p className="mt-1 text-lg font-semibold">
+                    {CONCRETE_BLOCK_FOOTPRINT_MM.toLocaleString("de-DE")} x {CONCRETE_BLOCK_FOOTPRINT_MM.toLocaleString("de-DE")} mm
+                  </p>
+                </div>
+
+                <label className="block text-sm font-medium">
+                  Anzahl Bloecke
+                  <input
+                    className={cn(fieldClassName, errors.numberOfConcreteBlocks && "border-destructive/60")}
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={numberOfConcreteBlocks}
+                    onChange={(event) => updateConcreteBlockCount(Number(event.target.value))}
+                  />
+                  <ErrorText text={errors.numberOfConcreteBlocks} />
+                </label>
+
+                <div className="rounded-xl border border-border bg-background/80 p-3">
+                  <p className="text-sm font-medium">Gesamtballast</p>
+                  <p className="mt-1 text-lg font-semibold">
+                    {concreteBlockBallastKg.toLocaleString("de-DE")} kg
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {isBaseplate ? (
             <div className="rounded-2xl border border-border bg-muted/30 p-4">
               <h4 className="text-sm font-semibold">Bodenplattenparameter</h4>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">

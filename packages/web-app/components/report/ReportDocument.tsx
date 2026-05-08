@@ -9,9 +9,10 @@ import {
   Text,
   View,
 } from "@react-pdf/renderer"
+import { getFrictionCoefficient } from "@truss-calculator/calc-engine"
 
 import type { ReportData, Support } from "@/lib/types-bridge"
-import { FOOT_LABELS, TERRAIN_LABELS, TRUSS_LABELS } from "@/lib/constants"
+import { FOOT_LABELS, getWindDirectionDisplay, TERRAIN_LABELS, TRUSS_LABELS } from "@/lib/constants"
 
 const styles = StyleSheet.create({
   page: {
@@ -168,6 +169,7 @@ function Table({
 
 export function ReportDocument({ data }: { data: ReportData }) {
   const { result, config } = data
+  const frictionCoefficient = getFrictionCoefficient(result.input.frictionConfig)
 
   return (
     <Document title={`Report ${result.input.projectName || "truss-calculator"}`}>
@@ -217,7 +219,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
             <Text>Gelaendekategorie: {TERRAIN_LABELS[result.input.terrainCategory]}</Text>
             <Text>Stuetzen: {result.input.supports.length}</Text>
             <Text>Traversen: {result.input.beams.length}</Text>
-            <Text>Reibungsbeiwert: {result.input.frictionCoefficient.toFixed(2)}</Text>
+            <Text>Reibungsbeiwert: {frictionCoefficient.toFixed(2)}</Text>
           </View>
           <View style={[styles.card, { flex: 1, marginLeft: 12 }]}>
             <Text style={{ marginBottom: 8, fontWeight: 700 }}>Grundriss</Text>
@@ -304,10 +306,13 @@ export function ReportDocument({ data }: { data: ReportData }) {
           <Table
             headers={["Richtung", "eta", "Rz,min", "Ballast", "OK"]}
             rows={[
-              ["Wind +X", result.tipping.windPlusX.utilization.toFixed(2), `${result.tipping.windPlusX.minVerticalReactionKN.toFixed(2)} kN`, `${result.tipping.windPlusX.requiredBallastTotalKg.toFixed(0)} kg`, result.tipping.windPlusX.isOk ? "Ja" : "Nein"],
-              ["Wind +Y", result.tipping.windPlusY.utilization.toFixed(2), `${result.tipping.windPlusY.minVerticalReactionKN.toFixed(2)} kN`, `${result.tipping.windPlusY.requiredBallastTotalKg.toFixed(0)} kg`, result.tipping.windPlusY.isOk ? "Ja" : "Nein"],
-              ["Wind -X", result.tipping.windMinusX.utilization.toFixed(2), `${result.tipping.windMinusX.minVerticalReactionKN.toFixed(2)} kN`, `${result.tipping.windMinusX.requiredBallastTotalKg.toFixed(0)} kg`, result.tipping.windMinusX.isOk ? "Ja" : "Nein"],
-              ["Wind -Y", result.tipping.windMinusY.utilization.toFixed(2), `${result.tipping.windMinusY.minVerticalReactionKN.toFixed(2)} kN`, `${result.tipping.windMinusY.requiredBallastTotalKg.toFixed(0)} kg`, result.tipping.windMinusY.isOk ? "Ja" : "Nein"],
+              ...result.tipping.directions.map(({ angleDeg, result: directionResult }) => [
+                getWindDirectionDisplay(angleDeg),
+                directionResult.utilization.toFixed(2),
+                `${directionResult.minVerticalReactionKN.toFixed(2)} kN`,
+                `${directionResult.requiredBallastTotalKg.toFixed(0)} kg`,
+                directionResult.isOk ? "Ja" : "Nein",
+              ]),
               ["Gleiten", "-", `${result.sliding.resultingHorizontalForceKN.toFixed(2)} kN`, `${Math.max(0, result.sliding.requiredBallastKg).toFixed(0)} kg`, result.sliding.isOk ? "Ja" : "Nein"],
             ]}
           />
