@@ -12,6 +12,7 @@ const baseInput: StructureInput = {
 
   windZone: 2,
   terrainCategory: 'II',
+  environment: 'OUTDOOR',
 
   supports: [
     {
@@ -48,17 +49,17 @@ const baseInput: StructureInput = {
           id: 'L1',
           label: 'Scheinwerfer',
           positionAlongBeam: 3,
-          weight: 50, // kg
+          weight: 50,
         },
       ],
       windSurfaces: [],
     },
   ],
 
-  frictionCoefficient: 0.3,
+  frictionConfig: { mode: 'CUSTOM', customValue: 0.3 },
 }
 
-describe('Gesamtberechnung Integration', () => {
+describe('Gesamtberechnung Integration (OUTDOOR)', () => {
   it('berechnet ohne unkontrollierten Abbruch durch', () => {
     const result = calculate(baseInput)
     expect(result.calculatedAt).toBeDefined()
@@ -117,8 +118,54 @@ describe('Gesamtberechnung Integration', () => {
       supports: [],
       beams: [],
     })
-
     expect(result.overallOk).toBe(false)
     expect(result.errors).toContain('Mindestens 2 Stuetzen erforderlich')
+  })
+})
+
+describe('Gesamtberechnung Integration (INDOOR)', () => {
+  const indoorBase: StructureInput = {
+    ...baseInput,
+    environment: 'INDOOR',
+    indoorConfig: { doorsCanOpen: false },
+  }
+
+  it('windLoad ist 0 im Indoor-Modus', () => {
+    const result = calculate(indoorBase)
+    expect(result.windLoad.peakVelocityPressure).toBe(0)
+    expect(result.windLoad.windForceX).toBe(0)
+    expect(result.windLoad.windForceY).toBe(0)
+  })
+
+  it('enthält Indoor-Hinweis in warnings', () => {
+    const result = calculate(indoorBase)
+    expect(result.warnings.some(w => w.includes('Indoor'))).toBe(true)
+  })
+
+  it('Kippsicherheit wird auch Indoor berechnet', () => {
+    const result = calculate(indoorBase)
+    expect(result.tipping.directions.length).toBeGreaterThan(0)
+    expect(result.tipping.governing).toBeDefined()
+  })
+
+  it('Gleitnachweis nutzt Indoor-Horizontalkraft', () => {
+    const result = calculate(indoorBase)
+    expect(result.sliding.resultingHorizontalForceKN).toBeGreaterThanOrEqual(0)
+  })
+
+  it('doorsCanOpen=true erhöht Horizontalkraft gegenüber false (bei großer Fläche)', () => {
+    const largeSurface: StructureInput = {
+      ...indoorBase,
+      supports: [
+        { ...indoorBase.supports[0]!, height: 6 },
+        { ...indoorBase.supports[1]!, height: 6 },
+      ],
+    }
+    const closed = calculate({ ...largeSurface, indoorConfig: { doorsCanOpen: false } })
+    const open   = calculate({ ...largeSurface, indoorConfig: { doorsCanOpen: true  } })
+    // Bei offenen Toren kann die Horizontalkraft gleich oder höher sein
+    expect(open.sliding.resultingHorizontalForceKN).toBeGreaterThanOrEqual(
+      closed.sliding.resultingHorizontalForceKN,
+    )
   })
 })

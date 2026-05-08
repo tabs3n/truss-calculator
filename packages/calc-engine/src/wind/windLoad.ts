@@ -1,4 +1,4 @@
-import type { TerrainCategory, WindZone } from '../types'
+import type { TerrainCategory, WindSurface, WindZone } from '../types'
 
 // Luftdichte nach DIN EN 1991-1-4
 const AIR_DENSITY = 1.25 // kg/m³
@@ -73,4 +73,40 @@ export function calculateWindForce(
   cf = 1.3,         // Kraftbeiwert, konservativ für Traverse/Equipment
 ): number {
   return cf * qp * width * height
+}
+
+// Kraftbeiwerte cf nach DIN EN 1991-1-4 (konservative Tabellenwerte)
+const CF_BY_SURFACE_TYPE: Record<Exclude<WindSurface['surfaceType'], 'CUSTOM'>, number> = {
+  LED_WALL:         1.3,  // massiv, volle Windlast
+  BANNER_SOLID:     1.3,  // PVC-Plane, geschlossen
+  BANNER_MESH:      0.6,  // Meshbanner ~50% Durchlässigkeit
+  BANNER_MESH_OPEN: 0.3,  // sehr offenes Mesh >70% Durchlässigkeit
+}
+
+/** Gibt den cf-Wert für eine WindSurface zurück. */
+export function getDragCoefficient(surface: WindSurface): number {
+  if (surface.surfaceType === 'CUSTOM') return surface.dragCoefficient
+  return CF_BY_SURFACE_TYPE[surface.surfaceType]
+}
+
+/**
+ * Richtungsabhängige Windkraft auf eine einzelne WindSurface.
+ *
+ * Fw(θ) = cf × qp × Aref × |cos(θ − surfaceOrientationDeg)|
+ *
+ * Für massive Flächen (LED_WALL, BANNER_SOLID) gilt eine Mindestlast von 30 %
+ * als Böenansatz bei seitlichem Wind (DIN EN 1991-1-4).
+ */
+export function calculateSurfaceWindForce(
+  surface: WindSurface,
+  windCompassAngleDeg: number,
+  qp: number,
+): number {
+  const cf = getDragCoefficient(surface)
+  const area = surface.width * surface.height
+  const angleDiffRad = ((windCompassAngleDeg - surface.surfaceOrientationDeg) * Math.PI) / 180
+  const rawFactor = Math.abs(Math.cos(angleDiffRad))
+  const needsMinimum = surface.surfaceType === 'LED_WALL' || surface.surfaceType === 'BANNER_SOLID'
+  const effectiveFactor = needsMinimum ? Math.max(rawFactor, 0.3) : rawFactor
+  return cf * qp * area * effectiveFactor
 }

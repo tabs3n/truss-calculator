@@ -30,6 +30,49 @@ export type FootType =
   | 'CONCRETE_BLOCK_1250'  // Betonblock 1250 kg mit Traversenaufnahme
   | 'TRUSS_PLATE_30x30'    // Traversenplatte 30×30 cm (bei Groundsupports)
 
+/** Reibwerte nach DIN EN 13814 Tabelle 3 */
+export type FrictionPreset =
+  | 'RUBBER_ON_CONCRETE'    // μ = 0.70
+  | 'WOOD_ON_CONCRETE'      // μ = 0.60
+  | 'WOOD_ON_WOOD'          // μ = 0.40
+  | 'STEEL_ON_CONCRETE'     // μ = 0.20
+  | 'STEEL_ON_STEEL'        // μ = 0.10
+  | 'ALU_ON_CONCRETE'       // μ = 0.20
+  | 'CONCRETE_ON_CONCRETE'  // μ = 0.50
+  | 'WOOD_ON_GRAVEL'        // μ = 0.65
+  | 'CUSTOM'
+
+export interface FrictionConfig {
+  mode: 'PRESET' | 'CUSTOM'
+  preset?: FrictionPreset
+  customValue?: number  // nur wenn mode = 'CUSTOM'
+}
+
+const FRICTION_PRESET_VALUES: Record<Exclude<FrictionPreset, 'CUSTOM'>, number> = {
+  RUBBER_ON_CONCRETE:   0.70,
+  WOOD_ON_CONCRETE:     0.60,
+  WOOD_ON_WOOD:         0.40,
+  STEEL_ON_CONCRETE:    0.20,
+  STEEL_ON_STEEL:       0.10,
+  ALU_ON_CONCRETE:      0.20,
+  CONCRETE_ON_CONCRETE: 0.50,
+  WOOD_ON_GRAVEL:       0.65,
+}
+
+/** Gibt den effektiven μ-Wert aus einer FrictionConfig zurück */
+export function getFrictionCoefficient(config: FrictionConfig): number {
+  if (config.mode === 'CUSTOM') {
+    if (config.customValue === undefined || config.customValue <= 0 || config.customValue > 1) {
+      throw new Error(`Ungültiger customValue: ${config.customValue} (muss 0 < μ ≤ 1)`)
+    }
+    return config.customValue
+  }
+  if (!config.preset || config.preset === 'CUSTOM') {
+    throw new Error('FrictionConfig: mode ist PRESET aber kein gültiges preset angegeben')
+  }
+  return FRICTION_PRESET_VALUES[config.preset]
+}
+
 // ─────────────────────────────────────────────
 // GEOMETRIE
 // ─────────────────────────────────────────────
@@ -58,7 +101,16 @@ export interface WindSurface {
   width: number                // m
   height: number               // m
   centerHeightAboveGround: number  // m – Höhe des Flächenschwerpunkts
-  dragCoefficient: number      // cf, default 1.3
+  /** Oberflächentyp – bestimmt cf automatisch (außer CUSTOM) */
+  surfaceType: 'LED_WALL' | 'BANNER_SOLID' | 'BANNER_MESH' | 'BANNER_MESH_OPEN' | 'CUSTOM'
+  /**
+   * Richtung des Normalenvektors der Fläche in Kompassgrad.
+   * 0° = zeigt nach Nord/+Y, 90° = zeigt nach Ost/+X.
+   * Volle Windlast wenn Windrichtung = surfaceOrientationDeg.
+   */
+  surfaceOrientationDeg: number
+  /** cf nur bei surfaceType === 'CUSTOM' verwendet; für alle anderen Typen wird der Typ-Standardwert genutzt */
+  dragCoefficient: number
 }
 
 // ─────────────────────────────────────────────
@@ -116,8 +168,28 @@ export interface StructureInput {
   supports: Support[]
   beams: Beam[]
 
+  // Einsatzumgebung
+  environment: 'OUTDOOR' | 'INDOOR'
+  /**
+   * Nur relevant wenn environment === 'INDOOR'.
+   * doorsCanOpen: Ersatzflächenlast nach DIN EN 17879 nur bei offenen Toren ansetzen.
+   */
+  indoorConfig?: {
+    doorsCanOpen: boolean
+  }
+
   // Reibung
-  frictionCoefficient: number  // μ, default 0.3 (konservativ)
+  frictionConfig: FrictionConfig
+
+  // Windrichtung
+  /** AUTO = alle 4 Hauptrichtungen, MANUAL = nur manualWindDirections. Default: AUTO */
+  windMode?: 'AUTO' | 'MANUAL'
+  /**
+   * Kompasswinkel in Grad (nur bei windMode === 'MANUAL').
+   * 0° = Nord/+Y, 90° = Ost/+X, 180° = Süd/-Y, 270° = West/-X
+   * Beispiel: [0, 90] = Wind von Nord und Ost
+   */
+  manualWindDirections?: number[]
 }
 
 // ─────────────────────────────────────────────
@@ -169,13 +241,17 @@ export interface TippingDirectionResult {
 }
 
 export interface TippingResult {
-  windPlusX: TippingDirectionResult
-  windPlusY: TippingDirectionResult
-  windMinusX: TippingDirectionResult
-  windMinusY: TippingDirectionResult
-  /** Maßgebender Lastfall */
+  /**
+   * Alle berechneten Richtungen.
+   * AUTO: 4 Richtungen (0°/N, 90°/O, 180°/S, 270°/W).
+   * MANUAL: nur die in manualWindDirections angegebenen Winkel.
+   * angleDeg ist der Kompasswinkel (0° = Nord).
+   */
+  directions: { angleDeg: number; result: TippingDirectionResult }[]
+  /** Maßgebender Lastfall (höchster Ballastbedarf) */
   governing: TippingDirectionResult
-  governingDirection: 'windPlusX' | 'windPlusY' | 'windMinusX' | 'windMinusY'
+  /** Kompasswinkel des maßgebenden Lastfalls in Grad */
+  governingAngleDeg: number
 }
 
 export interface SlidingResult {

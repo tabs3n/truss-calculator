@@ -1,4 +1,5 @@
-import type { SlidingResult } from '../types'
+import type { FrictionConfig, SlidingResult } from '../types'
+import { getFrictionCoefficient } from '../types'
 
 const G = 9.81 // m/s²
 
@@ -10,14 +11,12 @@ const G = 9.81 // m/s²
 export function checkSliding(
   totalHorizontalForceKN: number,
   totalVerticalForceKN: number,
-  frictionCoefficient: number,
+  frictionConfig: FrictionConfig,
 ): SlidingResult {
-  if (frictionCoefficient <= 0 || frictionCoefficient > 1) {
-    throw new Error(`Ungültiger Reibbeiwert: ${frictionCoefficient} (muss 0 < μ ≤ 1)`)
-  }
+  const mu = getFrictionCoefficient(frictionConfig)
 
   // Erforderliche Vertikallast zum Verhindern von Gleiten [kN]
-  const requiredVerticalKN = totalHorizontalForceKN / frictionCoefficient
+  const requiredVerticalKN = totalHorizontalForceKN / mu
 
   // Fehlender Anteil = Ballast in kN, dann → kg
   const deficitKN = requiredVerticalKN - totalVerticalForceKN
@@ -27,6 +26,6 @@ export function checkSliding(
     resultingHorizontalForceKN: totalHorizontalForceKN,
     requiredBallastKg,              // negativ = kein Ballast erforderlich
     isOk: deficitKN <= 0,
-    frictionCoefficientUsed: frictionCoefficient,
+    frictionCoefficientUsed: mu,
   }
 }

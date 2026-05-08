@@ -1,8 +1,11 @@
-import type { Support, TippingDirectionResult } from '../types'
+import type { Support, TippingDirectionResult, TippingResult } from '../types'
 
 const G = 9.81
 
-type DirectionKey = 'windPlusX' | 'windPlusY' | 'windMinusX' | 'windMinusY'
+/** Kompasswinkel (0°=N) → mathematischer Winkel (0°=+X) für interne Berechnung */
+function compassToMathAngle(compassDeg: number): number {
+  return (90 - compassDeg + 360) % 360
+}
 
 function findTippingAxis(
   supports: Support[],
@@ -134,31 +137,39 @@ export function calculateTipping(
   }
 }
 
-/** Berechnet alle 4 Windrichtungen und gibt den massgebenden Lastfall zurueck. */
+/**
+ * Berechnet alle Windrichtungen und gibt den massgebenden Lastfall zurueck.
+ *
+ * windMode 'AUTO': alle 4 Hauptrichtungen (0°/N, 90°/O, 180°/S, 270°/W).
+ * windMode 'MANUAL': nur die in manualWindDirections angegebenen Kompasswinkel.
+ * Leeres manualWindDirections fällt auf AUTO zurück.
+ *
+ * getWindForceKN: Funktion die für einen Kompasswinkel die Windkraft in kN liefert.
+ * Ermöglicht richtungsabhängige Windkräfte je Fläche.
+ */
 export function calculateTippingAllDirections(
   supports: Support[],
-  totalWindForceKN: number,
+  getWindForceKN: (compassAngleDeg: number) => number,
   windApplicationHeightM: number,
   supportVerticalReactions: Map<string, number>,
-): {
-  windPlusX: TippingDirectionResult
-  windPlusY: TippingDirectionResult
-  windMinusX: TippingDirectionResult
-  windMinusY: TippingDirectionResult
-  governing: TippingDirectionResult
-  governingDirection: DirectionKey
-} {
-  const windPlusX = calculateTipping(supports, totalWindForceKN, 0, windApplicationHeightM, supportVerticalReactions)
-  const windPlusY = calculateTipping(supports, totalWindForceKN, 90, windApplicationHeightM, supportVerticalReactions)
-  const windMinusX = calculateTipping(supports, totalWindForceKN, 180, windApplicationHeightM, supportVerticalReactions)
-  const windMinusY = calculateTipping(supports, totalWindForceKN, 270, windApplicationHeightM, supportVerticalReactions)
+  windMode: 'AUTO' | 'MANUAL' = 'AUTO',
+  manualWindDirections?: number[],
+): TippingResult {
+  const compassAngles =
+    windMode === 'MANUAL' && manualWindDirections && manualWindDirections.length > 0
+      ? manualWindDirections
+      : [0, 90, 180, 270]
 
-  const directions = [
-    { key: 'windPlusX' as const, result: windPlusX },
-    { key: 'windPlusY' as const, result: windPlusY },
-    { key: 'windMinusX' as const, result: windMinusX },
-    { key: 'windMinusY' as const, result: windMinusY },
-  ]
+  const directions = compassAngles.map(compassAngle => ({
+    angleDeg: compassAngle,
+    result: calculateTipping(
+      supports,
+      getWindForceKN(compassAngle),
+      compassToMathAngle(compassAngle),
+      windApplicationHeightM,
+      supportVerticalReactions,
+    ),
+  }))
 
   const governing = directions.reduce((prev, curr) => {
     if (curr.result.requiredBallastTotalKg > prev.result.requiredBallastTotalKg) return curr
@@ -172,11 +183,8 @@ export function calculateTippingAllDirections(
   })
 
   return {
-    windPlusX,
-    windPlusY,
-    windMinusX,
-    windMinusY,
+    directions,
     governing: governing.result,
-    governingDirection: governing.key,
+    governingAngleDeg: governing.angleDeg,
   }
 }
