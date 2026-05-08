@@ -16,7 +16,7 @@ import { calculateBeam } from './beam/beamCalculation'
 import { checkBeamUtilization } from './beam/utilizationCheck'
 import { getBeamSelfWeight, G, GAMMA_G, getDesignLoad } from './loads/loadCombinations'
 import { getGoverningIndoorLoad } from './loads/indoorLoads'
-import { getTrussProperties } from './materials/database'
+import { getFootProperties, getFootWeightKg, getTrussProperties } from './materials/database'
 import { checkSliding } from './sliding/slidingCheck'
 import { checkBuckling } from './stability/bucklingCheck'
 import { calculateTippingAllDirections } from './tipping/tippingCheck'
@@ -123,6 +123,11 @@ export function calculate(input: StructureInput): CalculationResult {
     const selfWeightKN = (props.weightPerMeter * support.height * 1.05 * G) / 1000
     totalPermanentKN += selfWeightKN * GAMMA_G
     totalPermanentKN += (support.existingBallast * G * GAMMA_G) / 1000
+    // Fußsystem-Eigengewicht: zählt als Ballast und ständige Last (γG)
+    const footProps = getFootProperties(support.footType)
+    if (footProps.countsAsBallast) {
+      totalPermanentKN += (getFootWeightKg(support) * G * GAMMA_G) / 1000
+    }
   }
   for (const beam of input.beams) {
     const startSupport = input.supports.find(s => s.id === beam.startSupportId)

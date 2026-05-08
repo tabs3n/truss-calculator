@@ -131,6 +131,11 @@ export interface Support {
   outriggerLength?: number
   /** Vorhandener Ballast (wird in Berechnung berücksichtigt) */
   existingBallast: number    // kg
+  /**
+   * Für CONCRETE_BLOCK_1250: Anzahl gestapelter Betonblöcke (Default 1).
+   * Gesamtgewicht = numberOfConcreteBlocks × 1250 kg.
+   */
+  numberOfConcreteBlocks?: number
 }
 
 /** Eine horizontale Traverse zwischen zwei Stützen */

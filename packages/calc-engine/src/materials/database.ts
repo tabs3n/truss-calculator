@@ -1,4 +1,81 @@
-import type { TrussType } from '../types'
+import type { FootType, Support, TrussType } from '../types'
+
+// ─────────────────────────────────────────────
+// FUßSYSTEM-DATENBANK
+// ─────────────────────────────────────────────
+
+export interface FootSystemProperties {
+  id: FootType
+  label: string
+  weightKg: number              // Eigengewicht des Fußes
+  footprintX: number            // mm – Abmessung in X
+  footprintY: number            // mm – Abmessung in Y
+  height: number                // mm
+  /** Abstand Stützenmittelpunkt → Kippachse in X-Richtung (= halbe Fußbreite X) */
+  tippingArmX: number           // mm
+  /** Abstand Stützenmittelpunkt → Kippachse in Y-Richtung (= halbe Fußbreite Y) */
+  tippingArmY: number           // mm
+  countsAsBallast: boolean      // Eigengewicht zählt als stabilisierender Ballast
+  stackable: boolean            // können mehrere gestapelt werden
+  additionalStackWeightKg: number  // Gewicht je zusätzlichem Block
+}
+
+export const FOOT_DATABASE: Record<FootType, FootSystemProperties> = {
+  CONCRETE_BLOCK_1250: {
+    id: 'CONCRETE_BLOCK_1250',
+    label: 'Betonblock 1250 kg',
+    weightKg: 1250,
+    footprintX: 1200,
+    footprintY: 1200,
+    height: 400,
+    tippingArmX: 600,           // 1200 / 2
+    tippingArmY: 600,
+    countsAsBallast: true,
+    stackable: true,
+    additionalStackWeightKg: 1250,
+  },
+  BASEPLATE: {
+    id: 'BASEPLATE',
+    label: 'Bodenplatte',
+    weightKg: 15,
+    footprintX: 600,            // Standardmaß; wird durch Support.baseplateSize überschrieben
+    footprintY: 600,
+    height: 0,
+    tippingArmX: 300,           // Standardwert; wird durch Support.outriggerLength überschrieben
+    tippingArmY: 300,
+    countsAsBallast: false,
+    stackable: false,
+    additionalStackWeightKg: 0,
+  },
+  TRUSS_PLATE_30x30: {
+    id: 'TRUSS_PLATE_30x30',
+    label: 'Traversenplatte 30×30 cm',
+    weightKg: 5,
+    footprintX: 300,
+    footprintY: 300,
+    height: 0,
+    tippingArmX: 150,
+    tippingArmY: 150,
+    countsAsBallast: false,
+    stackable: false,
+    additionalStackWeightKg: 0,
+  },
+}
+
+export function getFootProperties(footType: FootType): FootSystemProperties {
+  return FOOT_DATABASE[footType]
+}
+
+/**
+ * Gesamtgewicht des Fußsystems in kg.
+ * Für CONCRETE_BLOCK_1250 gilt: weightKg + (numberOfConcreteBlocks − 1) × additionalStackWeightKg.
+ */
+export function getFootWeightKg(support: Support): number {
+  const props = FOOT_DATABASE[support.footType]
+  if (!props.stackable) return props.weightKg
+  const n = Math.max(1, support.numberOfConcreteBlocks ?? 1)
+  return props.weightKg + (n - 1) * props.additionalStackWeightKg
+}
 
 export interface TrussProperties {
   label: string

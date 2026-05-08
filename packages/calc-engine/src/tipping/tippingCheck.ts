@@ -1,10 +1,33 @@
 import type { Support, TippingDirectionResult, TippingResult } from '../types'
+import { getFootProperties } from '../materials/database'
 
 const G = 9.81
 
 /** Kompasswinkel (0°=N) → mathematischer Winkel (0°=+X) für interne Berechnung */
 function compassToMathAngle(compassDeg: number): number {
   return (90 - compassDeg + 360) % 360
+}
+
+/**
+ * Wirksamer Kipparm des Fußsystems in Metern, projiziert auf die Windrichtung.
+ * Für BASEPLATE mit outriggerLength: überschreibt den Datenbankwert.
+ * windMathAngleDeg ist der MATHEMATISCHE Winkel (0°=+X).
+ */
+function getEffectiveTippingArmM(support: Support, windMathAngleDeg: number): number {
+  const footProps = getFootProperties(support.footType)
+  let armXm: number
+  let armYm: number
+
+  if (support.footType === 'BASEPLATE' && support.outriggerLength !== undefined && support.outriggerLength > 0) {
+    armXm = support.outriggerLength
+    armYm = support.outriggerLength
+  } else {
+    armXm = footProps.tippingArmX / 1000
+    armYm = footProps.tippingArmY / 1000
+  }
+
+  const rad = (windMathAngleDeg * Math.PI) / 180
+  return Math.abs(armXm * Math.cos(rad) + armYm * Math.sin(rad))
 }
 
 function findTippingAxis(
@@ -64,9 +87,9 @@ function buildLeewardNormal(
 /**
  * Kippsicherheitsnachweis fuer eine Windrichtung.
  *
- * Der erforderliche Zusatzballast wird aus dem Momentendefizit gegenueber dem
- * stabilisierenden Moment berechnet. Ballast direkt auf der Kippachse hat
- * keinen wirksamen Hebelarm und darf daher nicht stabilisierend angesetzt werden.
+ * Die Kippachse liegt an der windseitigen Außenkante des Fußsystems (tippingArm aus
+ * FOOT_DATABASE). Alle Stützen – auch die windseitigen – leisten dadurch einen
+ * stabilisierenden Beitrag. windDirectionAngleDeg ist der MATHEMATISCHE Winkel (0°=+X).
  */
 export function calculateTipping(
   supports: Support[],
@@ -88,32 +111,51 @@ export function calculateTipping(
 
   const normalVec = buildLeewardNormal(axisSupports, windDirectionAngleDeg)
   const axisOrigin = axisSupports[0]
-  const offAxisSupports = supports.filter(support => !tippingAxisIds.includes(support.id))
-  const leewardSupports = offAxisSupports
-    .map(support => ({
-      support,
-      leverArmM: signedDistanceToAxis(support, axisOrigin, normalVec),
-    }))
-    .filter(entry => entry.leverArmM > 0)
+
+  // Wirksamer Kipparm der windseitigen Stützen (konservativ: Minimum)
+  const windwardTippingArmM = Math.min(
+    ...tippingAxisIds.map(id => {
+      const support = supports.find(s => s.id === id)!
+      return getEffectiveTippingArmM(support, windDirectionAngleDeg)
+    }),
+  )
+
+  // Alle Stützen erhalten einen Hebelarm = Basisabstand zur Achse + windwardTippingArmM.
+  // Windseitige Stützen liegen auf der Achse (Basisabstand = 0) und bekommen den Kipparm.
+  // Leeseitige Stützen bekommen ihren Abstand + Kipparm als vergrößerten Hebelarm.
+  const allStabilizing = supports
+    .map(support => {
+      const isWindward = tippingAxisIds.includes(support.id)
+      const baseDistance = isWindward
+        ? 0
+        : signedDistanceToAxis(support, axisOrigin, normalVec)
+      return { support, leverArmM: baseDistance + windwardTippingArmM, isWindward }
+    })
+    .filter(e => e.leverArmM > 0)
+
+  const leewardSupports = allStabilizing.filter(e => !e.isWindward)
 
   const tippingMomentKNm = Math.max(0, totalWindForceKN * windApplicationHeightM)
-  const stabilizingMomentKNm = leewardSupports.reduce((sum, entry) => {
+  const stabilizingMomentKNm = allStabilizing.reduce((sum, entry) => {
     const verticalReactionKN = Math.max(0, supportVerticalReactions.get(entry.support.id) ?? 0)
     return sum + verticalReactionKN * entry.leverArmM
   }, 0)
 
-  const maxLeverArmM = leewardSupports.reduce(
-    (max, entry) => Math.max(max, entry.leverArmM),
-    0,
-  )
-  const momentDeficitKNm = Math.max(0, tippingMomentKNm - stabilizingMomentKNm)
+  // Maßgebender Hebelarm für Ballastberechnung: Leeseitige Stützen (oder Kipparm falls keine)
+  const maxLeverArmM = leewardSupports.length > 0
+    ? leewardSupports.reduce((max, e) => Math.max(max, e.leverArmM), 0)
+    : windwardTippingArmM
 
+  const momentDeficitKNm = Math.max(0, tippingMomentKNm - stabilizingMomentKNm)
   const requiredBallastTotalKg = maxLeverArmM > 0
     ? (momentDeficitKNm * 1000) / (G * maxLeverArmM)
     : (momentDeficitKNm * 1000) / G
-  const ballastSupportIds = leewardSupports.map(entry => entry.support.id)
-  const ballastSupportCount = ballastSupportIds.length > 0 ? ballastSupportIds.length : tippingAxisIds.length
-  const requiredBallastPerSupportKg = requiredBallastTotalKg / ballastSupportCount
+
+  // Ballast wird auf leeseitigen Stützen angesetzt; bei 2-Stützen-System auf beide Achsstützen
+  const ballastSupportIds = leewardSupports.length > 0
+    ? leewardSupports.map(e => e.support.id)
+    : [...tippingAxisIds]
+  const requiredBallastPerSupportKg = requiredBallastTotalKg / ballastSupportIds.length
 
   const upliftFromWindKN = maxLeverArmM > 0
     ? momentDeficitKNm / maxLeverArmM
