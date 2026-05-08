@@ -167,7 +167,7 @@ function getSupportLabel(supports: Support[], supportId: string) {
   return supports.find((support) => support.id === supportId)?.label ?? supportId
 }
 
-function getTippingAxisLabel(result: CalculationResult, tippingAxisSupportIds: [string, string]) {
+function getTippingAxisLabel(result: CalculationResult, tippingAxisSupportIds: string[]) {
   return tippingAxisSupportIds
     .map((id) => getSupportLabel(result.input.supports, id))
     .join(" - ")

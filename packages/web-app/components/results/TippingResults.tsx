@@ -2,7 +2,7 @@ import { WindSurfaceLoadList } from "@/components/results/WindSurfaceLoadList"
 import { getWindDirectionDisplay } from "@/lib/constants"
 import type { CalculationResult, Support, TippingDirectionResult } from "@/lib/types-bridge"
 
-function getTippingAxisLabel(supports: Support[], tippingAxisSupportIds: [string, string]) {
+function getTippingAxisLabel(supports: Support[], tippingAxisSupportIds: string[]) {
   return tippingAxisSupportIds
     .map((id) => supports.find((support) => support.id === id)?.label ?? id)
     .join(" - ")
