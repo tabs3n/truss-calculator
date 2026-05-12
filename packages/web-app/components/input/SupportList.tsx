@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useMemo, useState } from "react"
 import { Pencil, Plus, Trash2 } from "lucide-react"
@@ -11,7 +11,7 @@ import type { Support } from "@/lib/types-bridge"
 function createSupport(index: number): Support {
   return {
     id: crypto.randomUUID(),
-    label: `Stuetze ${index + 1}`,
+    label: `Stütze ${index + 1}`,
     position: { x: 0, y: 0 },
     trussType: "PROLYTE_H30V",
     height: 6,
@@ -35,8 +35,8 @@ export function SupportList({
   const emptyStateText = useMemo(
     () =>
       supports.length === 0
-        ? "Noch keine Stuetzen erfasst. Lege zuerst die Grundrisspunkte an."
-        : `${supports.length} Stuetzen im aktuellen Modell.`,
+        ? "Noch keine Stützen erfasst. Lege zuerst die Grundrisspunkte an."
+        : `${supports.length} Stützen im aktuellen Modell.`,
     [supports.length],
   )
 
@@ -64,14 +64,14 @@ export function SupportList({
     <section className="rounded-[1.5rem] border border-border/80 bg-card/90 p-5 shadow-sm">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-xl font-semibold">Stuetzen</h2>
+          <h2 className="text-xl font-semibold">Stützen</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             {emptyStateText}
           </p>
         </div>
         <Button type="button" onClick={openCreate}>
           <Plus />
-          Stuetze hinzufuegen
+          Stütze hinzufuegen
         </Button>
       </div>
 
@@ -82,7 +82,7 @@ export function SupportList({
               <th className="pb-3 font-medium">Label</th>
               <th className="pb-3 font-medium">X (m)</th>
               <th className="pb-3 font-medium">Y (m)</th>
-              <th className="pb-3 font-medium">Hoehe (m)</th>
+              <th className="pb-3 font-medium">Höhe (m)</th>
               <th className="pb-3 font-medium">Typ</th>
               <th className="pb-3 font-medium">Fuss</th>
               <th className="pb-3 font-medium">Ballast vorhanden (kg)</th>
@@ -123,7 +123,7 @@ export function SupportList({
       <div className="mt-5 grid gap-3 lg:hidden">
         {supports.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border p-4 text-sm text-muted-foreground">
-            Noch keine Stuetzen angelegt.
+            Noch keine Stützen angelegt.
           </div>
         ) : null}
         {supports.map((support) => (
@@ -157,7 +157,7 @@ export function SupportList({
                 </dd>
               </div>
               <div>
-                <dt className="text-muted-foreground">Hoehe</dt>
+                <dt className="text-muted-foreground">Höhe</dt>
                 <dd>{support.height.toFixed(2)} m</dd>
               </div>
               <div>

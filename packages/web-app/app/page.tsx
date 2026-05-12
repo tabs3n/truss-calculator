@@ -1,4 +1,4 @@
-import Link from "next/link"
+﻿import Link from "next/link"
 
 import { buttonVariants } from "@/components/ui/button"
 import { COMPANY } from "@/lib/constants"
@@ -14,11 +14,11 @@ export default function Home() {
             </span>
             <div className="space-y-4">
               <h1 className="max-w-2xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-                Truss Calculator fuer schnelle Standsicherheits-Vorbereitung im Tagesgeschaeft.
+                Truss Calculator für schnelle Standsicherheits-Vorbereitung im Tagesgeschäft.
               </h1>
               <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-                Erfasse Stuetzen, Traversen, Haengelasten und Windflaechen in einer
-                gemeinsamen Arbeitsoberflaeche. Die Rechenlogik wird spaeter direkt an die
+                Erfasse Stützen, Traversen, Hängelasten und Windflächen in einer
+                gemeinsamen Arbeitsoberfläche. Die Rechenlogik wird spaeter direkt an die
                 `calc-engine` angebunden.
               </p>
             </div>

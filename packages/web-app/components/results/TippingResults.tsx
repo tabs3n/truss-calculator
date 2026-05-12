@@ -1,4 +1,4 @@
-import { WindSurfaceLoadList } from "@/components/results/WindSurfaceLoadList"
+﻿import { WindSurfaceLoadList } from "@/components/results/WindSurfaceLoadList"
 import { getWindDirectionDisplay } from "@/lib/constants"
 import type { CalculationResult, Support, TippingDirectionResult } from "@/lib/types-bridge"
 
@@ -90,7 +90,7 @@ export function TippingResults({ result }: { result: CalculationResult | null })
       <div className="mb-4">
         <h2 className="text-xl font-semibold">Kippsicherheit</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Berechnete Lastfaelle mit hervorgehobenem massgebenden Nachweis.
+          Berechnete Lastfälle mit hervorgehobenem maßgebenden Nachweis.
         </p>
       </div>
 
@@ -107,7 +107,7 @@ export function TippingResults({ result }: { result: CalculationResult | null })
       </div>
 
       <div className="mt-4">
-        <WindSurfaceLoadList result={result} title="Windflaechen im massgebenden Lastfall" />
+        <WindSurfaceLoadList result={result} title="Windflächen im maßgebenden Lastfall" />
       </div>
     </section>
   )

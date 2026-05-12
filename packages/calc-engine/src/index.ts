@@ -1,4 +1,4 @@
-export * from './types'
+﻿export * from './types'
 
 import type {
   BeamResult,
@@ -102,7 +102,7 @@ export function calculate(input: StructureInput): CalculationResult {
   const errors: string[] = []
 
   if (input.supports.length < 2) {
-    errors.push('Mindestens 2 Stuetzen erforderlich')
+    errors.push('Mindestens 2 Stützen erforderlich')
     return failedCalculationResult(input, warnings, errors)
   }
 
@@ -151,7 +151,7 @@ export function calculate(input: StructureInput): CalculationResult {
     const startSupport = input.supports.find(s => s.id === beam.startSupportId)
     const endSupport   = input.supports.find(s => s.id === beam.endSupportId)
     if (!startSupport || !endSupport) {
-      errors.push(`Traverse ${beam.id}: Stuetze nicht gefunden`)
+      errors.push(`Traverse ${beam.id}: Stütze nicht gefunden`)
       continue
     }
     const span = Math.hypot(
@@ -317,11 +317,11 @@ export function calculate(input: StructureInput): CalculationResult {
       isOk = buckling.isOk
       if (!buckling.isOk) {
         failureReason = `Knicken: eta=${bucklingUtilization.toFixed(2)} > 1.0`
-        errors.push(`Stuetze ${support.id}: ${failureReason}`)
+        errors.push(`Stütze ${support.id}: ${failureReason}`)
       }
     } catch (error) {
       failureReason = (error as Error).message
-      errors.push(`Stuetze ${support.id}: ${failureReason}`)
+      errors.push(`Stütze ${support.id}: ${failureReason}`)
       isOk = false
     }
 

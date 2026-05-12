@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { Trash2 } from "lucide-react"
 
@@ -31,14 +31,14 @@ export function LoadForm({
         ? ""
         : `Position muss zwischen ${minPosition.toFixed(2)} und ${maxPosition.toFixed(2)} m liegen.`,
     weight:
-      Number.isFinite(load.weight) && load.weight > 0 ? "" : "Gewicht muss groesser als 0 sein.",
+      Number.isFinite(load.weight) && load.weight > 0 ? "" : "Gewicht muss größer als 0 sein.",
   }
 
   return (
     <div className="rounded-2xl border border-border bg-background/85 p-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h4 className="text-sm font-semibold">{load.label || "Neue Haengelast"}</h4>
+          <h4 className="text-sm font-semibold">{load.label || "Neue Hängelast"}</h4>
           <p className="mt-1 text-xs text-muted-foreground">
             Position ab linkem Auflager. Linke Auskragungen werden negativ eingegeben.
           </p>

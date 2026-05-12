@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useRef, useState, type ChangeEvent } from "react"
 import { FileUp } from "lucide-react"
@@ -81,7 +81,7 @@ export default function CalculatorPage() {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-                Arbeitsoberflaeche
+                Arbeitsoberfläche
               </p>
               <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
                 Truss Calculator
@@ -95,7 +95,7 @@ export default function CalculatorPage() {
             <div className="grid gap-3 rounded-2xl border border-border bg-background/80 p-4 text-sm text-muted-foreground sm:grid-cols-3">
               <div>
                 <p className="font-semibold text-foreground">{input.supports.length}</p>
-                <p>Stuetzen</p>
+                <p>Stützen</p>
               </div>
               <div>
                 <p className="font-semibold text-foreground">{input.beams.length}</p>
@@ -105,7 +105,7 @@ export default function CalculatorPage() {
                 <p className="font-semibold text-foreground">
                   {input.beams.reduce((sum, beam) => sum + beam.loads.length, 0)}
                 </p>
-                <p>Haengelasten</p>
+                <p>Hängelasten</p>
               </div>
             </div>
           </div>
@@ -170,7 +170,7 @@ export default function CalculatorPage() {
                 </div>
               ) : (
                 <div className="mt-4 rounded-2xl border border-border bg-background/80 p-4 text-sm text-muted-foreground">
-                  Neue Eingaben setzen das letzte Ergebnis zurueck. Nach Aenderungen die Berechnung
+                  Neue Eingaben setzen das letzte Ergebnis zurück. Nach Änderungen die Berechnung
                   erneut starten, damit Report und Nachweise konsistent bleiben.
                 </div>
               )}

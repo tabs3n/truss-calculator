@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useMemo, useState } from "react"
 import { Plus, X } from "lucide-react"
@@ -33,7 +33,7 @@ function validateBeam(beam: Beam, supports: Support[], spanLength: number) {
   if (beam.startSupportId && beam.startSupportId === beam.endSupportId) {
     errors.endSupportId = "Start und Ende muessen verschieden sein."
   }
-  if (supports.length < 2) errors.supports = "Mindestens zwei Stuetzen erforderlich."
+  if (supports.length < 2) errors.supports = "Mindestens zwei Stützen erforderlich."
   if (beam.cantileverStart < 0) errors.cantileverStart = "Auskragung darf nicht negativ sein."
   if (beam.cantileverEnd < 0) errors.cantileverEnd = "Auskragung darf nicht negativ sein."
 
@@ -43,21 +43,21 @@ function validateBeam(beam: Beam, supports: Support[], spanLength: number) {
       errors[`load-${load.id}-position`] =
         `Lastposition muss zwischen ${minLoadPosition.toFixed(2)} m und ${maxLoadPosition.toFixed(2)} m liegen.`
     }
-    if (load.weight <= 0) errors[`load-${load.id}-weight`] = "Lastgewicht muss groesser als 0 sein."
+    if (load.weight <= 0) errors[`load-${load.id}-weight`] = "Lastgewicht muss größer als 0 sein."
   })
 
   beam.windSurfaces.forEach((windSurface) => {
     if (!windSurface.label.trim()) errors[`surface-${windSurface.id}-label`] = "Label fehlt."
-    if (windSurface.width <= 0) errors[`surface-${windSurface.id}-width`] = "Breite ist ungueltig."
-    if (windSurface.height <= 0) errors[`surface-${windSurface.id}-height`] = "Hoehe ist ungueltig."
+    if (windSurface.width <= 0) errors[`surface-${windSurface.id}-width`] = "Breite ist ungültig."
+    if (windSurface.height <= 0) errors[`surface-${windSurface.id}-height`] = "Höhe ist ungültig."
     if (windSurface.centerHeightAboveGround <= 0) {
-      errors[`surface-${windSurface.id}-center`] = "Hoehe ueber Grund ist ungueltig."
+      errors[`surface-${windSurface.id}-center`] = "Höhe über Grund ist ungültig."
     }
     if (!Number.isFinite(windSurface.surfaceOrientationDeg)) {
-      errors[`surface-${windSurface.id}-orientation`] = "Ausrichtung ist ungueltig."
+      errors[`surface-${windSurface.id}-orientation`] = "Ausrichtung ist ungültig."
     }
     if (windSurface.surfaceType === "CUSTOM" && windSurface.dragCoefficient <= 0) {
-      errors[`surface-${windSurface.id}-drag`] = "c_f ist ungueltig."
+      errors[`surface-${windSurface.id}-drag`] = "c_f ist ungültig."
     }
   })
 
@@ -76,7 +76,7 @@ function createLoad(index: number): HangingLoad {
 function createWindSurface(index: number): WindSurface {
   return {
     id: crypto.randomUUID(),
-    label: `Windflaeche ${index + 1}`,
+    label: `Windfläche ${index + 1}`,
     width: 1,
     height: 1,
     centerHeightAboveGround: 4,
@@ -128,7 +128,7 @@ export function BeamForm({
             </p>
             <h3 className="mt-2 text-2xl font-semibold">{draft.label || "Neue Traverse"}</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Verbindungen, Auskragungen, Haengelasten und Windflaechen verwalten.
+              Verbindungen, Auskragungen, Hängelasten und Windflächen verwalten.
             </p>
           </div>
           <Button type="button" variant="ghost" size="icon" onClick={onClose} aria-label="Schliessen">
@@ -140,7 +140,7 @@ export function BeamForm({
           <div className="rounded-2xl border border-border bg-muted/25 p-4 text-sm text-muted-foreground">
             Freie Spannweite: <span className="font-semibold text-foreground">{spanLength.toFixed(2)} m</span>
             {" · "}
-            Gesamtlaenge inkl. Auskragungen:{" "}
+            Gesamtlänge inkl. Auskragungen:{" "}
             <span className="font-semibold text-foreground">{totalLength.toFixed(2)} m</span>
           </div>
 
@@ -162,7 +162,7 @@ export function BeamForm({
                 value={draft.startSupportId}
                 onChange={(event) => updateField("startSupportId", event.target.value)}
               >
-                <option value="">Stuetzen waehlen</option>
+                <option value="">Stützen waehlen</option>
                 {supports.map((support) => (
                   <option key={support.id} value={support.id}>
                     {support.label}
@@ -181,7 +181,7 @@ export function BeamForm({
                 value={draft.endSupportId}
                 onChange={(event) => updateField("endSupportId", event.target.value)}
               >
-                <option value="">Stuetzen waehlen</option>
+                <option value="">Stützen waehlen</option>
                 {supports.map((support) => (
                   <option key={support.id} value={support.id}>
                     {support.label}
@@ -242,7 +242,7 @@ export function BeamForm({
           <section className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h4 className="text-lg font-semibold">Haengelasten</h4>
+                <h4 className="text-lg font-semibold">Hängelasten</h4>
                 <p className="text-sm text-muted-foreground">
                   Einzellasten entlang der Traverse mit Position in Metern.
                 </p>
@@ -260,7 +260,7 @@ export function BeamForm({
             <div className="space-y-3">
               {draft.loads.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-border p-4 text-sm text-muted-foreground">
-                  Noch keine Haengelasten erfasst.
+                  Noch keine Hängelasten erfasst.
                 </div>
               ) : null}
               {draft.loads.map((load) => (
@@ -305,14 +305,14 @@ export function BeamForm({
                 }
               >
                 <Plus />
-                Windflaeche hinzufuegen
+                Windfläche hinzufuegen
               </Button>
             </div>
 
             <div className="space-y-3">
               {draft.windSurfaces.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-border p-4 text-sm text-muted-foreground">
-                  Noch keine Windflaechen hinterlegt.
+                  Noch keine Windflächen hinterlegt.
                 </div>
               ) : null}
               {draft.windSurfaces.map((windSurface) => (

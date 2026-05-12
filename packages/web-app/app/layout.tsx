@@ -1,10 +1,10 @@
-import type { Metadata } from "next"
+﻿import type { Metadata } from "next"
 
 import "./globals.css"
 
 export const metadata: Metadata = {
   title: "Truss Calculator",
-  description: "Planungswerkzeug fuer Standsicherheits-Berechnungen von Traversensystemen.",
+  description: "Planungswerkzeug für Standsicherheits-Berechnungen von Traversensystemen.",
 }
 
 export default function RootLayout({

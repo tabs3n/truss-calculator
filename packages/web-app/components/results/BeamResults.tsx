@@ -1,4 +1,4 @@
-import { WindSurfaceLoadList } from "@/components/results/WindSurfaceLoadList"
+﻿import { WindSurfaceLoadList } from "@/components/results/WindSurfaceLoadList"
 import type { CalculationResult } from "@/lib/types-bridge"
 
 function UtilizationBar({
@@ -39,7 +39,7 @@ export function BeamResults({ result }: { result: CalculationResult | null }) {
       <div className="mb-4">
         <h2 className="text-xl font-semibold">Traversenausnutzung</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Biegung, Querkraft, Durchbiegung und Windflaechen je Traverse.
+          Biegung, Querkraft, Durchbiegung und Windflächen je Traverse.
         </p>
       </div>
 
@@ -100,7 +100,7 @@ export function BeamResults({ result }: { result: CalculationResult | null }) {
                 <WindSurfaceLoadList
                   result={result}
                   beamId={beam.beamId}
-                  title="Windflaechen im massgebenden Lastfall"
+                  title="Windflächen im maßgebenden Lastfall"
                 />
               </div>
             </article>

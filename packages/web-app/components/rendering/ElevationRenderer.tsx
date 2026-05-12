@@ -1,4 +1,4 @@
-import type { CalculationResult, StructureInput } from "@/lib/types-bridge"
+﻿import type { CalculationResult, StructureInput } from "@/lib/types-bridge"
 
 function projectHeight(value: number, maxHeight: number, viewHeight: number) {
   const paddingTop = 36
@@ -18,7 +18,7 @@ export function ElevationRenderer({
   if (input.supports.length === 0) {
     return (
       <div className="flex h-[280px] items-center justify-center rounded-[1.5rem] border border-dashed border-border bg-card/90 p-6 text-sm text-muted-foreground">
-        Elevation erscheint, sobald Stuetzen und Traversen vorhanden sind.
+        Elevation erscheint, sobald Stützen und Traversen vorhanden sind.
       </div>
     )
   }
@@ -40,7 +40,7 @@ export function ElevationRenderer({
         <div>
           <h2 className="text-xl font-semibold">Elevation</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Seitenansicht fuer Hoehen, Lastpfeile und Windhinweise.
+            Seitenansicht für Höhen, Lastpfeile und Windhinweise.
           </p>
         </div>
         <div className="rounded-full border border-border px-3 py-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">

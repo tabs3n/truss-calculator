@@ -1,4 +1,4 @@
-import type { Support, TippingDirectionResult, TippingResult } from '../types'
+﻿import type { Support, TippingDirectionResult, TippingResult } from '../types'
 import { getFootProperties } from '../materials/database'
 
 const G = 9.81
@@ -37,7 +37,7 @@ function getEffectiveTippingArmM(support: Support, windMathAngleDeg: number): nu
  */
 function findWindwardSupports(supports: Support[], windAngleDeg: number): string[] {
   if (supports.length < 1) {
-    throw new Error('Mindestens 1 Stuetze erforderlich fuer Kippsicherheitsnachweis')
+    throw new Error('Mindestens 1 Stütze erforderlich für Kippsicherheitsnachweis')
   }
   const rad = (windAngleDeg * Math.PI) / 180
   const wx = Math.cos(rad)
@@ -76,7 +76,7 @@ function buildLeewardNormal(windAngleDeg: number) {
 }
 
 /**
- * Kippsicherheitsnachweis fuer eine Windrichtung.
+ * Kippsicherheitsnachweis für eine Windrichtung.
  *
  * Die Kippachse liegt an der windseitigen Außenkante des Fußsystems (tippingArm aus
  * FOOT_DATABASE). Alle Stützen – auch die windseitigen – leisten dadurch einen
@@ -90,7 +90,7 @@ export function calculateTipping(
   supportVerticalReactions: Map<string, number>,
 ): TippingDirectionResult {
   if (supports.length < 2) {
-    throw new Error('Mindestens 2 Stuetzen erforderlich')
+    throw new Error('Mindestens 2 Stützen erforderlich')
   }
 
   // Wirklich windseitige Stützen (alle mit max. Projektion)
@@ -177,7 +177,7 @@ export function calculateTipping(
 }
 
 /**
- * Berechnet alle Windrichtungen und gibt den massgebenden Lastfall zurueck.
+ * Berechnet alle Windrichtungen und gibt den maßgebenden Lastfall zurück.
  *
  * windMode 'AUTO': alle 4 Hauptrichtungen (0°/N, 90°/O, 180°/S, 270°/W).
  * windMode 'MANUAL': nur die in manualWindDirections angegebenen Kompasswinkel.

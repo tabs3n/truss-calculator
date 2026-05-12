@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState } from "react"
 import { Pencil, Plus, Trash2 } from "lucide-react"
@@ -58,7 +58,7 @@ export function BeamList({
         <div>
           <h2 className="text-xl font-semibold">Traversen</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Verbinde Stuetzen, pflege Auskragungen und hangle Lastfaelle direkt an.
+            Verbinde Stützen, pflege Auskragungen und hangle Lastfälle direkt an.
           </p>
         </div>
         <Button type="button" onClick={openCreate} disabled={supports.length < 2}>
@@ -69,7 +69,7 @@ export function BeamList({
 
       {supports.length < 2 ? (
         <div className="mt-4 rounded-2xl border border-dashed border-border p-4 text-sm text-muted-foreground">
-          Fuer neue Traversen werden zuerst mindestens zwei Stuetzen benoetigt.
+          Fuer neue Traversen werden zuerst mindestens zwei Stützen benötigt.
         </div>
       ) : null}
 
@@ -97,7 +97,7 @@ export function BeamList({
                 <td className="py-3">{beam.cantileverStart.toFixed(2)} m</td>
                 <td className="py-3">{beam.cantileverEnd.toFixed(2)} m</td>
                 <td className="py-3">
-                  {beam.loads.length} Lasten · {beam.windSurfaces.length} Flaechen
+                  {beam.loads.length} Lasten · {beam.windSurfaces.length} Flächen
                 </td>
                 <td className="py-3">
                   <div className="flex justify-end gap-2">
@@ -166,7 +166,7 @@ export function BeamList({
                 <dd>{beam.loads.length}</dd>
               </div>
               <div>
-                <dt className="text-muted-foreground">Windflaechen</dt>
+                <dt className="text-muted-foreground">Windflächen</dt>
                 <dd>{beam.windSurfaces.length}</dd>
               </div>
             </dl>

@@ -1,4 +1,4 @@
-import type { KeyboardEvent } from "react"
+﻿import type { KeyboardEvent } from "react"
 
 import { compassAngleToVector, WIND_DIRECTION_OPTIONS } from "@/lib/constants"
 import { cn } from "@/lib/utils"
@@ -35,7 +35,7 @@ export function WindCompass({
 
   return (
     <div className="rounded-[1.5rem] border border-border/80 bg-card/70 p-4 shadow-sm">
-      <svg viewBox="0 0 184 184" className="mx-auto h-52 w-full max-w-[240px]" aria-label="Kompassrose fuer Windrichtungen">
+      <svg viewBox="0 0 184 184" className="mx-auto h-52 w-full max-w-[240px]" aria-label="Kompassrose für Windrichtungen">
         <defs>
           <marker id="wind-compass-arrow-muted" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
             <path d="M0,0 L0,6 L6,3 z" fill="#94a3b8" />

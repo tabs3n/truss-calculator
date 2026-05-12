@@ -1,4 +1,4 @@
-import type { FootType, FrictionPreset, TerrainCategory, TrussType, WindSurface } from "./types-bridge"
+﻿import type { FootType, FrictionPreset, TerrainCategory, TrussType, WindSurface } from "./types-bridge"
 
 export const COMPANY = {
   name: "Cologne Hunters Licht & Ton Service GmbH",
@@ -6,9 +6,9 @@ export const COMPANY = {
 }
 
 export const DISCLAIMER =
-  "Dieses Dokument ist eine Planungsgrundlage und kein gepruefter " +
+  "Dieses Dokument ist eine Planungsgrundlage und kein geprüfter " +
   "Standsicherheitsnachweis nach den jeweiligen landesrechtlichen Anforderungen. " +
-  "Die Verantwortung fuer die korrekte Ausfuehrung liegt beim Betreiber."
+  "Die Verantwortung für die korrekte Ausfuehrung liegt beim Betreiber."
 
 export const TRUSS_LABELS: Record<TrussType, string> = {
   PROLYTE_H30D: "Prolyte H30D",
@@ -88,7 +88,7 @@ export const FRICTION_PRESET_DETAILS: Record<
     label: "Gummi auf Beton",
     shortLabel: "Gummi",
     value: 0.7,
-    note: "empfohlen fuer Gummipads",
+    note: "empfohlen für Gummipads",
     tone: "bg-red-500",
   },
   WOOD_ON_CONCRETE: {

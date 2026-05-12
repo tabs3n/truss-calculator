@@ -1,4 +1,4 @@
-import type { TrussType } from '../types'
+﻿import type { TrussType } from '../types'
 import { getTrussProperties } from '../materials/database'
 
 export interface BeamInternalForces {
@@ -76,7 +76,7 @@ function calculateMaxDeflectionMm(momentSamples: MomentSample[], spanM: number, 
 }
 
 /**
- * Balkenberechnung mit Gleichgewicht und numerischer Integration der Kruemmung.
+ * Balkenberechnung mit Gleichgewicht und numerischer Integration der Krümmung.
  * Koordinatensystem: x=0 am linken Auflager, x=L am rechten Auflager.
  * Linke Auskragungen liegen bei x<0, rechte Auskragungen bei x>L.
  */
@@ -88,7 +88,7 @@ export function calculateBeam(
   pointLoads: { positionM: number; forceKN: number }[],
   distributedLoadKNm: number,
 ): BeamInternalForces {
-  if (spanM <= 0) throw new Error(`Ungueltige Stuetzweite: ${spanM} m`)
+  if (spanM <= 0) throw new Error(`Ungültige Stützweite: ${spanM} m`)
   if (cantileverStartM < 0 || cantileverEndM < 0) {
     throw new Error('Auskragungen duerfen nicht negativ sein')
   }

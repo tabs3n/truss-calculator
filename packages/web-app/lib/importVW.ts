@@ -1,4 +1,4 @@
-import { defaultInput } from "./defaultInput"
+﻿import { defaultInput } from "./defaultInput"
 import type { FootType, StructureInput, TrussType, VWExportData } from "./types-bridge"
 
 const TRUSS_FALLBACK: TrussType = "PROLYTE_H30V"
@@ -85,7 +85,7 @@ export function importFromVW(data: VWExportData): StructureInput {
 
   const supports = data.supports.map((support, index) => ({
     id: support.id,
-    label: support.label || `Stuetze ${index + 1}`,
+    label: support.label || `Stütze ${index + 1}`,
     position: {
       x: mmToM(support.x),
       y: mmToM(support.y),

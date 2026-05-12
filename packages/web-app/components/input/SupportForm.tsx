@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useMemo, useState } from "react"
 import { X } from "lucide-react"
@@ -21,7 +21,7 @@ function validateSupport(support: Support) {
   if (!Number.isFinite(support.position.x)) errors.x = "X muss eine Zahl sein."
   if (!Number.isFinite(support.position.y)) errors.y = "Y muss eine Zahl sein."
   if (!Number.isFinite(support.height) || support.height <= 0) {
-    errors.height = "Hoehe muss groesser als 0 sein."
+    errors.height = "Höhe muss größer als 0 sein."
   }
   if (!Number.isFinite(support.existingBallast) || support.existingBallast < 0) {
     errors.existingBallast = "Ballast darf nicht negativ sein."
@@ -36,13 +36,13 @@ function validateSupport(support: Support) {
   }
   if (support.footType === "BASEPLATE") {
     if (!Number.isFinite(support.baseplateSize) || (support.baseplateSize ?? 0) <= 0) {
-      errors.baseplateSize = "Plattengroesse fuer Bodenplatte angeben."
+      errors.baseplateSize = "Plattengröße für Bodenplatte angeben."
     }
     if (
       support.outriggerLength !== undefined &&
       (!Number.isFinite(support.outriggerLength) || support.outriggerLength < 0)
     ) {
-      errors.outriggerLength = "Auslegerlaenge darf nicht negativ sein."
+      errors.outriggerLength = "Auslegerlänge darf nicht negativ sein."
     }
   }
 
@@ -168,11 +168,11 @@ export function SupportForm({
         <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-5">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-              Stuetzenformular
+              Stützenformular
             </p>
-            <h3 className="mt-2 text-2xl font-semibold">{draft.label || "Neue Stuetze"}</h3>
+            <h3 className="mt-2 text-2xl font-semibold">{draft.label || "Neue Stütze"}</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Position, Hoehe, Traversentyp und Fussdetail pflegen.
+              Position, Höhe, Traversentyp und Fußdetail pflegen.
             </p>
           </div>
           <Button type="button" variant="ghost" size="icon" onClick={onClose} aria-label="Schliessen">
@@ -217,7 +217,7 @@ export function SupportForm({
             </label>
 
             <label className="block text-sm font-medium">
-              Hoehe (m)
+              Höhe (m)
               <input
                 className={cn(fieldClassName, errors.height && "border-destructive/60")}
                 type="number"
@@ -321,7 +321,7 @@ export function SupportForm({
               <h4 className="text-sm font-semibold">Bodenplattenparameter</h4>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <label className="block text-sm font-medium">
-                  Kantenlaenge Platte (m)
+                  Kantenlänge Platte (m)
                   <input
                     className={cn(fieldClassName, errors.baseplateSize && "border-destructive/60")}
                     type="number"
@@ -334,7 +334,7 @@ export function SupportForm({
                 </label>
 
                 <label className="block text-sm font-medium">
-                  Outrigger-Laenge (m)
+                  Outrigger-Länge (m)
                   <input
                     className={cn(fieldClassName, errors.outriggerLength && "border-destructive/60")}
                     type="number"
@@ -362,7 +362,7 @@ export function SupportForm({
               onSave(normalizeSupport(draft))
             }}
           >
-            Stuetze speichern
+            Stütze speichern
           </Button>
         </div>
       </div>

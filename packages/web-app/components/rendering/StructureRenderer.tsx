@@ -1,4 +1,4 @@
-import type { CalculationResult, StructureInput, Support } from "@/lib/types-bridge"
+﻿import type { CalculationResult, StructureInput, Support } from "@/lib/types-bridge"
 import { compassAngleToVector, getWindDirectionDisplay, getWindDirectionLabel } from "@/lib/constants"
 
 function supportColor(support: Support, result: CalculationResult | null) {
@@ -20,7 +20,7 @@ export function StructureRenderer({
   if (input.supports.length === 0) {
     return (
       <div className="flex h-[320px] items-center justify-center rounded-[1.5rem] border border-dashed border-border bg-card/90 p-6 text-sm text-muted-foreground">
-        Noch kein Grundriss vorhanden. Lege zuerst Stuetzen an.
+        Noch kein Grundriss vorhanden. Lege zuerst Stützen an.
       </div>
     )
   }
@@ -144,7 +144,7 @@ export function StructureRenderer({
               Berechnete Windrichtungen: {windDirections.map(({ angleDeg }) => getWindDirectionLabel(angleDeg)).join(", ")}
             </text>
             <text x="24" y="44" className="fill-red-600 text-[12px] font-semibold">
-              Massgebender Wind: {getWindDirectionDisplay(governingAngleDeg)}
+              Maßgebender Wind: {getWindDirectionDisplay(governingAngleDeg)}
             </text>
             <circle cx="82" cy="88" r="7" fill="#e2e8f0" stroke="#cbd5e1" strokeWidth="1.5" />
             {windDirections.map(({ angleDeg }) => {
@@ -189,7 +189,7 @@ export function StructureRenderer({
           </g>
         ) : (
           <text x="24" y="28" className="fill-slate-500 text-[12px] font-semibold">
-            Alle Stuetzen werden bis zur Berechnung neutral dargestellt.
+            Alle Stützen werden bis zur Berechnung neutral dargestellt.
           </text>
         )}
       </svg>

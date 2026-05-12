@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { Trash2 } from "lucide-react"
 
@@ -52,12 +52,12 @@ export function WindSurfaceForm({
 }) {
   const errors = {
     label: windSurface.label.trim() ? "" : "Bezeichnung fehlt.",
-    width: windSurface.width > 0 ? "" : "Breite muss groesser als 0 sein.",
-    height: windSurface.height > 0 ? "" : "Hoehe muss groesser als 0 sein.",
+    width: windSurface.width > 0 ? "" : "Breite muss größer als 0 sein.",
+    height: windSurface.height > 0 ? "" : "Höhe muss größer als 0 sein.",
     centerHeightAboveGround:
-      windSurface.centerHeightAboveGround > 0 ? "" : "Hoehe ueber Grund muss groesser als 0 sein.",
-    surfaceOrientationDeg: Number.isFinite(windSurface.surfaceOrientationDeg) ? "" : "Ausrichtung ist ungueltig.",
-    dragCoefficient: windSurface.dragCoefficient > 0 ? "" : "c_f muss groesser als 0 sein.",
+      windSurface.centerHeightAboveGround > 0 ? "" : "Höhe über Grund muss größer als 0 sein.",
+    surfaceOrientationDeg: Number.isFinite(windSurface.surfaceOrientationDeg) ? "" : "Ausrichtung ist ungültig.",
+    dragCoefficient: windSurface.dragCoefficient > 0 ? "" : "c_f muss größer als 0 sein.",
   }
 
   const selectedSurfaceType = WIND_SURFACE_TYPE_OPTIONS.find((option) => option.value === windSurface.surfaceType)
@@ -70,9 +70,9 @@ export function WindSurfaceForm({
     <div className="rounded-2xl border border-border bg-background/85 p-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h4 className="text-sm font-semibold">{windSurface.label || "Neue Windflaeche"}</h4>
+          <h4 className="text-sm font-semibold">{windSurface.label || "Neue Windfläche"}</h4>
           <p className="mt-1 text-xs text-muted-foreground">
-            Flaeche, Schwerpunktlage, Typ und Orientierung pflegen.
+            Fläche, Schwerpunktlage, Typ und Orientierung pflegen.
           </p>
         </div>
         <Button type="button" variant="outline" size="icon" onClick={onRemove}>
@@ -92,7 +92,7 @@ export function WindSurfaceForm({
         </label>
 
         <label className="block text-sm font-medium xl:col-span-2">
-          Oberflaechentyp
+          Oberflächentyp
           <select
             className={fieldClassName}
             value={windSurface.surfaceType}
@@ -134,7 +134,7 @@ export function WindSurfaceForm({
         </label>
 
         <label className="block text-sm font-medium">
-          Hoehe (m)
+          Höhe (m)
           <input
             className={cn(fieldClassName, errors.height && "border-destructive/60")}
             type="number"
@@ -147,7 +147,7 @@ export function WindSurfaceForm({
         </label>
 
         <label className="block text-sm font-medium">
-          Schwerpunkt-Hoehe (m)
+          Schwerpunkt-Höhe (m)
           <input
             className={cn(fieldClassName, errors.centerHeightAboveGround && "border-destructive/60")}
             type="number"
@@ -178,7 +178,7 @@ export function WindSurfaceForm({
             <p className="mt-2 text-xs text-destructive">{errors.surfaceOrientationDeg}</p>
           ) : (
             <p className="mt-2 text-xs text-muted-foreground">
-              0 Grad = Flaeche zeigt nach Norden. Blickrichtung auf die Flaeche von vorne.
+              0 Grad = Fläche zeigt nach Norden. Blickrichtung auf die Fläche von vorne.
             </p>
           )}
         </label>
@@ -199,7 +199,7 @@ export function WindSurfaceForm({
             {errors.dragCoefficient ? (
               <p className="mt-2 text-xs text-destructive">{errors.dragCoefficient}</p>
             ) : (
-              <p className="mt-2 text-xs text-muted-foreground">Nur fuer benutzerdefinierte Oberflaechen.</p>
+              <p className="mt-2 text-xs text-muted-foreground">Nur für benutzerdefinierte Oberflächen.</p>
             )}
           </label>
         ) : (
@@ -208,7 +208,7 @@ export function WindSurfaceForm({
             <div className="mt-2 flex h-10 items-center rounded-xl border border-border bg-muted/40 px-3 text-sm font-semibold">
               {computedDragCoefficient?.toFixed(2) ?? "-"}
             </div>
-            <p className="mt-2 text-xs text-muted-foreground">Wird aus dem Oberflaechentyp uebernommen.</p>
+            <p className="mt-2 text-xs text-muted-foreground">Wird aus dem Oberflächentyp uebernommen.</p>
           </div>
         )}
 

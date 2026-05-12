@@ -1,4 +1,4 @@
-import { getFrictionCoefficient } from "@truss-calculator/calc-engine"
+﻿import { getFrictionCoefficient } from "@truss-calculator/calc-engine"
 
 import { WindCompass } from "@/components/input/WindCompass"
 import {
@@ -162,7 +162,7 @@ export function ProjectForm({
   const textWarnings = {
     projectName: input.projectName.trim() ? "" : "Projektname fehlt noch.",
     preparedBy: input.preparedBy.trim() ? "" : "Verantwortliche Person eintragen.",
-    location: input.location.trim() ? "" : "Standort fuer die Dokumentation erfassen.",
+    location: input.location.trim() ? "" : "Standort für die Dokumentation erfassen.",
   }
 
   return (
@@ -171,7 +171,7 @@ export function ProjectForm({
         <div>
           <h2 className="text-xl font-semibold">Projekt und Standort</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Alle Stammdaten fuer Bericht, Windannahmen und Reibung.
+            Alle Stammdaten für Bericht, Windannahmen und Reibung.
           </p>
         </div>
       </div>
@@ -204,7 +204,7 @@ export function ProjectForm({
             )}
           >
             <span className="block text-base font-semibold">Outdoor</span>
-            <span className="mt-1 block text-xs opacity-80">Windlasten fuer Aussenbetrieb</span>
+            <span className="mt-1 block text-xs opacity-80">Windlasten für Aussenbetrieb</span>
           </button>
         </div>
 
@@ -350,7 +350,7 @@ export function ProjectForm({
                 onChange={(event) => setCustomFrictionValue(Number(event.target.value))}
               />
               <InlineHint
-                text={frictionCoefficient <= 0 ? "Reibungsbeiwert muss groesser als 0 sein." : "Eigener Wert fuer Sonderfaelle."}
+                text={frictionCoefficient <= 0 ? "Reibungsbeiwert muss größer als 0 sein." : "Eigener Wert für Sonderfälle."}
                 tone={frictionCoefficient <= 0 ? "danger" : "muted"}
               />
             </label>
@@ -376,7 +376,7 @@ export function ProjectForm({
               <p className="text-sm font-medium">Windzone</p>
               <p className="mt-1 text-xs text-muted-foreground">
                 {isIndoor
-                  ? "Im Indoor-Modus fuer die Ersatzlasten deaktiviert."
+                  ? "Im Indoor-Modus für die Ersatzlasten deaktiviert."
                   : "Auswahl 1 bis 4 mit schneller visueller Einordnung."}
               </p>
             </div>
@@ -422,7 +422,7 @@ export function ProjectForm({
             <div>
               <p className="text-sm font-medium">Windrichtungen</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Automatisch prueft alle Richtungen. Manuell beschraenkt den Nachweis auf die
+                Automatisch prüft alle Richtungen. Manuell beschränkt den Nachweis auf die
                 ausgewaehlten Kompassrichtungen.
               </p>
             </div>
@@ -471,7 +471,7 @@ export function ProjectForm({
                 </div>
               </div>
             ) : (
-              <InlineHint text="Die Berechnung prueft automatisch alle verfuegbaren Windrichtungen." />
+              <InlineHint text="Die Berechnung prüft automatisch alle verfuegbaren Windrichtungen." />
             )}
           </div>
         </div>
@@ -483,7 +483,7 @@ export function ProjectForm({
           <p className="text-xs text-muted-foreground">
             {isIndoor
               ? "Die Windzonenkarte bleibt als Referenz sichtbar, ist im Indoor-Modus aber deaktiviert."
-              : "Vereinfachte Zonenkachel als Auswahlhilfe fuer die Projektvorbereitung."}
+              : "Vereinfachte Zonenkachel als Auswahlhilfe für die Projektvorbereitung."}
           </p>
         </div>
       </div>

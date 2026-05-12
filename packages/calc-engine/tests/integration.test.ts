@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+﻿import { describe, it, expect } from 'vitest'
 import { calculate } from '../src/index.js'
 import type { StructureInput } from '../src/types.js'
 
@@ -112,14 +112,14 @@ describe('Gesamtberechnung Integration (OUTDOOR)', () => {
     }
   })
 
-  it('liefert bei zu wenigen Stuetzen ein typisiertes Ergebnis mit errors', () => {
+  it('liefert bei zu wenigen Stützen ein typisiertes Ergebnis mit errors', () => {
     const result = calculate({
       ...baseInput,
       supports: [],
       beams: [],
     })
     expect(result.overallOk).toBe(false)
-    expect(result.errors).toContain('Mindestens 2 Stuetzen erforderlich')
+    expect(result.errors).toContain('Mindestens 2 Stützen erforderlich')
   })
 })
 

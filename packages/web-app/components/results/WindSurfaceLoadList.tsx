@@ -1,4 +1,4 @@
-import { getWindDirectionDisplay } from "@/lib/constants"
+﻿import { getWindDirectionDisplay } from "@/lib/constants"
 import { getWindSurfaceLoadEntries } from "@/lib/wind-surface-results"
 import type { CalculationResult } from "@/lib/types-bridge"
 
@@ -24,7 +24,7 @@ export function WindSurfaceLoadList({
         {title ? <p className="font-semibold">{title}</p> : null}
         <p className={title ? "mt-1" : undefined}>
           Im Indoor-Modus werden horizontale Ersatzlasten nach DIN EN 17879 angesetzt, keine
-          richtungsabhaengigen Windlasten je Windflaeche.
+          richtungsabhaengigen Windlasten je Windfläche.
         </p>
       </div>
     )
@@ -40,7 +40,7 @@ export function WindSurfaceLoadList({
           <li key={`${entry.beamId}-${entry.surfaceId}`}>
             <span className="font-medium">{entry.surfaceLabel}</span>
             {!beamId ? <span className="text-muted-foreground"> auf {entry.beamLabel}</span> : null}
-            : Windlast bei massgebendem Lastfall: {entry.forceKN.toFixed(2)} kN (cf=
+            : Windlast bei maßgebendem Lastfall: {entry.forceKN.toFixed(2)} kN (cf=
             {entry.dragCoefficient.toFixed(2)}, Richtung {getWindDirectionDisplay(entry.directionAngleDeg)})
           </li>
         ))}

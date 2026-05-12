@@ -1,4 +1,4 @@
-import {
+﻿import {
   Document,
   Page,
   StyleSheet,
@@ -486,7 +486,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
           <View style={{ marginTop: 12 }}>
             <Text style={styles.muted}>Horizontale Lasten: {horizontalLoadStandard}</Text>
             <Text style={styles.muted}>
-              Massgebender Lastfall: {getWindDirectionDisplay(result.tipping.governingAngleDeg)}
+              Maßgebender Lastfall: {getWindDirectionDisplay(result.tipping.governingAngleDeg)}
             </Text>
           </View>
         </View>
@@ -514,7 +514,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
               <Text>Gelaendekategorie: {TERRAIN_LABELS[result.input.terrainCategory]}</Text>
             </View>
             <View style={styles.keyValueItem}>
-              <Text>Stuetzen: {result.input.supports.length}</Text>
+              <Text>Stützen: {result.input.supports.length}</Text>
             </View>
             <View style={styles.keyValueItem}>
               <Text>Traversen: {result.input.beams.length}</Text>
@@ -536,7 +536,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
 
         <View style={styles.section}>
           <Table
-            headers={["Stuetze", "Typ", "Hoehe", "Fuss", "Ballast"]}
+            headers={["Stütze", "Typ", "Höhe", "Fuss", "Ballast"]}
             rows={result.input.supports.map((support) => [
               support.label,
               TRUSS_LABELS[support.trussType],
@@ -564,7 +564,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
 
         <View style={styles.section}>
           <Table
-            headers={["Traverse", "Typ", "Lasten", "Windflaechen"]}
+            headers={["Traverse", "Typ", "Lasten", "Windflächen"]}
             rows={result.input.beams.map((beam) => [
               beam.label,
               TRUSS_LABELS[beam.trussType],
@@ -587,7 +587,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
             {horizontalLoadProof.mode === "INDOOR" ? (
               <>
                 <Text style={styles.formulaLine}>
-                  DIN EN 17879, massgebender Fall: {horizontalLoadProof.indoorLoad.governingCase}
+                  DIN EN 17879, maßgebender Fall: {horizontalLoadProof.indoorLoad.governingCase}
                 </Text>
                 <Text style={styles.formulaLine}>
                   Imperfektionslast = 0,025 x Fv = 0,025 x {formatNumber(getTotalVerticalReactionKN(result))} = {formatNumber(horizontalLoadProof.indoorLoad.details.imperfectionForceKN)} kN
@@ -632,7 +632,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
           <View style={styles.formulaCard}>
             <Text style={styles.formulaHeading}>Kippsicherheitsnachweis</Text>
             <Text style={styles.formulaLine}>
-              Massgebende Windrichtung: {formatNumber(result.tipping.governingAngleDeg, 0)}°
+              Maßgebende Windrichtung: {formatNumber(result.tipping.governingAngleDeg, 0)}°
             </Text>
             <Text style={styles.formulaLine}>Kippachse: {tippingProof.tippingAxisLabel}</Text>
             <Text style={styles.formulaLine}>
@@ -702,9 +702,9 @@ export function ReportDocument({ data }: { data: ReportData }) {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.h3}>Stuetzen / Knicken</Text>
+          <Text style={styles.h3}>Stützen / Knicken</Text>
           <Table
-            headers={["Stuetze", "Rz", "Rx", "Ry", "eta Knicken", "OK"]}
+            headers={["Stütze", "Rz", "Rx", "Ry", "eta Knicken", "OK"]}
             rows={result.supports.map((support) => [
               result.input.supports.find((entry) => entry.id === support.supportId)?.label ?? support.supportId,
               `${formatNumber(support.verticalReactionKN)} kN`,
@@ -747,7 +747,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
 
         <View style={styles.section}>
           <Table
-            headers={["Stuetze", "Erforderlich", "Vorhanden", "Zusaetzlich"]}
+            headers={["Stütze", "Erforderlich", "Vorhanden", "Zusätzlich"]}
             rows={result.ballastPerSupport.map((entry) => [
               entry.supportLabel,
               `${formatNumber(entry.requiredBallastKg, 0)} kg`,

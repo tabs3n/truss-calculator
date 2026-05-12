@@ -1,4 +1,4 @@
-import type { CalculationResult } from "@/lib/types-bridge"
+﻿import type { CalculationResult } from "@/lib/types-bridge"
 
 export function BallastTable({ result }: { result: CalculationResult | null }) {
   if (!result) {
@@ -12,7 +12,7 @@ export function BallastTable({ result }: { result: CalculationResult | null }) {
   return (
     <section className="rounded-[1.5rem] border border-border/80 bg-card/90 p-5 shadow-sm">
       <div className="mb-4">
-        <h2 className="text-xl font-semibold">Ballast je Stuetze</h2>
+        <h2 className="text-xl font-semibold">Ballast je Stütze</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Zeilen mit Zusatzbedarf sind gelb markiert.
         </p>
@@ -22,10 +22,10 @@ export function BallastTable({ result }: { result: CalculationResult | null }) {
         <table className="w-full min-w-[620px] text-sm">
           <thead className="text-left text-muted-foreground">
             <tr className="border-b border-border">
-              <th className="pb-3 font-medium">Stuetze</th>
+              <th className="pb-3 font-medium">Stütze</th>
               <th className="pb-3 font-medium">Erforderlich</th>
               <th className="pb-3 font-medium">Vorhanden</th>
-              <th className="pb-3 font-medium">Zusaetzlich noetig</th>
+              <th className="pb-3 font-medium">Zusätzlich noetig</th>
             </tr>
           </thead>
           <tbody>

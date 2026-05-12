@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState } from "react"
 
@@ -131,7 +131,7 @@ export function TrussGateWizard({
         <div>
           <h2 className="text-xl font-semibold">Schnellkonfiguration Traversentor</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Drei Schritte fuer ein startfertiges Traversentor. Danach kann alles in der normalen
+            Drei Schritte für ein startfertiges Traversentor. Danach kann alles in der normalen
             Eingabemaske weiter bearbeitet werden.
           </p>
         </div>
@@ -142,7 +142,7 @@ export function TrussGateWizard({
 
       {hasExistingStructure ? (
         <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-sm text-amber-800">
-          Bestehende Stuetzen und Traversen werden beim Uebernehmen durch die Wizard-Konfiguration ersetzt.
+          Bestehende Stützen und Traversen werden beim Übernehmen durch die Wizard-Konfiguration ersetzt.
         </div>
       ) : null}
 
@@ -260,13 +260,13 @@ export function TrussGateWizard({
                   />
                 </label>
                 <div className="rounded-2xl border border-sky-100 bg-sky-50/70 p-4 text-sm text-slate-700">
-                  Die Windflaeche wird mit Ausrichtung 0 Grad angelegt und kann danach in der normalen
+                  Die Windfläche wird mit Ausrichtung 0 Grad angelegt und kann danach in der normalen
                   Eingabemaske weiter angepasst werden.
                 </div>
               </>
             ) : (
               <div className="rounded-2xl border border-dashed border-border p-4 text-sm text-muted-foreground md:col-span-3">
-                Leer erzeugt nur die Grundstruktur ohne Windflaeche.
+                Leer erzeugt nur die Grundstruktur ohne Windfläche.
               </div>
             )}
           </div>
@@ -275,7 +275,7 @@ export function TrussGateWizard({
         {currentStep === 2 ? (
           <div className="grid gap-4 md:grid-cols-2">
             <label className="block text-sm font-medium">
-              Auslegerlaenge (m)
+              Auslegerlänge (m)
               <input
                 className="mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 text-sm shadow-sm transition-colors focus:border-primary focus:outline-none"
                 type="number"
@@ -286,7 +286,7 @@ export function TrussGateWizard({
               />
             </label>
             <label className="block text-sm font-medium">
-              Vorhandener Ballast je Stuetze (kg)
+              Vorhandener Ballast je Stütze (kg)
               <input
                 className="mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 text-sm shadow-sm transition-colors focus:border-primary focus:outline-none"
                 type="number"
@@ -311,7 +311,7 @@ export function TrussGateWizard({
             </Button>
           ) : (
             <Button type="button" onClick={() => canApply && onApply(createGateStructure(config))} disabled={!canApply}>
-              Traversentor uebernehmen
+              Traversentor übernehmen
             </Button>
           )}
         </div>
