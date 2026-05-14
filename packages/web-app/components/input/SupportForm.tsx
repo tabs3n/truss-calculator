@@ -4,7 +4,9 @@ import { useMemo, useState } from "react"
 import { X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { Tooltip } from "@/components/ui/Tooltip"
 import { FOOT_OPTIONS, FOOT_LABELS, TRUSS_OPTIONS } from "@/lib/constants"
+import { TOOLTIP_TEXTS } from "@/lib/tooltip-texts"
 import type { FootType, Support, TrussType } from "@/lib/types-bridge"
 import { cn } from "@/lib/utils"
 
@@ -20,8 +22,8 @@ function validateSupport(support: Support) {
   if (!support.label.trim()) errors.label = "Label ist erforderlich."
   if (!Number.isFinite(support.position.x)) errors.x = "X muss eine Zahl sein."
   if (!Number.isFinite(support.position.y)) errors.y = "Y muss eine Zahl sein."
-  if (!Number.isFinite(support.height) || support.height <= 0) {
-    errors.height = "Höhe muss größer als 0 sein."
+  if (!Number.isFinite(support.height) || support.height < 0.5 || support.height > 20) {
+    errors.height = "Höhe muss zwischen 0,5 und 20 m liegen."
   }
   if (!Number.isFinite(support.existingBallast) || support.existingBallast < 0) {
     errors.existingBallast = "Ballast darf nicht negativ sein."
@@ -77,8 +79,13 @@ function normalizeSupport(support: Support): Support {
   }
 }
 
-function ErrorText({ text }: { text?: string }) {
-  return text ? <p className="mt-2 text-xs text-destructive">{text}</p> : null
+function ErrorText({ text, tone = "error" }: { text?: string; tone?: "error" | "warning" }) {
+  if (!text) return null
+  return (
+    <p className={cn("mt-2 text-xs", tone === "warning" ? "text-amber-700" : "text-destructive")}>
+      {text}
+    </p>
+  )
 }
 
 export function SupportForm({
@@ -217,7 +224,10 @@ export function SupportForm({
             </label>
 
             <label className="block text-sm font-medium">
-              Höhe (m)
+              <span className="flex items-center gap-2">
+                Höhe (m)
+                <Tooltip text={TOOLTIP_TEXTS.supportHeight}>(?)</Tooltip>
+              </span>
               <input
                 className={cn(fieldClassName, errors.height && "border-destructive/60")}
                 type="number"
@@ -231,7 +241,10 @@ export function SupportForm({
 
             {!isConcreteBlock ? (
               <label className="block text-sm font-medium">
-                Ballast vorhanden (kg)
+                <span className="flex items-center gap-2">
+                  Ballast vorhanden (kg)
+                  <Tooltip text={TOOLTIP_TEXTS.gammaG}>(?)</Tooltip>
+                </span>
                 <input
                   className={cn(fieldClassName, errors.existingBallast && "border-destructive/60")}
                   type="number"
@@ -260,7 +273,7 @@ export function SupportForm({
             </label>
 
             <label className="block text-sm font-medium">
-              Fuss
+              Fuß
               <select
                 className={fieldClassName}
                 value={draft.footType}
@@ -334,7 +347,10 @@ export function SupportForm({
                 </label>
 
                 <label className="block text-sm font-medium">
-                  Outrigger-Länge (m)
+                  <span className="flex items-center gap-2">
+                    Outrigger-Länge (m)
+                    <Tooltip text={TOOLTIP_TEXTS.baseplateOutrigger}>(?)</Tooltip>
+                  </span>
                   <input
                     className={cn(fieldClassName, errors.outriggerLength && "border-destructive/60")}
                     type="number"

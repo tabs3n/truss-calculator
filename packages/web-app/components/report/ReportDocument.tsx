@@ -18,6 +18,7 @@ import {
 } from "@calc-engine/wind/windLoad"
 import { getFrictionCoefficient } from "@truss-calculator/calc-engine"
 
+import { BeamDiagrams } from "@/components/report/BeamDiagrams"
 import { IsometricSketch } from "@/components/report/IsometricSketch"
 import { PlanView } from "@/components/report/PlanView"
 import type { CalculationResult, ReportData, Support, WindZone } from "@/lib/types-bridge"
@@ -110,6 +111,10 @@ const styles = StyleSheet.create({
     color: "#166534",
     fontWeight: 700,
   },
+  badgeWarn: {
+    color: "#92400e",
+    fontWeight: 700,
+  },
   badgeBad: {
     color: "#b91c1c",
     fontWeight: 700,
@@ -173,6 +178,30 @@ function formatNumber(value: number, digits = 2) {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   })
+}
+
+function getOverallStatus(result: CalculationResult) {
+  if (result.overallOk) {
+    return {
+      label: "STANDSICHER",
+      style: styles.badgeOk,
+      hint: "Alle rechnerischen Nachweise sind erfüllt.",
+    }
+  }
+
+  if (result.requiredBallastTotalKg > 0.5) {
+    return {
+      label: "NICHT STANDSICHER",
+      style: styles.badgeBad,
+      hint: "Für Kippen oder Gleiten ist zusätzlicher Ballast erforderlich.",
+    }
+  }
+
+  return {
+    label: "NACHWEISE PRÜFEN",
+    style: styles.badgeWarn,
+    hint: "Kein zusätzlicher Ballastbedarf aus Kippen/Gleiten; offene Punkte liegen in Bauteil-, Eingabe- oder Detailnachweisen.",
+  }
 }
 
 function getSupportLabel(supports: Support[], supportId: string) {
@@ -453,6 +482,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
   const horizontalLoadProof = getHorizontalLoadProof(result)
   const tippingProof = getTippingProof(result, horizontalLoadProof)
   const slidingProof = getSlidingProof(result, horizontalLoadProof, frictionCoefficient)
+  const overallStatus = getOverallStatus(result)
 
   return (
     <Document title={`Report ${result.input.projectName || "truss-calculator"}`}>
@@ -475,9 +505,8 @@ export function ReportDocument({ data }: { data: ReportData }) {
           <View style={styles.grid2}>
             <View style={styles.card}>
               <Text style={styles.muted}>Gesamtstatus</Text>
-              <Text style={result.overallOk ? styles.badgeOk : styles.badgeBad}>
-                {result.overallOk ? "STANDSICHER" : "NICHT STANDSICHER"}
-              </Text>
+              <Text style={overallStatus.style}>{overallStatus.label}</Text>
+              <Text style={[styles.muted, { marginTop: 4 }]}>{overallStatus.hint}</Text>
             </View>
             <View style={[styles.card, styles.cardGap]}>
               <Text style={styles.muted}>Erforderlicher Zusatzballast gesamt</Text>
@@ -689,6 +718,21 @@ export function ReportDocument({ data }: { data: ReportData }) {
             )}
           </View>
 
+          {result.snowLoad ? (
+            <View style={styles.formulaCard}>
+              <Text style={styles.formulaHeading}>Schneelast (DIN EN 1991-1-3)</Text>
+              <Text style={styles.formulaLine}>
+                s = μ · C_e · C_t · s_k = {formatNumber(result.snowLoad.shapeFactor)} · {formatNumber(result.snowLoad.exposureFactor)} · {formatNumber(result.snowLoad.thermalFactor)} · {formatNumber(result.snowLoad.characteristicGroundLoadKNm2)} = {formatNumber(result.snowLoad.roofLoadKNm2)} kN/m²
+              </Text>
+              <Text style={styles.formulaLine}>
+                F_s,k = s · A = {formatNumber(result.snowLoad.roofLoadKNm2)} · {formatNumber(result.snowLoad.roofAreaM2)} = {formatNumber(result.snowLoad.totalCharacteristicLoadKN)} kN
+              </Text>
+              <Text style={styles.formulaLine}>
+                F_s,d = F_s,k · γQ · Dyn = {formatNumber(result.snowLoad.totalCharacteristicLoadKN)} · {formatNumber(result.designFactors.gammaQ)} · {formatNumber(result.designFactors.dynamicFactor)} = {formatNumber(result.snowLoad.totalDesignLoadKN)} kN
+              </Text>
+            </View>
+          ) : null}
+
           <View style={styles.formulaCard}>
             <Text style={styles.formulaHeading}>Kippsicherheitsnachweis (EQU, DIN EN 1990)</Text>
             <Text style={styles.formulaLine}>
@@ -815,6 +859,28 @@ export function ReportDocument({ data }: { data: ReportData }) {
             ]}
           />
         </View>
+      </Page>
+
+      <Page size="A4" style={styles.page}>
+        <Text style={styles.h2}>Schnittkraftverläufe je Traverse</Text>
+        <Text style={[styles.muted, { fontSize: 10, marginBottom: 12 }]}>
+          Bemessungswerte aus dem jeweils maßgebenden Segment: Biegemoment M, Querkraft V und Biegelinie w.
+        </Text>
+
+        {result.beams.length > 0 ? (
+          result.beams.map((beamResult) => {
+            const beamInput = result.input.beams.find((beam) => beam.id === beamResult.beamId)
+            return (
+              <BeamDiagrams
+                key={beamResult.beamId}
+                beam={beamResult}
+                beamLabel={beamInput?.label ?? beamResult.beamId}
+              />
+            )
+          })
+        ) : (
+          <Text style={styles.muted}>Keine Traversennachweise vorhanden.</Text>
+        )}
       </Page>
 
       <Page size="A4" style={styles.page}>

@@ -48,6 +48,22 @@ export interface FrictionConfig {
   customValue?: number  // nur wenn mode = 'CUSTOM'
 }
 
+export type SnowZone = '1' | '1a' | '2' | '2a' | '3'
+
+export type SnowExposure = 'WINDIG' | 'NORMAL' | 'GESCHUETZT'
+
+export interface SnowConfig {
+  enabled: boolean
+  zone: SnowZone
+  altitudeM: number
+  /** Dachneigung (0 = flach) */
+  roofPitchDeg: number
+  /** WINDIG | NORMAL | GESCHUETZT */
+  exposure: SnowExposure
+  /** Optional: Dachfläche in m² (wenn Dach mit modelliert wird) */
+  roofAreaM2?: number
+}
+
 const FRICTION_PRESET_VALUES: Record<Exclude<FrictionPreset, 'CUSTOM'>, number> = {
   RUBBER_ON_CONCRETE:   0.70,
   WOOD_ON_CONCRETE:     0.60,
@@ -208,6 +224,9 @@ export interface StructureInput {
     doorsCanOpen: boolean
   }
 
+  // Schneelast
+  snowConfig?: SnowConfig
+
   // Reibung
   frictionConfig: FrictionConfig
 
@@ -233,6 +252,25 @@ export interface WindLoadResult {
   windForceY: number             // Fw in kN, Richtung +Y
 }
 
+export interface SnowLoadDetails {
+  characteristicGroundLoadKNm2: number
+  shapeFactor: number
+  exposureFactor: number
+  thermalFactor: number
+  roofLoadKNm2: number
+  roofAreaM2: number
+  totalCharacteristicLoadKN: number
+  totalDesignLoadKN: number
+}
+
+export interface BeamSample {
+  /** Position entlang der Traverse ab linker Gesamtstuetze [m] */
+  xM: number
+  momentKNm: number
+  shearKN: number
+  deflectionMm: number
+}
+
 export interface BeamResult {
   beamId: string
   maxBendingMomentKNm: number
@@ -240,6 +278,8 @@ export interface BeamResult {
   bendingUtilization: number     // η = MEd / MRd, ≤ 1.0 = OK
   shearUtilization: number       // η = VEd / VRd, ≤ 1.0 = OK
   maxDeflectionMm: number
+  /** Reduzierte Stuetzstellen fuer Report-Diagramme (M, V, w) */
+  samples?: BeamSample[]
   isOk: boolean
   failureReason?: string
 }
@@ -336,6 +376,7 @@ export interface CalculationResult {
 
   // Teilberechnungen
   windLoad: WindLoadResult
+  snowLoad?: SnowLoadDetails
   beams: BeamResult[]
   supports: SupportResult[]
   tipping: TippingResult

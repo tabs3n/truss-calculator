@@ -104,4 +104,20 @@ describe('Balkenberechnung', () => {
       expect(result.maxShearForceKN).toBeCloseTo(5, 1)
     })
   })
+
+  describe('Schnittkraft-Samples fuer Reportdiagramme', () => {
+    it('liefert reduzierte Stützstellen mit Moment, Querkraft und Durchbiegung', () => {
+      const result = calculateBeam('PROLYTE_H40V', 6, 0, 0, [{ positionM: 3, forceKN: 10 }], 0)
+      const governingMomentSample = result.samples.reduce((governing, sample) =>
+        Math.abs(sample.momentKNm) > Math.abs(governing.momentKNm) ? sample : governing,
+      )
+
+      expect(result.samples.length).toBeGreaterThan(2)
+      expect(result.samples.length).toBeLessThanOrEqual(51)
+      expect(governingMomentSample.x).toBeCloseTo(3, 1)
+      expect(Math.abs(governingMomentSample.momentKNm)).toBeCloseTo(15, 1)
+      expect(Number.isFinite(governingMomentSample.shearKN)).toBe(true)
+      expect(Number.isFinite(governingMomentSample.deflectionMm)).toBe(true)
+    })
+  })
 })

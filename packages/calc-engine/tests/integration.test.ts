@@ -82,11 +82,44 @@ describe('Gesamtberechnung Integration (OUTDOOR)', () => {
     expect(result.windLoad.windForceX).toBeGreaterThan(0)
   })
 
+  it('Schneelast Outdoor: Zone 3, 500 m, 10 m² Dach erhöht STR-Auflagerkräfte', () => {
+    const withoutSnow = calculate(baseInput)
+    const withSnow = calculate({
+      ...baseInput,
+      snowConfig: {
+        enabled: true,
+        zone: '3',
+        altitudeM: 500,
+        roofPitchDeg: 0,
+        exposure: 'NORMAL',
+        roofAreaM2: 10,
+      },
+    })
+    const supportSumWithoutSnow = withoutSnow.supports.reduce((sum, support) => sum + support.verticalReactionKN, 0)
+    const supportSumWithSnow = withSnow.supports.reduce((sum, support) => sum + support.verticalReactionKN, 0)
+
+    expect(withSnow.snowLoad).toBeDefined()
+    expect(withSnow.snowLoad!.roofLoadKNm2).toBeGreaterThan(0)
+    expect(supportSumWithSnow - supportSumWithoutSnow).toBeCloseTo(withSnow.snowLoad!.totalDesignLoadKN, 2)
+  })
+
   it('Traverse T1 Biegenachweis liegt im plausiblen Bereich', () => {
     const result = calculate(baseInput)
     const beam = result.beams[0]!
     expect(beam.bendingUtilization).toBeGreaterThan(0)
     expect(beam.bendingUtilization).toBeLessThanOrEqual(1.0)
+  })
+
+  it('Traverse T1 enthaelt Schnittkraft-Samples fuer den Report', () => {
+    const result = calculate(baseInput)
+    const beam = result.beams[0]!
+    expect(beam.samples).toBeDefined()
+    expect(beam.samples!.length).toBeGreaterThan(2)
+    expect(beam.samples!.length).toBeLessThanOrEqual(51)
+    expect(Math.max(...beam.samples!.map(sample => Math.abs(sample.momentKNm)))).toBeCloseTo(
+      beam.maxBendingMomentKNm,
+      1,
+    )
   })
 
   it('requiredBallastTotalKg ≥ 0', () => {

@@ -8,11 +8,23 @@ export interface BeamInternalForces {
   reactionEndKN: number
   maxShearForceKN: number
   maxDeflectionMm: number
+  samples: BeamForceSample[]
+}
+
+export interface BeamForceSample {
+  x: number
+  momentKNm: number
+  shearKN: number
+  deflectionMm: number
 }
 
 interface MomentSample {
   x: number
   momentKNm: number
+}
+
+interface ForceSample extends MomentSample {
+  shearKN: number
 }
 
 interface DeflectionSample extends MomentSample {
@@ -38,17 +50,22 @@ function interpolateDeflection(samples: DeflectionSample[], targetX: number) {
   return last.rawDeflectionM
 }
 
-function calculateMaxDeflectionMm(momentSamples: MomentSample[], spanM: number, eiKNm2: number) {
-  if (eiKNm2 <= 0 || momentSamples.length < 2) return 0
+function calculateDeflectionResult(samples: ForceSample[], spanM: number, eiKNm2: number) {
+  if (eiKNm2 <= 0 || samples.length < 2) {
+    return {
+      maxDeflectionMm: 0,
+      samples: samples.map(sample => ({ ...sample, deflectionMm: 0 })),
+    }
+  }
 
   const deflectionSamples: DeflectionSample[] = []
   let rotation = 0
   let rawDeflection = 0
 
-  for (let index = 0; index < momentSamples.length; index += 1) {
-    const sample = momentSamples[index]!
+  for (let index = 0; index < samples.length; index += 1) {
+    const sample = samples[index]!
     if (index > 0) {
-      const previous = momentSamples[index - 1]!
+      const previous = samples[index - 1]!
       const dx = sample.x - previous.x
       const previousCurvature = previous.momentKNm / eiKNm2
       const currentCurvature = sample.momentKNm / eiKNm2
@@ -66,13 +83,43 @@ function calculateMaxDeflectionMm(momentSamples: MomentSample[], spanM: number, 
   const supportDeflectionA = interpolateDeflection(deflectionSamples, 0)
   const supportDeflectionB = interpolateDeflection(deflectionSamples, spanM)
   let maxDeflectionM = 0
+  const samplesWithDeflection: BeamForceSample[] = []
 
-  for (const sample of deflectionSamples) {
+  for (let index = 0; index < deflectionSamples.length; index += 1) {
+    const sample = deflectionSamples[index]!
+    const forceSample = samples[index]!
     const supportChordM = supportDeflectionA + ((supportDeflectionB - supportDeflectionA) * sample.x) / spanM
-    maxDeflectionM = Math.max(maxDeflectionM, Math.abs(sample.rawDeflectionM - supportChordM))
+    const deflectionM = sample.rawDeflectionM - supportChordM
+    maxDeflectionM = Math.max(maxDeflectionM, Math.abs(deflectionM))
+    samplesWithDeflection.push({
+      x: forceSample.x,
+      momentKNm: forceSample.momentKNm,
+      shearKN: forceSample.shearKN,
+      deflectionMm: deflectionM * 1000,
+    })
   }
 
-  return maxDeflectionM * 1000
+  return {
+    maxDeflectionMm: maxDeflectionM * 1000,
+    samples: samplesWithDeflection,
+  }
+}
+
+function downsampleForceSamples(samples: BeamForceSample[], maxSamples = 51) {
+  if (samples.length <= maxSamples) return samples
+
+  const result: BeamForceSample[] = []
+  const usedIndices = new Set<number>()
+  const step = (samples.length - 1) / (maxSamples - 1)
+
+  for (let index = 0; index < maxSamples; index += 1) {
+    const sampleIndex = Math.round(index * step)
+    if (usedIndices.has(sampleIndex)) continue
+    usedIndices.add(sampleIndex)
+    result.push(samples[sampleIndex]!)
+  }
+
+  return result
 }
 
 export interface DistributedLoadSegment {
@@ -175,7 +222,7 @@ export function calculateBeam(
   let maxMoment = 0
   let posOfMaxMoment = 0
   let maxShear = 0
-  const momentSamples: MomentSample[] = []
+  const forceSamples: ForceSample[] = []
 
   for (let index = 0; index <= numSamples; index += 1) {
     const x = xStart + index * dx
@@ -196,7 +243,7 @@ export function calculateBeam(
       if (x >= load.positionM) momentKNm -= load.forceKN * (x - load.positionM)
     }
 
-    momentSamples.push({ x, momentKNm })
+    forceSamples.push({ x, momentKNm, shearKN })
 
     if (Math.abs(momentKNm) > Math.abs(maxMoment)) {
       maxMoment = momentKNm
@@ -208,6 +255,7 @@ export function calculateBeam(
   }
 
   const eiKNm2 = props.eModulus * props.momentOfInertiaY * 1e-4
+  const deflectionResult = calculateDeflectionResult(forceSamples, span, eiKNm2)
 
   return {
     maxBendingMomentKNm: Math.abs(maxMoment),
@@ -215,6 +263,7 @@ export function calculateBeam(
     reactionStartKN: reactionStart,
     reactionEndKN: reactionEnd,
     maxShearForceKN: Math.abs(maxShear),
-    maxDeflectionMm: calculateMaxDeflectionMm(momentSamples, span, eiKNm2),
+    maxDeflectionMm: deflectionResult.maxDeflectionMm,
+    samples: downsampleForceSamples(deflectionResult.samples),
   }
 }

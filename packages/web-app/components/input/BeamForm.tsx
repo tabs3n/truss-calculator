@@ -6,8 +6,10 @@ import { Plus, X } from "lucide-react"
 import { LoadForm } from "@/components/input/LoadForm"
 import { WindSurfaceForm } from "@/components/input/WindSurfaceForm"
 import { Button } from "@/components/ui/button"
+import { Tooltip } from "@/components/ui/Tooltip"
 import { getOrderedBeamSupportIds, getBeamPolylineLengthM } from "@/lib/beam-helpers"
 import { getWindSurfaceTypeDragCoefficient, TRUSS_OPTIONS } from "@/lib/constants"
+import { TOOLTIP_TEXTS } from "@/lib/tooltip-texts"
 import type { Beam, DistributedLoad, HangingLoad, Support, TrussType, WindSurface } from "@/lib/types-bridge"
 import { cn } from "@/lib/utils"
 
@@ -66,6 +68,33 @@ function validateBeam(beam: Beam, supports: Support[], spanLength: number) {
   return errors
 }
 
+function validateBeamWarnings(beam: Beam, spanLength: number) {
+  const warnings: Record<string, string> = {}
+
+  if (spanLength > 12) {
+    warnings.span = "Freie Spannweite über 12 m ist kritisch. Zwischenstütze oder größeren Traversentyp prüfen."
+  } else if (beam.trussType === "PROLYTE_H30V" && spanLength > 8) {
+    warnings.span = "PROLYTE_H30V erlaubt typischerweise maximal ca. 8 m frei."
+  }
+  if (beam.cantileverStart > spanLength / 2) {
+    warnings.cantileverStart = "Linke Auskragung ist größer als die halbe Spannweite."
+  }
+  if (beam.cantileverEnd > spanLength / 2) {
+    warnings.cantileverEnd = "Rechte Auskragung ist größer als die halbe Spannweite."
+  }
+
+  return warnings
+}
+
+function FieldIssue({ text, tone = "error" }: { text?: string; tone?: "error" | "warning" }) {
+  if (!text) return null
+  return (
+    <p className={cn("mt-2 text-xs", tone === "warning" ? "text-amber-700" : "text-destructive")}>
+      {text}
+    </p>
+  )
+}
+
 function createLoad(index: number): HangingLoad {
   return {
     id: crypto.randomUUID(),
@@ -121,6 +150,7 @@ export function BeamForm({
   const minLoadPosition = -draft.cantileverStart
   const maxLoadPosition = spanLength + draft.cantileverEnd
   const errors = useMemo(() => validateBeam(draft, supports, spanLength), [draft, supports, spanLength])
+  const warnings = useMemo(() => validateBeamWarnings(draft, spanLength), [draft, spanLength])
 
   if (!open) return null
 
@@ -154,6 +184,7 @@ export function BeamForm({
             {" · "}
             Gesamtlänge inkl. Auskragungen:{" "}
             <span className="font-semibold text-foreground">{totalLength.toFixed(2)} m</span>
+            <FieldIssue text={warnings.span} tone="warning" />
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -221,7 +252,10 @@ export function BeamForm({
             </label>
 
             <label className="block text-sm font-medium">
-              Auskragung links (m)
+              <span className="flex items-center gap-2">
+                Auskragung links (m)
+                <Tooltip text={TOOLTIP_TEXTS.cantilever}>(?)</Tooltip>
+              </span>
               <input
                 className={cn(fieldClassName, errors.cantileverStart && "border-destructive/60")}
                 type="number"
@@ -230,13 +264,15 @@ export function BeamForm({
                 value={draft.cantileverStart}
                 onChange={(event) => updateField("cantileverStart", Number(event.target.value))}
               />
-              {errors.cantileverStart ? (
-                <p className="mt-2 text-xs text-destructive">{errors.cantileverStart}</p>
-              ) : null}
+              <FieldIssue text={errors.cantileverStart} />
+              <FieldIssue text={warnings.cantileverStart} tone="warning" />
             </label>
 
             <label className="block text-sm font-medium">
-              Auskragung rechts (m)
+              <span className="flex items-center gap-2">
+                Auskragung rechts (m)
+                <Tooltip text={TOOLTIP_TEXTS.cantilever}>(?)</Tooltip>
+              </span>
               <input
                 className={cn(fieldClassName, errors.cantileverEnd && "border-destructive/60")}
                 type="number"
@@ -245,9 +281,8 @@ export function BeamForm({
                 value={draft.cantileverEnd}
                 onChange={(event) => updateField("cantileverEnd", Number(event.target.value))}
               />
-              {errors.cantileverEnd ? (
-                <p className="mt-2 text-xs text-destructive">{errors.cantileverEnd}</p>
-              ) : null}
+              <FieldIssue text={errors.cantileverEnd} />
+              <FieldIssue text={warnings.cantileverEnd} tone="warning" />
             </label>
           </div>
 
@@ -331,7 +366,10 @@ export function BeamForm({
           <section className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h4 className="text-lg font-semibold">Hängelasten</h4>
+                <h4 className="flex items-center gap-2 text-lg font-semibold">
+                  Hängelasten
+                  <Tooltip text={TOOLTIP_TEXTS.dynamicFactor}>(?)</Tooltip>
+                </h4>
                 <p className="text-sm text-muted-foreground">
                   Einzellasten entlang der Traverse mit Position in Metern.
                 </p>
@@ -379,7 +417,10 @@ export function BeamForm({
           <section className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h4 className="text-lg font-semibold">Streckenlasten</h4>
+                <h4 className="flex items-center gap-2 text-lg font-semibold">
+                  Streckenlasten
+                  <Tooltip text={TOOLTIP_TEXTS.distributedLoad}>(?)</Tooltip>
+                </h4>
                 <p className="text-sm text-muted-foreground">
                   Kontinuierliche Last über einen Abschnitt (z.B. Ketten, Kabelwege, PA-Riser).
                 </p>
@@ -504,7 +545,10 @@ export function BeamForm({
           <section className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h4 className="text-lg font-semibold">Windangriffsflaechen</h4>
+                <h4 className="flex items-center gap-2 text-lg font-semibold">
+                  Windangriffsflächen
+                  <Tooltip text={TOOLTIP_TEXTS.windSurface}>(?)</Tooltip>
+                </h4>
                 <p className="text-sm text-muted-foreground">
                   Banner, LED-Waende oder bestueckte Trussbereiche.
                 </p>

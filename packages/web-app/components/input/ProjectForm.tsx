@@ -3,6 +3,7 @@
 import { getFrictionCoefficient } from "@truss-calculator/calc-engine"
 
 import { WindCompass } from "@/components/input/WindCompass"
+import { Tooltip } from "@/components/ui/Tooltip"
 import {
   FRICTION_PRESET_DETAILS,
   FRICTION_PRESET_OPTIONS,
@@ -11,12 +12,29 @@ import {
   TERRAIN_OPTIONS,
   WIND_ZONE_OPTIONS,
 } from "@/lib/constants"
-import type { FrictionPreset, StructureInput, TerrainCategory, WindZone } from "@/lib/types-bridge"
+import { TOOLTIP_TEXTS } from "@/lib/tooltip-texts"
+import type { FrictionPreset, SnowConfig, SnowExposure, SnowZone, StructureInput, TerrainCategory, WindZone } from "@/lib/types-bridge"
 import { cn } from "@/lib/utils"
 import { getWindZoneByPlz } from "@/lib/windzones-by-plz"
 
 const fieldClassName =
   "mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 text-sm shadow-sm transition-colors focus:border-primary focus:outline-none"
+
+const SNOW_ZONE_OPTIONS: SnowZone[] = ["1", "1a", "2", "2a", "3"]
+const SNOW_EXPOSURE_OPTIONS: Array<{ value: SnowExposure; label: string }> = [
+  { value: "WINDIG", label: "Windig" },
+  { value: "NORMAL", label: "Normal" },
+  { value: "GESCHUETZT", label: "Geschützt" },
+]
+
+const defaultSnowConfig: SnowConfig = {
+  enabled: false,
+  zone: "1",
+  altitudeM: 50,
+  roofPitchDeg: 0,
+  exposure: "NORMAL",
+  roofAreaM2: 0,
+}
 
 function GermanyWindMap({ activeZone }: { activeZone: WindZone }) {
   const fills: Record<WindZone, string> = {
@@ -126,7 +144,12 @@ export function ProjectForm({
   }
 
   const isIndoor = input.environment === "INDOOR"
+  const snowConfig = input.snowConfig ?? defaultSnowConfig
   const frictionCoefficient = resolveFrictionCoefficient(input)
+  const frictionError =
+    input.frictionConfig.mode === "CUSTOM" && (frictionCoefficient <= 0 || frictionCoefficient > 1)
+      ? "Reibungsbeiwert muss zwischen 0 und 1 liegen."
+      : ""
   const manualWindDirections =
     input.manualWindDirections && input.manualWindDirections.length > 0 ? input.manualWindDirections : [0]
 
@@ -164,6 +187,20 @@ export function ProjectForm({
       ...input,
       environment: "INDOOR",
       indoorConfig: { doorsCanOpen },
+    })
+  }
+
+  const updateSnowConfig = (next: SnowConfig) => {
+    onChange({
+      ...input,
+      snowConfig: next,
+    })
+  }
+
+  const setSnowField = <K extends keyof SnowConfig>(key: K, value: SnowConfig[K]) => {
+    updateSnowConfig({
+      ...(input.snowConfig ?? defaultSnowConfig),
+      [key]: value,
     })
   }
 
@@ -247,7 +284,10 @@ export function ProjectForm({
                 onChange={(event) => setDoorsCanOpen(event.target.checked)}
               />
               <span>
-                <span className="block text-sm font-medium">Tore koennen sich oeffnen (Ersatzflaechenlast)</span>
+                <span className="flex items-center gap-2 text-sm font-medium">
+                  Tore können sich öffnen (Ersatzflächenlast)
+                  <Tooltip text={TOOLTIP_TEXTS.indoorDoors}>(?)</Tooltip>
+                </span>
                 <span className="mt-1 block text-xs text-muted-foreground">
                   Horizontale Ersatzlasten nach DIN EN 17879
                 </span>
@@ -258,6 +298,100 @@ export function ProjectForm({
           )}
         </div>
       </div>
+
+      {!isIndoor ? (
+        <div className="mb-6 rounded-[1.5rem] border border-border/80 bg-background/70 p-4">
+          <label className="flex items-start gap-3 text-foreground">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 rounded border-border"
+              checked={snowConfig.enabled}
+              onChange={(event) => setSnowField("enabled", event.target.checked)}
+            />
+            <span>
+              <span className="flex items-center gap-2 text-sm font-medium">
+                Schneelast berücksichtigen
+                <Tooltip text={TOOLTIP_TEXTS.snowLoad}>(?)</Tooltip>
+              </span>
+              <span className="mt-1 block text-xs text-muted-foreground">
+                Optionaler Dach- oder Planenansatz nach DIN EN 1991-1-3.
+              </span>
+            </span>
+          </label>
+
+          {snowConfig.enabled ? (
+            <div className="mt-4 grid gap-4 md:grid-cols-3">
+              <label className="block text-sm font-medium">
+                Schneelastzone
+                <select
+                  className={fieldClassName}
+                  value={snowConfig.zone}
+                  onChange={(event) => setSnowField("zone", event.target.value as SnowZone)}
+                >
+                  {SNOW_ZONE_OPTIONS.map((zone) => (
+                    <option key={zone} value={zone}>
+                      Zone {zone}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block text-sm font-medium">
+                Höhe ü. NN (m)
+                <input
+                  className={fieldClassName}
+                  type="number"
+                  min="0"
+                  max="1500"
+                  step="10"
+                  value={snowConfig.altitudeM}
+                  onChange={(event) => setSnowField("altitudeM", Number(event.target.value))}
+                />
+              </label>
+
+              <label className="block text-sm font-medium">
+                Dachneigung (°)
+                <input
+                  className={fieldClassName}
+                  type="number"
+                  min="0"
+                  max="90"
+                  step="1"
+                  value={snowConfig.roofPitchDeg}
+                  onChange={(event) => setSnowField("roofPitchDeg", Number(event.target.value))}
+                />
+              </label>
+
+              <label className="block text-sm font-medium">
+                Exposition
+                <select
+                  className={fieldClassName}
+                  value={snowConfig.exposure}
+                  onChange={(event) => setSnowField("exposure", event.target.value as SnowExposure)}
+                >
+                  {SNOW_EXPOSURE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block text-sm font-medium">
+                Dachfläche (m²)
+                <input
+                  className={fieldClassName}
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={snowConfig.roofAreaM2 ?? 0}
+                  onChange={(event) => setSnowField("roofAreaM2", Number(event.target.value))}
+                />
+              </label>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="grid gap-4 md:grid-cols-2">
         <label className="block text-sm font-medium">
@@ -347,8 +481,9 @@ export function ProjectForm({
 
         <div className="rounded-[1.5rem] border border-border/80 bg-background/60 p-4 md:col-span-2">
           <div className="flex flex-wrap items-center gap-3">
-            <p className="text-sm font-medium" title="Werte nach DIN EN 13814 Tabelle 3">
+            <p className="flex items-center gap-2 text-sm font-medium" title="Werte nach DIN EN 13814 Tabelle 3">
               Untergrund
+              <Tooltip text={TOOLTIP_TEXTS.friction}>(?)</Tooltip>
             </p>
             <span className="rounded-full border border-border px-3 py-1 text-xs font-semibold text-muted-foreground">
               mu = {frictionCoefficient.toFixed(2)}
@@ -400,9 +535,12 @@ export function ProjectForm({
 
           {input.frictionConfig.mode === "CUSTOM" ? (
             <label className="mt-4 block text-sm font-medium">
-              Reibungsbeiwert mu
+              <span className="flex items-center gap-2">
+                Reibungsbeiwert µ
+                <Tooltip text={TOOLTIP_TEXTS.friction}>(?)</Tooltip>
+              </span>
               <input
-                className={cn(fieldClassName, frictionCoefficient <= 0 && "border-destructive/60")}
+                className={cn(fieldClassName, frictionError && "border-destructive/60")}
                 type="number"
                 min="0"
                 step="0.05"
@@ -410,8 +548,8 @@ export function ProjectForm({
                 onChange={(event) => setCustomFrictionValue(Number(event.target.value))}
               />
               <InlineHint
-                text={frictionCoefficient <= 0 ? "Reibungsbeiwert muss größer als 0 sein." : "Eigener Wert für Sonderfälle."}
-                tone={frictionCoefficient <= 0 ? "danger" : "muted"}
+                text={frictionError || "Eigener Wert für Sonderfälle."}
+                tone={frictionError ? "danger" : "muted"}
               />
             </label>
           ) : null}
@@ -433,7 +571,10 @@ export function ProjectForm({
             )}
           >
             <div>
-              <p className="text-sm font-medium">Windzone</p>
+              <p className="flex items-center gap-2 text-sm font-medium">
+                Windzone
+                <Tooltip text={TOOLTIP_TEXTS.windZone}>(?)</Tooltip>
+              </p>
               <p className="mt-1 text-xs text-muted-foreground">
                 {isIndoor
                   ? "Im Indoor-Modus für die Ersatzlasten deaktiviert."
@@ -461,7 +602,10 @@ export function ProjectForm({
             </div>
 
             <label className="block text-sm font-medium">
-              Gelaendekategorie
+              <span className="flex items-center gap-2">
+                Geländekategorie
+                <Tooltip text={TOOLTIP_TEXTS.terrainCategory}>(?)</Tooltip>
+              </span>
               <select
                 className={fieldClassName}
                 value={input.terrainCategory}
@@ -480,7 +624,10 @@ export function ProjectForm({
 
           <div className="rounded-[1.5rem] border border-border/80 bg-background/60 p-4">
             <div>
-              <p className="text-sm font-medium">Windrichtungen</p>
+              <p className="flex items-center gap-2 text-sm font-medium">
+                Windrichtungen
+                <Tooltip text={TOOLTIP_TEXTS.windMode}>(?)</Tooltip>
+              </p>
               <p className="mt-1 text-xs text-muted-foreground">
                 Automatisch prüft alle Richtungen. Manuell beschränkt den Nachweis auf die
                 ausgewaehlten Kompassrichtungen.

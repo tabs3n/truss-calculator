@@ -1,10 +1,14 @@
 ﻿export * from './types'
 
+export * from './validation'
+
 import type {
   Beam,
   BeamResult,
+  BeamSample,
   CalculationResult,
   SlidingResult,
+  SnowLoadDetails,
   StructureInput,
   Support,
   SupportResult,
@@ -28,6 +32,7 @@ import {
   getDesignLoad,
 } from './loads/loadCombinations'
 import { getGoverningIndoorLoad } from './loads/indoorLoads'
+import { calculateSnowLoad } from './loads/snowLoad'
 import { getFootProperties, getFootWeightKg, getTrussProperties } from './materials/database'
 import { checkSliding } from './sliding/slidingCheck'
 import { checkBuckling } from './stability/bucklingCheck'
@@ -36,6 +41,7 @@ import { calculateSurfaceWindForce, calculateWindForce, getPeakVelocityPressure 
 
 const normReferences = [
   'DIN EN 1991-1-4: Windlasten',
+  'DIN EN 1991-1-3: Schneelasten',
   'DIN EN 1993-1 (EC3): Stahlbau',
   'DIN EN 1999-1-1 (EC9): Aluminiumbau',
   'DIN EN 17879: Event-Strukturen',
@@ -383,6 +389,39 @@ export function calculate(input: StructureInput): CalculationResult {
     }
   }
 
+  let snowLoad: SnowLoadDetails | undefined
+  if (!isIndoor && input.snowConfig?.enabled) {
+    try {
+      const roofAreaM2 = Math.max(0, input.snowConfig.roofAreaM2 ?? 0)
+      const snow = calculateSnowLoad({
+        zone: input.snowConfig.zone,
+        altitudeM: input.snowConfig.altitudeM,
+        roofPitchDeg: input.snowConfig.roofPitchDeg,
+        exposure: input.snowConfig.exposure,
+      })
+      const totalCharacteristicLoadKN = snow.roofLoadKNm2 * roofAreaM2
+      // DIN EN 1990: Schneelast als veränderliche Last mit γQ und DGUV-Dynamikzuschlag ansetzen.
+      const totalDesignLoadKN = getDesignLoad(totalCharacteristicLoadKN, 'variable')
+
+      totalPermanentSTR_KN += totalDesignLoadKN
+      if (input.supports.length > 0) {
+        const snowReactionPerSupportKN = totalDesignLoadKN / input.supports.length
+        for (const support of input.supports) {
+          addToReactionMap(supportVerticalReactionsSTR, support.id, snowReactionPerSupportKN)
+        }
+      }
+
+      snowLoad = {
+        ...snow,
+        roofAreaM2,
+        totalCharacteristicLoadKN,
+        totalDesignLoadKN,
+      }
+    } catch (error) {
+      errors.push(`Schneelastberechnung: ${(error as Error).message}`)
+    }
+  }
+
   // ── Horizontalkraft und Windlast-Result ─────────────────────────────────────
   let windLoad: WindLoadResult
   let totalHorizontalForceKN: number
@@ -475,6 +514,7 @@ export function calculate(input: StructureInput): CalculationResult {
     let segmentMaxMoment = 0
     let segmentMaxShear = 0
     let segmentMaxDeflection = 0
+    let governingSamples: BeamSample[] | undefined
     let aggregateUtilization = { bending: 0, shear: 0, isOk: true, failureReason: undefined as string | undefined }
 
     try {
@@ -532,11 +572,20 @@ export function calculate(input: StructureInput): CalculationResult {
           segDistributed,
         )
         const utilization = checkBeamUtilization(beam.trussType, forces)
+        const segmentSamples = forces.samples.map(sample => ({
+          xM: sample.x + segStart,
+          momentKNm: sample.momentKNm,
+          shearKN: sample.shearKN,
+          deflectionMm: sample.deflectionMm,
+        }))
 
         // Aggregiere maximale Werte über alle Segmente
         if (forces.maxBendingMomentKNm > segmentMaxMoment) segmentMaxMoment = forces.maxBendingMomentKNm
         if (forces.maxShearForceKN > segmentMaxShear) segmentMaxShear = forces.maxShearForceKN
         if (forces.maxDeflectionMm > segmentMaxDeflection) segmentMaxDeflection = forces.maxDeflectionMm
+        if (!governingSamples || utilization.bendingUtilization > aggregateUtilization.bending) {
+          governingSamples = segmentSamples
+        }
         if (utilization.bendingUtilization > aggregateUtilization.bending) aggregateUtilization.bending = utilization.bendingUtilization
         if (utilization.shearUtilization > aggregateUtilization.shear) aggregateUtilization.shear = utilization.shearUtilization
         if (!utilization.isOk) {
@@ -552,6 +601,7 @@ export function calculate(input: StructureInput): CalculationResult {
         bendingUtilization: aggregateUtilization.bending,
         shearUtilization: aggregateUtilization.shear,
         maxDeflectionMm: segmentMaxDeflection,
+        ...(governingSamples ? { samples: governingSamples } : {}),
         isOk: aggregateUtilization.isOk,
         ...(aggregateUtilization.failureReason ? { failureReason: aggregateUtilization.failureReason } : {}),
       })
@@ -694,6 +744,7 @@ export function calculate(input: StructureInput): CalculationResult {
     input,
     normReferences,
     windLoad,
+    ...(snowLoad ? { snowLoad } : {}),
     beams: beamResults,
     supports: supportResults,
     tipping,

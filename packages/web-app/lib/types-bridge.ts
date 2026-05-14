@@ -2,6 +2,7 @@
 export type {
   Beam,
   BeamResult,
+  BeamSample,
   CalculationResult,
   DesignFactors,
   DistributedLoad,
@@ -12,6 +13,10 @@ export type {
   ReportConfig,
   ReportData,
   SlidingResult,
+  SnowConfig,
+  SnowExposure,
+  SnowLoadDetails,
+  SnowZone,
   StructureInput,
   Support,
   SupportResult,
