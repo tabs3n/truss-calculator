@@ -1,4 +1,5 @@
-﻿import type { CalculationResult, StructureInput } from "@/lib/types-bridge"
+﻿import { getOrderedBeamSupports } from "@/lib/beam-helpers"
+import type { CalculationResult, StructureInput } from "@/lib/types-bridge"
 
 function projectHeight(value: number, maxHeight: number, viewHeight: number) {
   const paddingTop = 36
@@ -81,10 +82,7 @@ export function ElevationRenderer({
         })}
 
         {input.beams.map((beam) => {
-          const ids = beam.supportIds && beam.supportIds.length >= 2
-            ? beam.supportIds
-            : [beam.startSupportId, beam.endSupportId]
-          const supports = ids.map((id) => supportById.get(id)).filter(Boolean) as typeof input.supports
+          const supports = getOrderedBeamSupports(beam, input.supports)
           if (supports.length < 2) return null
 
           const first = supports[0]!

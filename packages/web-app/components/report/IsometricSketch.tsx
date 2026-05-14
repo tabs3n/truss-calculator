@@ -3,6 +3,7 @@ import { Fragment } from "react"
 import { getFootProperties, getTrussProperties } from "@calc-engine/materials/database"
 import { Line, Path, Svg, Text } from "@react-pdf/renderer"
 
+import { getOrderedBeamSupports } from "@/lib/beam-helpers"
 import type { Beam, CalculationResult, Support } from "@/lib/types-bridge"
 
 const COS_30 = Math.cos(Math.PI / 6)
@@ -58,16 +59,11 @@ function getBeamSupports(result: CalculationResult, beam: Beam) {
 }
 
 /**
- * Liefert alle Stützen einer Traverse in Reihenfolge (Multi-Support-fähig).
- * Fällt auf [start, end] zurück wenn supportIds nicht gesetzt.
+ * Liefert alle Stützen einer Traverse in physikalisch korrekter Reihenfolge
+ * (sortiert nach Projektion auf Start→Ende-Vektor).
  */
 function getAllBeamSupports(result: CalculationResult, beam: Beam): Support[] {
-  const ids = beam.supportIds && beam.supportIds.length >= 2
-    ? beam.supportIds
-    : [beam.startSupportId, beam.endSupportId]
-  return ids
-    .map((id) => result.input.supports.find((support) => support.id === id))
-    .filter((support): support is Support => Boolean(support))
+  return getOrderedBeamSupports(beam, result.input.supports)
 }
 
 function interpolateBeamPoint(beam: Beam, result: CalculationResult, distanceM: number): WorldPoint | null {

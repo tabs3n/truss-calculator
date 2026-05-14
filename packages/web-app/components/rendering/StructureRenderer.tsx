@@ -1,4 +1,5 @@
-﻿import type { CalculationResult, StructureInput, Support } from "@/lib/types-bridge"
+﻿import { getOrderedBeamSupports } from "@/lib/beam-helpers"
+import type { CalculationResult, StructureInput, Support } from "@/lib/types-bridge"
 import { compassAngleToVector, getWindDirectionDisplay, getWindDirectionLabel } from "@/lib/constants"
 
 function supportColor(support: Support, result: CalculationResult | null) {
@@ -79,12 +80,7 @@ export function StructureRenderer({
         <rect x="0" y="0" width={viewWidth} height={viewHeight} fill="url(#grid)" />
 
         {input.beams.map((beam) => {
-          const supportIds = beam.supportIds && beam.supportIds.length >= 2
-            ? beam.supportIds
-            : [beam.startSupportId, beam.endSupportId]
-          const beamSupports = supportIds
-            .map((id) => supportById.get(id))
-            .filter((s): s is Support => Boolean(s))
+          const beamSupports = getOrderedBeamSupports(beam, input.supports)
 
           if (beamSupports.length < 2) return null
 

@@ -6,6 +6,7 @@ import { Plus, X } from "lucide-react"
 import { LoadForm } from "@/components/input/LoadForm"
 import { WindSurfaceForm } from "@/components/input/WindSurfaceForm"
 import { Button } from "@/components/ui/button"
+import { getOrderedBeamSupportIds, getBeamPolylineLengthM } from "@/lib/beam-helpers"
 import { getWindSurfaceTypeDragCoefficient, TRUSS_OPTIONS } from "@/lib/constants"
 import type { Beam, DistributedLoad, HangingLoad, Support, TrussType, WindSurface } from "@/lib/types-bridge"
 import { cn } from "@/lib/utils"
@@ -19,16 +20,8 @@ function getBeamSupportIds(beam: Beam): string[] {
 }
 
 function distanceBetweenSupports(beam: Beam, supports: Support[]) {
-  const ids = getBeamSupportIds(beam)
-  let total = 0
-  for (let i = 0; i < ids.length - 1; i++) {
-    const a = supports.find((s) => s.id === ids[i])
-    const b = supports.find((s) => s.id === ids[i + 1])
-    if (a && b) {
-      total += Math.hypot(b.position.x - a.position.x, b.position.y - a.position.y)
-    }
-  }
-  return total
+  // Verwendet die korrekt sortierte Polylinie (Zwischenstützen nach Projektion)
+  return getBeamPolylineLengthM(beam, supports)
 }
 
 function validateBeam(beam: Beam, supports: Support[], spanLength: number) {
@@ -567,7 +560,25 @@ export function BeamForm({
           <Button type="button" variant="outline" onClick={onClose}>
             Abbrechen
           </Button>
-          <Button type="button" disabled={!canSave} onClick={() => canSave && onSave(draft)}>
+          <Button
+            type="button"
+            disabled={!canSave}
+            onClick={() => {
+              if (!canSave) return
+              // Vor dem Speichern: Zwischenstützen nach Position entlang
+              // Start→Ende-Vektor sortieren, damit die Polylinie monoton ist
+              const orderedIds = getOrderedBeamSupportIds(draft, supports)
+              const next: Beam = orderedIds.length >= 2
+                ? {
+                    ...draft,
+                    supportIds: orderedIds,
+                    startSupportId: orderedIds[0]!,
+                    endSupportId: orderedIds[orderedIds.length - 1]!,
+                  }
+                : draft
+              onSave(next)
+            }}
+          >
             Traverse speichern
           </Button>
         </div>

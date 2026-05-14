@@ -3,6 +3,7 @@ import { Fragment } from "react"
 import { getFootProperties } from "@calc-engine/materials/database"
 import { Line, Path, Svg, Text } from "@react-pdf/renderer"
 
+import { getOrderedBeamSupports } from "@/lib/beam-helpers"
 import type { Beam, CalculationResult, Support } from "@/lib/types-bridge"
 
 /**
@@ -30,12 +31,7 @@ function getFootSizeMeters(support: Support) {
 }
 
 function getAllBeamSupports(result: CalculationResult, beam: Beam): Support[] {
-  const ids = beam.supportIds && beam.supportIds.length >= 2
-    ? beam.supportIds
-    : [beam.startSupportId, beam.endSupportId]
-  return ids
-    .map((id) => result.input.supports.find((s) => s.id === id))
-    .filter((s): s is Support => Boolean(s))
+  return getOrderedBeamSupports(beam, result.input.supports)
 }
 
 function compassToWindVector(compassDeg: number): { x: number; y: number } {

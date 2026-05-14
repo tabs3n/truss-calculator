@@ -86,13 +86,43 @@ function getBeamSupportIds(beam: Beam): string[] {
     : [beam.startSupportId, beam.endSupportId]
 }
 
+/**
+ * Sortiert Zwischenstützen einer Multi-Support-Traverse defensiv nach ihrer
+ * Projektion auf den Start→Ende-Vektor, sodass die Polylinie monoton ist.
+ * Schützt vor inkonsistenten Eingaben (z.B. wenn Zwischenstützen-Reihenfolge
+ * nicht der physikalischen Position entspricht).
+ */
+function orderSupportsAlongAxis(supports: Support[]): Support[] {
+  if (supports.length < 3) return supports
+  const first = supports[0]!
+  const last = supports[supports.length - 1]!
+  const vx = last.position.x - first.position.x
+  const vy = last.position.y - first.position.y
+  const len2 = vx * vx + vy * vy
+  if (len2 === 0) return supports
+
+  const intermediates = supports.slice(1, -1).map(s => {
+    const dx = s.position.x - first.position.x
+    const dy = s.position.y - first.position.y
+    const t = (dx * vx + dy * vy) / len2
+    return { support: s, t }
+  })
+  intermediates.sort((a, b) => a.t - b.t)
+  return [first, ...intermediates.map(e => e.support), last]
+}
+
 function resolveBeamGeometry(beam: Beam, supports: Support[]): BeamGeometry | null {
   const supportIds = getBeamSupportIds(beam)
   const beamSupports = supportIds
     .map(id => supports.find(s => s.id === id))
   if (beamSupports.some(s => !s)) return null
-  const resolvedSupports = beamSupports.filter((s): s is Support => Boolean(s))
-  if (resolvedSupports.length < 2) return null
+  const rawSupports = beamSupports.filter((s): s is Support => Boolean(s))
+  if (rawSupports.length < 2) return null
+
+  // Defensiv sortieren: bei nicht-monotoner Polylinie würde der Träger sonst
+  // zickzack laufen und Längen/Lastpositionen unsinnig werden.
+  const resolvedSupports = orderSupportsAlongAxis(rawSupports)
+  const orderedIds = resolvedSupports.map(s => s.id)
 
   const spans: number[] = []
   const cumulativeX: number[] = [0]
@@ -107,7 +137,7 @@ function resolveBeamGeometry(beam: Beam, supports: Support[]): BeamGeometry | nu
   const beamSpanTotal = spans.reduce((sum, span) => sum + span, 0)
 
   return {
-    supportIds,
+    supportIds: orderedIds,
     spans,
     cumulativeX,
     totalLengthM: beam.cantileverStart + beamSpanTotal + beam.cantileverEnd,
@@ -432,26 +462,14 @@ export function calculate(input: StructureInput): CalculationResult {
   // berechnet (konservative Vereinfachung – überschätzt Momente gegenüber Durchlaufträger).
   const beamResults: BeamResult[] = []
   for (const beam of input.beams) {
-    const supportIds = beam.supportIds && beam.supportIds.length >= 2
-      ? beam.supportIds
-      : [beam.startSupportId, beam.endSupportId]
-    const beamSupports = supportIds
-      .map(id => input.supports.find(s => s.id === id))
-      .filter((s): s is typeof input.supports[number] => Boolean(s))
-    if (beamSupports.length < 2) continue
+    const geometry = resolveBeamGeometry(beam, input.supports)
+    if (!geometry) continue
 
     const selfWeightPerMKNm = getBeamSelfWeight(beam.trussType, 1) * GAMMA_G
 
-    // Spannweiten und kumulierte x-Positionen der Stützen entlang des Trägers
-    const spans: number[] = []
-    const cumulativeX: number[] = [0]
-    for (let i = 0; i < beamSupports.length - 1; i++) {
-      const a = beamSupports[i]!
-      const b = beamSupports[i + 1]!
-      const s = Math.hypot(b.position.x - a.position.x, b.position.y - a.position.y)
-      spans.push(s)
-      cumulativeX.push(cumulativeX[i]! + s)
-    }
+    // Aus der defensiv sortierten Geometrie (Polylinie monoton entlang Start→Ende)
+    const spans = geometry.spans
+    const cumulativeX = geometry.cumulativeX
 
     // Sammle für jedes Segment Punkt- und Streckenlasten, sowie Auskragungs-Beiträge
     let segmentMaxMoment = 0
