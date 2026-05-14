@@ -19,6 +19,7 @@ import {
 import { getFrictionCoefficient } from "@truss-calculator/calc-engine"
 
 import { IsometricSketch } from "@/components/report/IsometricSketch"
+import { PlanView } from "@/components/report/PlanView"
 import type { CalculationResult, ReportData, Support, WindZone } from "@/lib/types-bridge"
 import {
   FOOT_LABELS,
@@ -533,6 +534,18 @@ export function ReportDocument({ data }: { data: ReportData }) {
             </Text>
             <View style={styles.sketchFrame}>
               <IsometricSketch result={result} width={500} height={320} />
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.card}>
+            <Text style={styles.h3}>Grundriss (Draufsicht)</Text>
+            <Text style={[styles.muted, { fontSize: 9, marginBottom: 6 }]}>
+              Bodenplatten, Stützen, Traversen, alle Windrichtungen und Kippachse (rot gestrichelt)
+            </Text>
+            <View style={styles.sketchFrame}>
+              <PlanView result={result} width={500} height={340} />
             </View>
           </View>
         </View>

@@ -5,6 +5,7 @@ import { FileUp } from "lucide-react"
 
 import { ProjectForm } from "@/components/input/ProjectForm"
 import { BeamList } from "@/components/input/BeamList"
+import { ConfigImportExport } from "@/components/input/ConfigImportExport"
 import { SupportList } from "@/components/input/SupportList"
 import { TemplateGallery } from "@/components/input/TemplateGallery"
 import { TrussGateWizard } from "@/components/input/TrussGateWizard"
@@ -13,6 +14,7 @@ import { ElevationRenderer } from "@/components/rendering/ElevationRenderer"
 import { StructureRenderer } from "@/components/rendering/StructureRenderer"
 import { BallastTable } from "@/components/results/BallastTable"
 import { BeamResults } from "@/components/results/BeamResults"
+import { Recommendations } from "@/components/results/Recommendations"
 import { ResultSummary } from "@/components/results/ResultSummary"
 import { TippingResults } from "@/components/results/TippingResults"
 import { Button } from "@/components/ui/button"
@@ -22,7 +24,17 @@ import { createEmptyInput } from "@/lib/templates"
 import type { Beam, StructureInput, Support, VWExportData } from "@/lib/types-bridge"
 
 export default function CalculatorPage() {
-  const { input, setInput, result, isCalculating, error, runCalculation } = useCalculation()
+  const {
+    input,
+    setInput,
+    result,
+    isCalculating,
+    error,
+    runCalculation,
+    hasRestoredDraft,
+    dismissRestoredDraft,
+    resetToDefault,
+  } = useCalculation()
   const [importMessage, setImportMessage] = useState<string | null>(null)
   const [importError, setImportError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -119,12 +131,29 @@ export default function CalculatorPage() {
           </div>
         </section>
 
+        {hasRestoredDraft ? (
+          <section className="rounded-2xl border border-emerald-300 bg-emerald-50 px-5 py-4 text-sm text-emerald-900 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              Letzte Konfiguration aus dem Browser wiederhergestellt. Weiterarbeiten oder neu starten?
+            </span>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={dismissRestoredDraft}>
+                Weiterarbeiten
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={resetToDefault}>
+                Neu starten
+              </Button>
+            </div>
+          </section>
+        ) : null}
+
         <div className="grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
           <div className="space-y-6">
             <TemplateGallery
               onSelect={applyTemplate}
               onEmpty={() => applyTemplate(createEmptyInput())}
             />
+            <ConfigImportExport input={input} onImport={applyTemplate} />
             <ProjectForm input={input} onChange={updateInput} />
             <TrussGateWizard
               hasExistingStructure={input.supports.length > 0 || input.beams.length > 0}
@@ -189,6 +218,7 @@ export default function CalculatorPage() {
             </section>
 
             <ResultSummary result={result} />
+            <Recommendations result={result} />
             <BallastTable result={result} />
             <BeamResults result={result} />
             <TippingResults result={result} />
