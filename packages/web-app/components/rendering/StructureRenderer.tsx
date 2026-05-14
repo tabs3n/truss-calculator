@@ -79,29 +79,41 @@ export function StructureRenderer({
         <rect x="0" y="0" width={viewWidth} height={viewHeight} fill="url(#grid)" />
 
         {input.beams.map((beam) => {
-          const start = supportById.get(beam.startSupportId)
-          const end = supportById.get(beam.endSupportId)
+          const supportIds = beam.supportIds && beam.supportIds.length >= 2
+            ? beam.supportIds
+            : [beam.startSupportId, beam.endSupportId]
+          const beamSupports = supportIds
+            .map((id) => supportById.get(id))
+            .filter((s): s is Support => Boolean(s))
 
-          if (!start || !end) return null
+          if (beamSupports.length < 2) return null
+
+          // Label-Position in der Mitte der Polylinie
+          const first = beamSupports[0]!
+          const last = beamSupports[beamSupports.length - 1]!
+          const midX = (projectX(first.position.x) + projectX(last.position.x)) / 2
+          const midY = (projectY(first.position.y) + projectY(last.position.y)) / 2 - 10
 
           return (
             <g key={beam.id}>
-              <line
-                x1={projectX(start.position.x)}
-                y1={projectY(start.position.y)}
-                x2={projectX(end.position.x)}
-                y2={projectY(end.position.y)}
-                stroke="#334155"
-                strokeWidth="4"
-                strokeLinecap="round"
-              />
-              <text
-                x={(projectX(start.position.x) + projectX(end.position.x)) / 2}
-                y={(projectY(start.position.y) + projectY(end.position.y)) / 2 - 10}
-                textAnchor="middle"
-                className="fill-slate-700 text-[11px] font-semibold"
-              >
+              {beamSupports.slice(0, -1).map((start, idx) => {
+                const end = beamSupports[idx + 1]!
+                return (
+                  <line
+                    key={`${beam.id}-seg-${idx}`}
+                    x1={projectX(start.position.x)}
+                    y1={projectY(start.position.y)}
+                    x2={projectX(end.position.x)}
+                    y2={projectY(end.position.y)}
+                    stroke="#334155"
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                  />
+                )
+              })}
+              <text x={midX} y={midY} textAnchor="middle" className="fill-slate-700 text-[11px] font-semibold">
                 {beam.label}
+                {beamSupports.length > 2 ? ` (${beamSupports.length} Stützen)` : ""}
               </text>
             </g>
           )

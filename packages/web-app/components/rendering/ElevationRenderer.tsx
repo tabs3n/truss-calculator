@@ -81,19 +81,47 @@ export function ElevationRenderer({
         })}
 
         {input.beams.map((beam) => {
-          const start = supportById.get(beam.startSupportId)
-          const end = supportById.get(beam.endSupportId)
-          if (!start || !end) return null
+          const ids = beam.supportIds && beam.supportIds.length >= 2
+            ? beam.supportIds
+            : [beam.startSupportId, beam.endSupportId]
+          const supports = ids.map((id) => supportById.get(id)).filter(Boolean) as typeof input.supports
+          if (supports.length < 2) return null
 
-          const startX = projectX(start.position.x)
-          const endX = projectX(end.position.x)
-          const startY = projectHeight(start.height, maxHeight, viewHeight)
-          const endY = projectHeight(end.height, maxHeight, viewHeight)
+          const first = supports[0]!
+          const last = supports[supports.length - 1]!
+          const startX = projectX(first.position.x)
+          const endX = projectX(last.position.x)
+          const startY = projectHeight(first.height, maxHeight, viewHeight)
+          const endY = projectHeight(last.height, maxHeight, viewHeight)
           const beamY = Math.min(startY, endY)
+
+          // Spannweiten und cumulative position für Lastenverteilung entlang Polylinie
+          let totalSpan = 0
+          for (let i = 0; i < supports.length - 1; i++) {
+            const a = supports[i]!
+            const b = supports[i + 1]!
+            totalSpan += Math.hypot(b.position.x - a.position.x, b.position.y - a.position.y)
+          }
+          const totalBeamLength = beam.cantileverStart + totalSpan + beam.cantileverEnd
 
           return (
             <g key={beam.id}>
-              <line x1={startX} y1={beamY} x2={endX} y2={beamY} stroke="#0f172a" strokeWidth="4" strokeLinecap="round" />
+              {/* Segmente zwischen aufeinanderfolgenden Stützen */}
+              {supports.slice(0, -1).map((s, idx) => {
+                const e = supports[idx + 1]!
+                return (
+                  <line
+                    key={`${beam.id}-seg-${idx}`}
+                    x1={projectX(s.position.x)}
+                    y1={projectHeight(s.height, maxHeight, viewHeight)}
+                    x2={projectX(e.position.x)}
+                    y2={projectHeight(e.height, maxHeight, viewHeight)}
+                    stroke="#0f172a"
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                  />
+                )
+              })}
               <text
                 x={(startX + endX) / 2}
                 y={beamY - 12}
@@ -101,11 +129,10 @@ export function ElevationRenderer({
                 className="fill-slate-700 text-[11px] font-semibold"
               >
                 {beam.label}
+                {supports.length > 2 ? ` · ${supports.length} Stützen` : ""}
               </text>
 
               {beam.loads.map((load) => {
-                const spanLength = Math.hypot(end.position.x - start.position.x, end.position.y - start.position.y)
-                const totalBeamLength = beam.cantileverStart + spanLength + beam.cantileverEnd
                 const ratio = (load.positionAlongBeam + beam.cantileverStart) / Math.max(totalBeamLength, 0.01)
                 const clampedRatio = Math.min(1, Math.max(0, ratio))
                 const x = startX + (endX - startX) * clampedRatio
@@ -123,6 +150,35 @@ export function ElevationRenderer({
                     />
                     <text x={x} y={beamY + 50} textAnchor="middle" className="fill-blue-700 text-[10px] font-medium">
                       {load.weight.toFixed(0)} kg
+                    </text>
+                  </g>
+                )
+              })}
+
+              {/* Streckenlasten als blaues Rechteck mit Pfeilen darüber */}
+              {(beam.distributedLoads ?? []).map((dl) => {
+                const startRatio = Math.max(0, Math.min(1, (dl.startPositionM + beam.cantileverStart) / Math.max(totalBeamLength, 0.01)))
+                const endRatio = Math.max(0, Math.min(1, (dl.endPositionM + beam.cantileverStart) / Math.max(totalBeamLength, 0.01)))
+                const x1 = startX + (endX - startX) * startRatio
+                const x2 = startX + (endX - startX) * endRatio
+                return (
+                  <g key={dl.id} opacity="0.7">
+                    <rect
+                      x={Math.min(x1, x2)}
+                      y={beamY - 24}
+                      width={Math.abs(x2 - x1)}
+                      height={10}
+                      fill="#60a5fa"
+                      stroke="#1d4ed8"
+                      strokeWidth="0.5"
+                    />
+                    <text
+                      x={(x1 + x2) / 2}
+                      y={beamY - 28}
+                      textAnchor="middle"
+                      className="fill-blue-700 text-[9px] font-medium"
+                    >
+                      {dl.loadKgPerM.toFixed(0)} kg/m
                     </text>
                   </g>
                 )
