@@ -1,7 +1,27 @@
 # Truss Calculator – Status & Roadmap
 
-> Stand: 2026-05-14
-> Letzte Session: Anzeige-Bugs im Report behoben, Streckenlast + Multi-Support hinzugefügt, Umlaute korrigiert, Norm-Audit durchgeführt.
+> Stand: 2026-05-14 (Session 2)
+> **Aktuell**: Codex arbeitet parallel an Bug-Fixes 1+2 + Templates + DIN-Symbole.
+> Diese Datei spiegelt den Stand VOR Codex' Merge wider — nach Pull aktualisieren.
+
+## 📦 Session 2 Parallel-Arbeit (nicht-konfliktäre Dateien)
+
+| Commit | Inhalt |
+|---|---|
+| `8106b61` | PLZ→Windzone (`lib/windzones-by-plz.ts` + ProjectForm), IsometricSketch Multi-Support, localStorage Auto-Save, JSON Export/Import, `multiSupport.test.ts` |
+| `3c99a23` | `PlanView.tsx` (Grundriss mit allen Windrichtungen), `snowLoad.ts` (DIN EN 1991-1-3), `snowLoad.test.ts` |
+| `c69a8b1` | StructureRenderer + ElevationRenderer Multi-Support + Streckenlasten-Visualisierung |
+| `25042f0` | `Recommendations.tsx` mit auto-Analyse (Ballast > 10t Warnung, Outrigger-Ersparnis-Schätzung, 2-Stützen-Falle, Mesh-Tipp, Zwischenstützen-Tipp) |
+
+**Wartet auf Wiring nach Codex' Merge** (calculator/page.tsx wird von Codex angefasst):
+- `<TemplateGallery />` (Codex)
+- `<ConfigImportExport input={input} onImport={setInput} />`
+- `<Recommendations result={result} />`
+- `<PlanView result={result} />` in `ReportDocument.tsx`
+
+**Wartet auf Engine-Integration**:
+- Snow load in `index.ts` (nach Codex Bug 2 fertig)
+- PlanView in ReportDocument neben IsometricSketch
 
 ---
 
