@@ -32,11 +32,11 @@
 
 | # | Item | Status | Commit | Notiz |
 |---|---|---|---|---|
-| 2 | Tooltips mit Norm-Referenzen | 🔄 In Arbeit | — | Tooltip-Primitive + Normtexte in Formularen begonnen |
-| 6 | Schnittkraft-Diagramme im Report | 🔄 In Arbeit | — | Beam-Samples in Engine + Report-Diagrammseite begonnen |
+| 2 | Tooltips mit Norm-Referenzen | ✅ Fertig | `3d3adfc` | Tooltip-Primitive + tooltip-texts.ts + in allen 3 Forms |
+| 6 | Schnittkraft-Diagramme im Report | ✅ Fertig | `3d3adfc` | BeamDiagrams.tsx (M, V, Biegelinie), Samples in BeamResult |
 | 7 | Was-wäre-wenn-Vergleich im Report | ⬜ Offen | — | `calculateVariants()` + neue Report-Seite |
-| 9 | Snow-Load UI Integration | 🔄 In Arbeit | — | Typen + Engine-Lastansatz + ProjectForm + Report begonnen |
-| 10 | Eingabe-Validierung mit Echo | 🔄 In Arbeit | — | `validation.ts` + erste Feld-Echos in Forms |
+| 9 | Snow-Load UI Integration | ✅ Fertig | `3d3adfc` | SnowConfig im Input, Engine-Integration, ProjectForm-Sektion, Report-Block |
+| 10 | Eingabe-Validierung mit Echo | ✅ Fertig | `3d3adfc` | `validation.ts` (engine) + Issue-Echos in allen Forms + Tests |
 | 15 | Materialdatenbank vervollständigen | ⬜ Offen | — | TRUSS_DATABASE mit verifizierten Werten + Quellen |
 
 **Datei-Bereiche** (Codex touched only):
@@ -88,6 +88,16 @@ Bevor ein Item ✅ markiert wird:
   ohne diese ist der Renderer read-only.
 - Mobile-FAB ist bei Live-Modus statusanzeigend, bei Manuell-Modus
   hat es einen Berechnen-Button.
+
+**Codex — 4 von 6 Items erledigt** (Commit `3d3adfc`)
+- Tooltips (#2): in ProjectForm/SupportForm/BeamForm verteilt
+- Validation (#10): zentrale `validateStructureInput()` + Echos in Forms
+- Snow (#9): SnowConfig + Engine + UI + Report-Block komplett
+- Schnittkraft-Diagramme (#6): BeamDiagrams.tsx mit M/V/Biegelinie
+
+**Noch offen für nächste Session:**
+- **#7** Was-wäre-wenn-Vergleich (`calculateVariants` API + VariantsComparison.tsx)
+- **#15** Materialdatenbank füllen (6 Trussen mit verifizierten Werten)
 
 ---
 
