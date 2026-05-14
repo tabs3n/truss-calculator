@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   formulaLine: {
-    fontFamily: "Courier",
+    fontFamily: "Helvetica",
     fontSize: 9.2,
     marginBottom: 4,
   },
@@ -497,7 +497,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
       </Page>
 
       <Page size="A4" style={styles.page}>
-        <Text style={styles.h2}>Systemuebersicht</Text>
+        <Text style={styles.h2}>Systemübersicht</Text>
         <View style={styles.card}>
           <Text style={styles.h3}>Standort und System</Text>
           <View style={styles.keyValueGrid}>
@@ -511,7 +511,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
               <Text>Windzone: {result.input.windZone}</Text>
             </View>
             <View style={styles.keyValueItem}>
-              <Text>Gelaendekategorie: {TERRAIN_LABELS[result.input.terrainCategory]}</Text>
+              <Text>Geländekategorie: {TERRAIN_LABELS[result.input.terrainCategory]}</Text>
             </View>
             <View style={styles.keyValueItem}>
               <Text>Stützen: {result.input.supports.length}</Text>
@@ -539,7 +539,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
 
         <View style={styles.section}>
           <Table
-            headers={["Stütze", "Typ", "Höhe", "Fuss", "Ballast"]}
+            headers={["Stütze", "Typ", "Höhe", "Fuß", "Ballast"]}
             rows={result.input.supports.map((support) => [
               support.label,
               TRUSS_LABELS[support.trussType],
@@ -617,13 +617,13 @@ export function ReportDocument({ data }: { data: ReportData }) {
                   DIN EN 17879, maßgebender Fall: {horizontalLoadProof.indoorLoad.governingCase}
                 </Text>
                 <Text style={styles.formulaLine}>
-                  Imperfektionslast = 0,025 x Fv = 0,025 x {formatNumber(getTotalVerticalReactionKN(result))} = {formatNumber(horizontalLoadProof.indoorLoad.details.imperfectionForceKN)} kN
+                  Imperfektionslast = 0,025 · Fv = 0,025 · {formatNumber(getTotalVerticalReactionKN(result))} = {formatNumber(horizontalLoadProof.indoorLoad.details.imperfectionForceKN)} kN
                 </Text>
                 <Text style={styles.formulaLine}>
                   Anpralllast = {formatNumber(horizontalLoadProof.indoorLoad.details.impactForceKN)} kN
                 </Text>
                 <Text style={styles.formulaLine}>
-                  Ersatzflaechenlast = qh x Aref = {formatNumber(horizontalLoadProof.indoorLoad.details.surfacePressureKNm2)} x {formatNumber(horizontalLoadProof.referenceAreaM2)} = {formatNumber(horizontalLoadProof.indoorLoad.details.surfaceForceKN)} kN
+                  Ersatzflächenlast = qh · Aref = {formatNumber(horizontalLoadProof.indoorLoad.details.surfacePressureKNm2)} · {formatNumber(horizontalLoadProof.referenceAreaM2)} = {formatNumber(horizontalLoadProof.indoorLoad.details.surfaceForceKN)} kN
                 </Text>
                 <Text style={styles.formulaLine}>
                   Fh = {formatNumber(horizontalLoadProof.forceKN)} kN bei h = {formatNumber(horizontalLoadProof.applicationHeightM)} m
@@ -632,25 +632,25 @@ export function ReportDocument({ data }: { data: ReportData }) {
             ) : (
               <>
                 <Text style={styles.formulaLine}>
-                  Windzone [{result.input.windZone}] -&gt; vb = {formatNumber(horizontalLoadProof.vb)} m/s
+                  Windzone [{result.input.windZone}] → vb = {formatNumber(horizontalLoadProof.vb)} m/s
                 </Text>
                 <Text style={styles.formulaLine}>
-                  Gelaendekategorie [{result.input.terrainCategory}] -&gt; z0 = {formatNumber(horizontalLoadProof.z0)} m
+                  Geländekategorie [{result.input.terrainCategory}] → z0 = {formatNumber(horizontalLoadProof.z0)} m
                 </Text>
                 <Text style={styles.formulaLine}>
-                  cr(z) = kr x ln(z/z0) = {formatNumber(horizontalLoadProof.kr)} x ln({formatNumber(horizontalLoadProof.zEff)}/{formatNumber(horizontalLoadProof.z0)}) = {formatNumber(horizontalLoadProof.cr)}
+                  cr(z) = kr · ln(z/z0) = {formatNumber(horizontalLoadProof.kr)} · ln({formatNumber(horizontalLoadProof.zEff)}/{formatNumber(horizontalLoadProof.z0)}) = {formatNumber(horizontalLoadProof.cr)}
                 </Text>
                 <Text style={styles.formulaLine}>
                   Iv(z) = 1 / ln(z/z0) = 1 / ln({formatNumber(horizontalLoadProof.zEff)}/{formatNumber(horizontalLoadProof.z0)}) = {formatNumber(horizontalLoadProof.Iv)}
                 </Text>
                 <Text style={styles.formulaLine}>
-                  vm(z) = cr x vb = {formatNumber(horizontalLoadProof.cr)} x {formatNumber(horizontalLoadProof.vb)} = {formatNumber(horizontalLoadProof.vm)} m/s
+                  vm(z) = cr · vb = {formatNumber(horizontalLoadProof.cr)} · {formatNumber(horizontalLoadProof.vb)} = {formatNumber(horizontalLoadProof.vm)} m/s
                 </Text>
                 <Text style={styles.formulaLine}>
-                  qp(z) = (1 + 7xIv) x 0,5 x rho x vm^2 = (1 + 7x{formatNumber(horizontalLoadProof.Iv)}) x 0,5 x {formatNumber(AIR_DENSITY)} x {formatNumber(horizontalLoadProof.vm)}^2 = {formatNumber(horizontalLoadProof.qp)} kN/m^2
+                  qp(z) = (1 + 7·Iv) · 0,5 · ρ · vm² = (1 + 7·{formatNumber(horizontalLoadProof.Iv)}) · 0,5 · {formatNumber(AIR_DENSITY)} · {formatNumber(horizontalLoadProof.vm)}² = {formatNumber(horizontalLoadProof.qp)} kN/m²
                 </Text>
                 <Text style={styles.formulaLine}>
-                  Fw = cf x qp x Aref = {formatNumber(horizontalLoadProof.effectiveCf)} x {formatNumber(horizontalLoadProof.qp)} x {formatNumber(horizontalLoadProof.referenceAreaM2)} = {formatNumber(horizontalLoadProof.forceKN)} kN
+                  Fw = cf · qp · Aref = {formatNumber(horizontalLoadProof.effectiveCf)} · {formatNumber(horizontalLoadProof.qp)} · {formatNumber(horizontalLoadProof.referenceAreaM2)} = {formatNumber(horizontalLoadProof.forceKN)} kN
                 </Text>
               </>
             )}
@@ -666,19 +666,19 @@ export function ReportDocument({ data }: { data: ReportData }) {
               Faktoren: γQ = {formatNumber(result.designFactors.gammaQ)}, Dyn = {formatNumber(result.designFactors.dynamicFactor)}, γG,inf = {formatNumber(result.designFactors.gammaGinf)}
             </Text>
             <Text style={styles.formulaLine}>
-              Fw,d = Fw,k x γQ x Dyn = {formatNumber(horizontalLoadProof.forceKN)} x {formatNumber(result.designFactors.horizontalDesignFactor)} = {formatNumber(result.tipping.governing.designHorizontalForceKN)} kN
+              Fw,d = Fw,k · γQ · Dyn = {formatNumber(horizontalLoadProof.forceKN)} · {formatNumber(result.designFactors.horizontalDesignFactor)} = {formatNumber(result.tipping.governing.designHorizontalForceKN)} kN
             </Text>
             <Text style={styles.formulaLine}>
-              Mk,d = Fw,d x h = {formatNumber(result.tipping.governing.designHorizontalForceKN)} kN x {formatNumber(result.tipping.governing.applicationHeightM)} m = {formatNumber(result.tipping.governing.designTippingMomentKNm)} kN.m
+              Mk,d = Fw,d · h = {formatNumber(result.tipping.governing.designHorizontalForceKN)} kN · {formatNumber(result.tipping.governing.applicationHeightM)} m = {formatNumber(result.tipping.governing.designTippingMomentKNm)} kN·m
             </Text>
             <Text style={styles.formulaLine}>
-              Ms,d = Σ(Rz,EQU x a) = {formatNumber(result.tipping.governing.totalEquVerticalReactionKN)} kN x {formatNumber(result.tipping.governing.effectiveLeverArmM)} m = {formatNumber(result.tipping.governing.designStabilizingMomentKNm)} kN.m
+              Ms,d = Σ(Rz,EQU · a) = {formatNumber(result.tipping.governing.totalEquVerticalReactionKN)} kN · {formatNumber(result.tipping.governing.effectiveLeverArmM)} m = {formatNumber(result.tipping.governing.designStabilizingMomentKNm)} kN·m
             </Text>
             <Text style={styles.formulaLine}>
-              Ausnutzung: eta = Mk,d / Ms,d = {formatNumber(result.tipping.governing.designTippingMomentKNm)} / {formatNumber(result.tipping.governing.designStabilizingMomentKNm)} = {formatNumber(result.tipping.governing.utilization)} {result.tipping.governing.utilization <= 1 ? "<= 1,0 OK" : "> 1,0 NICHT OK"}
+              Ausnutzung: η = Mk,d / Ms,d = {formatNumber(result.tipping.governing.designTippingMomentKNm)} / {formatNumber(result.tipping.governing.designStabilizingMomentKNm)} = {formatNumber(result.tipping.governing.utilization)} {result.tipping.governing.utilization <= 1 ? "≤ 1,0 OK" : "> 1,0 NICHT OK"}
             </Text>
             <Text style={styles.formulaLine}>
-              Erf. Ballast = (Mk,d − Ms,d) / (g x a) = ({formatNumber(result.tipping.governing.designTippingMomentKNm)} − {formatNumber(result.tipping.governing.designStabilizingMomentKNm)}) / (9,81 x {formatNumber(result.tipping.governing.effectiveLeverArmM)}) = {formatNumber(result.tipping.governing.requiredBallastTotalKg, 0)} kg
+              Erf. Ballast = (Mk,d − Ms,d) / (g · a) = ({formatNumber(result.tipping.governing.designTippingMomentKNm)} − {formatNumber(result.tipping.governing.designStabilizingMomentKNm)}) / (9,81 · {formatNumber(result.tipping.governing.effectiveLeverArmM)}) = {formatNumber(result.tipping.governing.requiredBallastTotalKg, 0)} kg
             </Text>
           </View>
 
@@ -710,13 +710,13 @@ export function ReportDocument({ data }: { data: ReportData }) {
                 <View key={beamResult.beamId} style={{ marginBottom: 8 }}>
                   <Text style={styles.formulaLine}>{beamLabel}</Text>
                   <Text style={styles.formulaLine}>
-                    MEd = {formatNumber(beamResult.maxBendingMomentKNm)} kN.m
+                    MEd = {formatNumber(beamResult.maxBendingMomentKNm)} kN·m
                   </Text>
                   <Text style={styles.formulaLine}>
-                    MRd = {formatNumber(trussProperties?.bendingResistanceY ?? 0)} kN.m (aus Systemstatik {trussType ? TRUSS_LABELS[trussType] : beamResult.beamId})
+                    MRd = {formatNumber(trussProperties?.bendingResistanceY ?? 0)} kN·m (aus Systemstatik {trussType ? TRUSS_LABELS[trussType] : beamResult.beamId})
                   </Text>
                   <Text style={styles.formulaLine}>
-                    eta = MEd/MRd = {formatNumber(beamResult.maxBendingMomentKNm)}/{formatNumber(trussProperties?.bendingResistanceY ?? 0)} = {formatNumber(beamResult.bendingUtilization)} {beamResult.bendingUtilization <= 1 ? "<= 1,0 OK" : "> 1,0 NICHT OK"}
+                    η = MEd/MRd = {formatNumber(beamResult.maxBendingMomentKNm)}/{formatNumber(trussProperties?.bendingResistanceY ?? 0)} = {formatNumber(beamResult.bendingUtilization)} {beamResult.bendingUtilization <= 1 ? "≤ 1,0 OK" : "> 1,0 NICHT OK"}
                   </Text>
                 </View>
               )
@@ -731,7 +731,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
         <View style={styles.section}>
           <Text style={styles.h3}>Traversen</Text>
           <Table
-            headers={["Traverse", "M_max", "V_max", "eta Biegung", "eta Quer", "OK"]}
+            headers={["Traverse", "M_max", "V_max", "η Biegung", "η Quer", "OK"]}
             rows={result.beams.map((beam) => [
               result.input.beams.find((entry) => entry.id === beam.beamId)?.label ?? beam.beamId,
               `${formatNumber(beam.maxBendingMomentKNm)} kNm`,
@@ -746,7 +746,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
         <View style={styles.section}>
           <Text style={styles.h3}>Stützen / Knicken</Text>
           <Table
-            headers={["Stütze", "Rz", "Rx", "Ry", "eta Knicken", "OK"]}
+            headers={["Stütze", "Rz", "Rx", "Ry", "η Knicken", "OK"]}
             rows={result.supports.map((support) => [
               result.input.supports.find((entry) => entry.id === support.supportId)?.label ?? support.supportId,
               `${formatNumber(support.verticalReactionKN)} kN`,
@@ -761,7 +761,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
         <View style={styles.section}>
           <Text style={styles.h3}>Kippen / Gleiten</Text>
           <Table
-            headers={["Richtung", "Kippachse", "eta", "Rz,min", "Ballast", "OK"]}
+            headers={["Richtung", "Kippachse", "η", "Rz,min", "Ballast", "OK"]}
             rows={[
               ...result.tipping.directions.map(({ angleDeg, result: directionResult }) => [
                 getWindDirectionDisplay(angleDeg),

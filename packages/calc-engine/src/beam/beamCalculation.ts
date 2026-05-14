@@ -183,7 +183,7 @@ export function calculateBeam(
     let shearKN = -selfWeightKNm * (x - xStart)
     shearKN += distributedShearAtX(distributedSegments, x)
     if (x >= 0) shearKN += reactionStart
-    if (x >= span) shearKN -= reactionEnd
+    if (x > span) shearKN -= reactionEnd
     for (const load of pointLoads) {
       if (x >= load.positionM) shearKN -= load.forceKN
     }

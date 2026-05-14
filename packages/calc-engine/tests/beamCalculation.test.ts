@@ -87,4 +87,21 @@ describe('Balkenberechnung', () => {
       expect(check.failureReason).toBeDefined()
     })
   })
+
+  describe('maxShearForceKN - korrekt am Auflager', () => {
+    it('Einzellast 10 kN bei Mitte, L=6m: V_max = 5 kN', () => {
+      const result = calculateBeam('PROLYTE_H40V', 6, 0, 0, [{ positionM: 3, forceKN: 10 }], 0)
+      expect(result.maxShearForceKN).toBeCloseTo(5, 1)
+    })
+
+    it('Streckenlast q=2 kN/m, L=4m: V_max = 4 kN', () => {
+      const result = calculateBeam('PROLYTE_H40V', 4, 0, 0, [], 2)
+      expect(result.maxShearForceKN).toBeCloseTo(4, 1)
+    })
+
+    it('Kragarm: 5 kN am Auskragungs-Ende, L=6m, cant=2m: V_max = 5 kN', () => {
+      const result = calculateBeam('PROLYTE_H40V', 6, 2, 0, [{ positionM: -2, forceKN: 5 }], 0)
+      expect(result.maxShearForceKN).toBeCloseTo(5, 1)
+    })
+  })
 })

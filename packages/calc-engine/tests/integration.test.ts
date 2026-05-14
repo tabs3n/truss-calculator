@@ -112,6 +112,62 @@ describe('Gesamtberechnung Integration (OUTDOOR)', () => {
     }
   })
 
+  it('Asymmetrische Last: nähere Stütze trägt mehr', () => {
+    const asymInput: StructureInput = {
+      ...baseInput,
+      beams: [
+        {
+          ...baseInput.beams[0]!,
+          loads: [
+            {
+              id: 'L1',
+              label: 'Testlast',
+              positionAlongBeam: 1,
+              weight: 100,
+            },
+          ],
+        },
+      ],
+    }
+    const unloadedInput: StructureInput = {
+      ...asymInput,
+      beams: [{ ...asymInput.beams[0]!, loads: [] }],
+    }
+
+    const result = calculate(asymInput)
+    const unloaded = calculate(unloadedInput)
+    const rA = result.supports[0]!.verticalReactionKN
+    const rB = result.supports[1]!.verticalReactionKN
+    const loadShareA = rA - unloaded.supports[0]!.verticalReactionKN
+    const loadShareB = rB - unloaded.supports[1]!.verticalReactionKN
+
+    expect(rA).toBeGreaterThan(rB)
+    expect(loadShareA).toBeGreaterThan(loadShareB * 4.5)
+    expect(loadShareA).toBeCloseTo(loadShareB * 5, 1)
+  })
+
+  it('Symmetrische Last: Stützen tragen gleich', () => {
+    const symmetricInput: StructureInput = {
+      ...baseInput,
+      beams: [
+        {
+          ...baseInput.beams[0]!,
+          loads: [
+            {
+              id: 'L1',
+              label: 'Testlast',
+              positionAlongBeam: 3,
+              weight: 100,
+            },
+          ],
+        },
+      ],
+    }
+
+    const result = calculate(symmetricInput)
+    expect(result.supports[0]!.verticalReactionKN).toBeCloseTo(result.supports[1]!.verticalReactionKN, 1)
+  })
+
   it('liefert bei zu wenigen Stützen ein typisiertes Ergebnis mit errors', () => {
     const result = calculate({
       ...baseInput,

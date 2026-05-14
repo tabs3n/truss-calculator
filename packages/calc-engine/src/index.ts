@@ -1,10 +1,12 @@
 ﻿export * from './types'
 
 import type {
+  Beam,
   BeamResult,
   CalculationResult,
   SlidingResult,
   StructureInput,
+  Support,
   SupportResult,
   TippingDirectionResult,
   TippingResult,
@@ -12,7 +14,7 @@ import type {
 } from './types'
 import { getFrictionCoefficient } from './types'
 
-import { calculateBeam } from './beam/beamCalculation'
+import { calculateBeam, type DistributedLoadSegment } from './beam/beamCalculation'
 import { checkBeamUtilization } from './beam/utilizationCheck'
 import {
   DYNAMIC_FACTOR,
@@ -64,6 +66,139 @@ function emptyTippingResult(): TippingResult {
     directions: [],
     governing: emptyTippingDirection(),
     governingAngleDeg: 0,
+  }
+}
+
+interface BeamGeometry {
+  supportIds: string[]
+  spans: number[]
+  cumulativeX: number[]
+  totalLengthM: number
+}
+
+function addToReactionMap(reactions: Map<string, number>, supportId: string, reactionKN: number) {
+  reactions.set(supportId, (reactions.get(supportId) ?? 0) + reactionKN)
+}
+
+function getBeamSupportIds(beam: Beam): string[] {
+  return beam.supportIds && beam.supportIds.length >= 2
+    ? beam.supportIds
+    : [beam.startSupportId, beam.endSupportId]
+}
+
+function resolveBeamGeometry(beam: Beam, supports: Support[]): BeamGeometry | null {
+  const supportIds = getBeamSupportIds(beam)
+  const beamSupports = supportIds
+    .map(id => supports.find(s => s.id === id))
+  if (beamSupports.some(s => !s)) return null
+  const resolvedSupports = beamSupports.filter((s): s is Support => Boolean(s))
+  if (resolvedSupports.length < 2) return null
+
+  const spans: number[] = []
+  const cumulativeX: number[] = [0]
+  for (let i = 0; i < resolvedSupports.length - 1; i++) {
+    const a = resolvedSupports[i]!
+    const b = resolvedSupports[i + 1]!
+    const span = Math.hypot(b.position.x - a.position.x, b.position.y - a.position.y)
+    spans.push(span)
+    cumulativeX.push(cumulativeX[i]! + span)
+  }
+
+  const beamSpanTotal = spans.reduce((sum, span) => sum + span, 0)
+
+  return {
+    supportIds,
+    spans,
+    cumulativeX,
+    totalLengthM: beam.cantileverStart + beamSpanTotal + beam.cantileverEnd,
+  }
+}
+
+function getSegmentPointLoads(
+  beam: Beam,
+  segStart: number,
+  segSpan: number,
+  cantStart: number,
+  cantEnd: number,
+) {
+  return beam.loads
+    .map(load => ({
+      positionM: load.positionAlongBeam - segStart,
+      forceKN: getDesignLoad((load.weight * G) / 1000, 'variable'),
+    }))
+    .filter(load => {
+      const min = -cantStart
+      const max = segSpan + cantEnd
+      return load.positionM >= min && load.positionM <= max
+    })
+}
+
+function getSegmentDistributedLoads(
+  beam: Beam,
+  segStart: number,
+  segEnd: number,
+  cantStart: number,
+  cantEnd: number,
+): DistributedLoadSegment[] {
+  const segMin = segStart - cantStart
+  const segMax = segEnd + cantEnd
+
+  return (beam.distributedLoads ?? [])
+    .map(dl => {
+      const clipStart = Math.max(dl.startPositionM, segMin)
+      const clipEnd = Math.min(dl.endPositionM, segMax)
+      if (clipEnd <= clipStart) return null
+      return {
+        startM: clipStart - segStart,
+        endM: clipEnd - segStart,
+        loadKNm: getDesignLoad((dl.loadKgPerM * G) / 1000, 'variable'),
+      }
+    })
+    .filter((dl): dl is DistributedLoadSegment => dl !== null)
+}
+
+function addBeamReactionsToSupports(
+  beam: Beam,
+  geometry: BeamGeometry,
+  supportVerticalReactionsSTR: Map<string, number>,
+  supportVerticalReactionsEQU: Map<string, number>,
+) {
+  const selfWeightPerMSTR_KNm = getBeamSelfWeight(beam.trussType, 1) * GAMMA_G
+  const selfWeightPerMEQU_KNm = getBeamSelfWeight(beam.trussType, 1) * GAMMA_G_INF
+
+  for (let i = 0; i < geometry.spans.length; i++) {
+    const segStart = geometry.cumulativeX[i]!
+    const segEnd = geometry.cumulativeX[i + 1]!
+    const segSpan = geometry.spans[i]!
+    const isFirst = i === 0
+    const isLast = i === geometry.spans.length - 1
+    const cantStart = isFirst ? beam.cantileverStart : 0
+    const cantEnd = isLast ? beam.cantileverEnd : 0
+
+    const strForces = calculateBeam(
+      beam.trussType,
+      segSpan,
+      cantStart,
+      cantEnd,
+      getSegmentPointLoads(beam, segStart, segSpan, cantStart, cantEnd),
+      selfWeightPerMSTR_KNm,
+      getSegmentDistributedLoads(beam, segStart, segEnd, cantStart, cantEnd),
+    )
+    addToReactionMap(supportVerticalReactionsSTR, geometry.supportIds[i]!, strForces.reactionStartKN)
+    addToReactionMap(supportVerticalReactionsSTR, geometry.supportIds[i + 1]!, strForces.reactionEndKN)
+
+    // DIN EN 1990 EQU: nur stabilisierende ständige Lasten mit γG,inf ansetzen.
+    const equForces = calculateBeam(
+      beam.trussType,
+      segSpan,
+      cantStart,
+      cantEnd,
+      [],
+      selfWeightPerMEQU_KNm,
+      [],
+    )
+    addToReactionMap(supportVerticalReactionsEQU, geometry.supportIds[i]!, equForces.reactionStartKN)
+    addToReactionMap(supportVerticalReactionsEQU, geometry.supportIds[i + 1]!, equForces.reactionEndKN)
   }
 }
 
@@ -146,43 +281,49 @@ export function calculate(input: StructureInput): CalculationResult {
   // EQU: Lagesicherheit (Kippen, Gleiten) → günstige Faktoren γG,inf=0.90, γQ,fav=0
   let totalPermanentSTR_KN = 0
   let totalPermanentEQU_KN = 0
+  const supportVerticalReactionsSTR = new Map<string, number>(
+    input.supports.map(s => [s.id, 0]),
+  )
+  const supportVerticalReactionsEQU = new Map<string, number>(
+    input.supports.map(s => [s.id, 0]),
+  )
   for (const support of input.supports) {
     const props = getTrussProperties(support.trussType)
     const selfWeightKN = (props.weightPerMeter * support.height * 1.05 * G) / 1000
-    totalPermanentSTR_KN += selfWeightKN * GAMMA_G
-    totalPermanentEQU_KN += selfWeightKN * GAMMA_G_INF
+    const supportSelfWeightSTR = selfWeightKN * GAMMA_G
+    const supportSelfWeightEQU = selfWeightKN * GAMMA_G_INF
+    totalPermanentSTR_KN += supportSelfWeightSTR
+    totalPermanentEQU_KN += supportSelfWeightEQU
+    addToReactionMap(supportVerticalReactionsSTR, support.id, supportSelfWeightSTR)
+    addToReactionMap(supportVerticalReactionsEQU, support.id, supportSelfWeightEQU)
 
     const ballastKN = (support.existingBallast * G) / 1000
-    totalPermanentSTR_KN += ballastKN * GAMMA_G
-    totalPermanentEQU_KN += ballastKN * GAMMA_G_INF
+    const ballastSTR = ballastKN * GAMMA_G
+    const ballastEQU = ballastKN * GAMMA_G_INF
+    totalPermanentSTR_KN += ballastSTR
+    totalPermanentEQU_KN += ballastEQU
+    addToReactionMap(supportVerticalReactionsSTR, support.id, ballastSTR)
+    addToReactionMap(supportVerticalReactionsEQU, support.id, ballastEQU)
 
     // Fußsystem-Eigengewicht: zählt als Ballast und ständige Last
     const footProps = getFootProperties(support.footType)
     if (footProps.countsAsBallast) {
       const footKN = (getFootWeightKg(support) * G) / 1000
-      totalPermanentSTR_KN += footKN * GAMMA_G
-      totalPermanentEQU_KN += footKN * GAMMA_G_INF
+      const footSTR = footKN * GAMMA_G
+      const footEQU = footKN * GAMMA_G_INF
+      totalPermanentSTR_KN += footSTR
+      totalPermanentEQU_KN += footEQU
+      addToReactionMap(supportVerticalReactionsSTR, support.id, footSTR)
+      addToReactionMap(supportVerticalReactionsEQU, support.id, footEQU)
     }
   }
   for (const beam of input.beams) {
-    const supportIds = beam.supportIds && beam.supportIds.length >= 2
-      ? beam.supportIds
-      : [beam.startSupportId, beam.endSupportId]
-    const beamSupports = supportIds
-      .map(id => input.supports.find(s => s.id === id))
-      .filter((s): s is typeof input.supports[number] => Boolean(s))
-    if (beamSupports.length < 2) {
+    const geometry = resolveBeamGeometry(beam, input.supports)
+    if (!geometry) {
       errors.push(`Traverse ${beam.id}: Stütze nicht gefunden`)
       continue
     }
-    // Gesamtlänge der Traverse: Summe aller Spannweiten zwischen aufeinanderfolgenden Stützen + Auskragungen
-    let beamSpanTotal = 0
-    for (let i = 0; i < beamSupports.length - 1; i++) {
-      const a = beamSupports[i]!
-      const b = beamSupports[i + 1]!
-      beamSpanTotal += Math.hypot(b.position.x - a.position.x, b.position.y - a.position.y)
-    }
-    const totalLength = beam.cantileverStart + beamSpanTotal + beam.cantileverEnd
+    const totalLength = geometry.totalLengthM
     const beamSelfKN = getBeamSelfWeight(beam.trussType, totalLength)
     totalPermanentSTR_KN += beamSelfKN * GAMMA_G
     totalPermanentEQU_KN += beamSelfKN * GAMMA_G_INF
@@ -198,6 +339,17 @@ export function calculate(input: StructureInput): CalculationResult {
       const totalKg = dl.loadKgPerM * length
       const totalKN = (totalKg * G) / 1000
       totalPermanentSTR_KN += getDesignLoad(totalKN, 'variable')
+    }
+
+    try {
+      addBeamReactionsToSupports(
+        beam,
+        geometry,
+        supportVerticalReactionsSTR,
+        supportVerticalReactionsEQU,
+      )
+    } catch (error) {
+      errors.push(`Traverse ${beam.id}: ${(error as Error).message}`)
     }
   }
 
@@ -272,16 +424,8 @@ export function calculate(input: StructureInput): CalculationResult {
     getHorizontalForceKN = getWindForceKN
   }
 
-  // ── Auflagerkräfte (vereinfacht: gleichmäßige Verteilung) ───────────────────
+  // ── Auflagerkräfte aus echten Beam-Reactions ────────────────────────────────
   // STR: für Bauteilnachweise (Knicken). EQU: für Kipp-/Gleitnachweis (stabilisierend).
-  const reactionPerSupportSTR = totalPermanentSTR_KN / input.supports.length
-  const reactionPerSupportEQU = totalPermanentEQU_KN / input.supports.length
-  const supportVerticalReactionsSTR = new Map<string, number>(
-    input.supports.map(s => [s.id, reactionPerSupportSTR]),
-  )
-  const supportVerticalReactionsEQU = new Map<string, number>(
-    input.supports.map(s => [s.id, reactionPerSupportEQU]),
-  )
 
   // ── Traversennachweise ───────────────────────────────────────────────────────
   // Multi-Support-Traversen (>2 Stützen) werden als Aneinanderreihung von Einfeldträgern

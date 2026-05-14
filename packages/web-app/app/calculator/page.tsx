@@ -6,6 +6,7 @@ import { FileUp } from "lucide-react"
 import { ProjectForm } from "@/components/input/ProjectForm"
 import { BeamList } from "@/components/input/BeamList"
 import { SupportList } from "@/components/input/SupportList"
+import { TemplateGallery } from "@/components/input/TemplateGallery"
 import { TrussGateWizard } from "@/components/input/TrussGateWizard"
 import { ReportButton } from "@/components/report/ReportButton"
 import { ElevationRenderer } from "@/components/rendering/ElevationRenderer"
@@ -17,6 +18,7 @@ import { TippingResults } from "@/components/results/TippingResults"
 import { Button } from "@/components/ui/button"
 import { useCalculation } from "@/hooks/useCalculation"
 import { importFromVW } from "@/lib/importVW"
+import { createEmptyInput } from "@/lib/templates"
 import type { Beam, StructureInput, Support, VWExportData } from "@/lib/types-bridge"
 
 export default function CalculatorPage() {
@@ -26,6 +28,12 @@ export default function CalculatorPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const updateInput = (next: StructureInput) => {
+    setInput(next)
+  }
+
+  const applyTemplate = (next: StructureInput) => {
+    setImportError(null)
+    setImportMessage(null)
     setInput(next)
   }
 
@@ -113,6 +121,10 @@ export default function CalculatorPage() {
 
         <div className="grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
           <div className="space-y-6">
+            <TemplateGallery
+              onSelect={applyTemplate}
+              onEmpty={() => applyTemplate(createEmptyInput())}
+            />
             <ProjectForm input={input} onChange={updateInput} />
             <TrussGateWizard
               hasExistingStructure={input.supports.length > 0 || input.beams.length > 0}
