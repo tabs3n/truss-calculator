@@ -7,9 +7,12 @@ import type { CalculationResult, StructureInput, Support } from "@/lib/types-bri
 import { compassAngleToVector, getWindDirectionDisplay, getWindDirectionLabel } from "@/lib/constants"
 
 const VIEW_WIDTH = 500
-const VIEW_HEIGHT = 340
+const VIEW_HEIGHT = 360
 const PADDING = 30
 const DRAG_SNAP_M = 0.1   // Rasten auf 10 cm
+// Kompass oben-rechts, damit er nicht mit Struktur-Labels überlappt
+const COMPASS_CX = VIEW_WIDTH - 75   // 425
+const COMPASS_CY = 95
 
 function supportColor(support: Support, result: CalculationResult | null) {
   if (!result) return "#9ca3af"
@@ -202,6 +205,10 @@ export function StructureRenderer({
           const last = beamSupports[beamSupports.length - 1]!
           const midX = (projectX(first.position.x) + projectX(last.position.x)) / 2
           const midY = (projectY(first.position.y) + projectY(last.position.y)) / 2 - 10
+          const beamNearLeft = midX < 80
+          const beamNearRight = midX > VIEW_WIDTH - 80
+          const beamAnchor = beamNearLeft ? "start" : beamNearRight ? "end" : "middle"
+          const beamLabelX = beamNearLeft ? midX + 12 : beamNearRight ? midX - 12 : midX
 
           return (
             <g key={beam.id}>
@@ -220,7 +227,7 @@ export function StructureRenderer({
                   />
                 )
               })}
-              <text x={midX} y={midY} textAnchor="middle" className="fill-slate-700 text-[11px] font-semibold">
+              <text x={beamLabelX} y={midY} textAnchor={beamAnchor} className="fill-slate-700 text-[11px] font-semibold">
                 {beam.label}
                 {beamSupports.length > 2 ? ` (${beamSupports.length} Stützen)` : ""}
               </text>
@@ -254,6 +261,11 @@ export function StructureRenderer({
           const cx = projectX(support.position.x)
           const cy = projectY(support.position.y)
           const dragging = dragRef.current?.supportId === support.id
+          // Smarter Textanker: Ränder-Labels nicht clippen
+          const nearLeft = cx < 80
+          const nearRight = cx > VIEW_WIDTH - 80
+          const labelAnchor = nearLeft ? "start" : nearRight ? "end" : "middle"
+          const labelX = nearLeft ? cx + 12 : nearRight ? cx - 12 : cx
           return (
             <g
               key={support.id}
@@ -276,9 +288,9 @@ export function StructureRenderer({
                 strokeWidth={dragging ? "2" : "0"}
               />
               <text
-                x={cx}
+                x={labelX}
                 y={cy - 14}
-                textAnchor="middle"
+                textAnchor={labelAnchor}
                 className="fill-slate-700 text-[11px] font-semibold pointer-events-none"
               >
                 {support.label}
@@ -299,14 +311,16 @@ export function StructureRenderer({
         {/* Wind-Kompass — hover hebt zugehörige Kippachse hervor */}
         {windDirections.length > 0 && governingAngleDeg !== undefined ? (
           <g>
-            <text x="24" y="28" className="fill-slate-700 text-[12px] font-semibold">
+            {/* Wind-Info unten links, damit Kompass und Struktur-Labels nicht überlagern */}
+            <text x="12" y={VIEW_HEIGHT - 20} className="fill-slate-700 text-[11px] font-semibold">
               Windrichtungen: {windDirections.map(({ angleDeg }) => getWindDirectionLabel(angleDeg)).join(", ")}
             </text>
-            <text x="24" y="44" className="fill-red-600 text-[12px] font-semibold">
+            <text x="12" y={VIEW_HEIGHT - 7} className="fill-red-600 text-[11px] font-semibold">
               Maßgebend: {getWindDirectionDisplay(activeAngleDeg ?? governingAngleDeg)}
               {hoveredWindAngle !== null && hoveredWindAngle !== governingAngleDeg ? " (Hover)" : ""}
             </text>
-            <circle cx="82" cy="98" r="7" fill="#e2e8f0" stroke="#cbd5e1" strokeWidth="1.5" />
+            {/* Kompass oben-rechts */}
+            <circle cx={COMPASS_CX} cy={COMPASS_CY} r="7" fill="#e2e8f0" stroke="#cbd5e1" strokeWidth="1.5" />
             {windDirections.map(({ angleDeg, result: directionResult }) => {
               const vector = compassAngleToVector(angleDeg)
               const isGoverning = angleDeg === governingAngleDeg
@@ -325,24 +339,24 @@ export function StructureRenderer({
                 >
                   {/* Hit-Bereich */}
                   <circle
-                    cx={82 + vector.x * 30}
-                    cy={98 + vector.y * 30}
+                    cx={COMPASS_CX + vector.x * 30}
+                    cy={COMPASS_CY + vector.y * 30}
                     r="18"
                     fill="transparent"
                   />
                   <line
-                    x1={82 + vector.x * 10}
-                    y1={98 + vector.y * 10}
-                    x2={82 + vector.x * radius}
-                    y2={98 + vector.y * radius}
+                    x1={COMPASS_CX + vector.x * 10}
+                    y1={COMPASS_CY + vector.y * 10}
+                    x2={COMPASS_CX + vector.x * radius}
+                    y2={COMPASS_CY + vector.y * radius}
                     stroke={stroke}
                     strokeWidth={strokeW}
                     strokeLinecap="round"
                     markerEnd={markerId}
                   />
                   <text
-                    x={82 + vector.x * 64}
-                    y={98 + vector.y * 64 + 4}
+                    x={COMPASS_CX + vector.x * 64}
+                    y={COMPASS_CY + vector.y * 64 + 4}
                     textAnchor="middle"
                     className={
                       isHovered
@@ -363,22 +377,22 @@ export function StructureRenderer({
             {hoveredWindAngle !== null && activeDirection ? (
               <g>
                 <rect
-                  x={150}
-                  y={70}
-                  width={200}
+                  x={COMPASS_CX - 225}
+                  y={COMPASS_CY - 28}
+                  width={210}
                   height={56}
                   rx={8}
                   fill="rgba(15, 23, 42, 0.95)"
                 />
-                <text x={160} y={90} className="fill-white text-[11px] font-semibold">
+                <text x={COMPASS_CX - 215} y={COMPASS_CY - 8} className="fill-white text-[11px] font-semibold">
                   {getWindDirectionDisplay(hoveredWindAngle)}
                 </text>
-                <text x={160} y={106} className="fill-white text-[10px]">
+                <text x={COMPASS_CX - 215} y={COMPASS_CY + 8} className="fill-white text-[10px]">
                   η = {activeDirection.result.utilization.toFixed(2)}
                   {" · "}
                   Ballast {activeDirection.result.requiredBallastTotalKg.toFixed(0)} kg
                 </text>
-                <text x={160} y={120} className="fill-slate-300 text-[10px]">
+                <text x={COMPASS_CX - 215} y={COMPASS_CY + 22} className="fill-slate-300 text-[10px]">
                   {activeDirection.result.isOk ? "OK" : "kritisch"}
                 </text>
               </g>

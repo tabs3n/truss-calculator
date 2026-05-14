@@ -35,6 +35,17 @@ export function ElevationRenderer({
   const paddingX = 36
   const projectX = (value: number) => paddingX + ((value - minX) / width) * (viewWidth - paddingX * 2)
 
+  // Stützen am gleichen X: Labels vertikal gestaffeln damit sie nicht übereinander kleben
+  const xLabelCounter = new Map<string, number>()
+  const supportMeta = orderedSupports.map((s) => {
+    const key = s.position.x.toFixed(1)
+    const xIdx = xLabelCounter.get(key) ?? 0
+    xLabelCounter.set(key, xIdx + 1)
+    const isLeft = Math.abs(s.position.x - minX) < 0.15
+    const isRight = Math.abs(s.position.x - maxX) < 0.15
+    return { xIdx, isLeft, isRight }
+  })
+
   return (
     <section className="rounded-[1.5rem] border border-border/80 bg-card/90 p-5 shadow-sm">
       <div className="mb-4 flex items-start justify-between gap-4">
@@ -64,19 +75,27 @@ export function ElevationRenderer({
           Bodenlinie
         </text>
 
-        {orderedSupports.map((support) => {
+        {orderedSupports.map((support, sIdx) => {
           const x = projectX(support.position.x)
           const topY = projectHeight(support.height, maxHeight, viewHeight)
+          const meta = supportMeta[sIdx]!
+          const anchor = meta.isLeft ? "start" : meta.isRight ? "end" : "middle"
+          const labelX = meta.isLeft ? x + 4 : meta.isRight ? x - 4 : x
+          // Label-Y: für jede weitere Stütze am gleichen X um 13 px nach oben versetzt
+          const labelY = topY - 10 - meta.xIdx * 13
 
           return (
             <g key={support.id}>
               <line x1={x} y1="264" x2={x} y2={topY} stroke="#475569" strokeWidth="5" strokeLinecap="round" />
-              <text x={x} y={topY - 10} textAnchor="middle" className="fill-slate-700 text-[11px] font-semibold">
+              <text x={labelX} y={labelY} textAnchor={anchor} className="fill-slate-700 text-[11px] font-semibold">
                 {support.label}
               </text>
-              <text x={x} y="250" textAnchor="middle" className="fill-slate-500 text-[10px]">
-                {support.height.toFixed(1)} m
-              </text>
+              {/* Höhenangabe nur beim ersten Vorkommen dieses X-Werts */}
+              {meta.xIdx === 0 ? (
+                <text x={labelX} y="250" textAnchor={anchor} className="fill-slate-500 text-[10px]">
+                  {support.height.toFixed(1)} m
+                </text>
+              ) : null}
             </g>
           )
         })}

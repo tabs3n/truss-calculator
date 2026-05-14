@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useMemo, useRef, useState, type PointerEvent } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from "react"
 import { RotateCcw } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -79,6 +79,20 @@ export function Structure3DView({
   } | null>(null)
 
   const [view, setView] = useState<ViewAngles>(DEFAULT_VIEW)
+  const [zoom, setZoom] = useState(1.0)
+
+  // Scroll-Zoom (non-passive, damit preventDefault funktioniert)
+  useEffect(() => {
+    const svg = svgRef.current
+    if (!svg) return
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15
+      setZoom((z) => Math.max(0.25, Math.min(5, z * factor)))
+    }
+    svg.addEventListener("wheel", onWheel, { passive: false })
+    return () => svg.removeEventListener("wheel", onWheel)
+  }, [])
 
   // Bounding-Box + Auto-Skalierung
   const bbox = useMemo(() => {
@@ -101,8 +115,8 @@ export function Structure3DView({
 
   const project = useMemo(() => {
     if (!bbox) return null
-    return makeProjector(view, bbox.scale, VIEW_W / 2, VIEW_H / 2 + 40)
-  }, [bbox, view])
+    return makeProjector(view, bbox.scale * zoom, VIEW_W / 2, VIEW_H / 2 + 40)
+  }, [bbox, view, zoom])
 
   // Translation in Welt-Koordinaten so dass Schwerpunkt im Ursprung steht
   const localize = useCallback(
@@ -242,23 +256,46 @@ export function Structure3DView({
 
   return (
     <section className="rounded-[1.5rem] border border-border/80 bg-card/90 p-5 shadow-sm">
-      <div className="mb-4 flex items-start justify-between gap-4">
+      <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold">3D-Ansicht</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Ziehen zum Drehen. Yaw {view.yaw.toFixed(0)}° / Pitch {view.pitch.toFixed(0)}°.
+            Ziehen = Drehen · Scrollen = Zoom · {Math.round(zoom * 100)} %
+            &nbsp;·&nbsp;Yaw {view.yaw.toFixed(0)}° / Pitch {view.pitch.toFixed(0)}°
           </p>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setView(DEFAULT_VIEW)}
-          className="h-9"
-          title="Ansicht zurücksetzen"
-        >
-          <RotateCcw className="h-4 w-4" />
-        </Button>
+        <div className="flex shrink-0 items-center gap-1">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-9 w-9 p-0 text-base font-bold"
+            title="Reinzoomen"
+            onClick={() => setZoom((z) => Math.min(5, z * 1.25))}
+          >
+            +
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-9 w-9 p-0 text-base font-bold"
+            title="Rauszoomen"
+            onClick={() => setZoom((z) => Math.max(0.25, z / 1.25))}
+          >
+            −
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => { setView(DEFAULT_VIEW); setZoom(1) }}
+            className="h-9 px-3"
+            title="Ansicht zurücksetzen"
+          >
+            <RotateCcw className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <svg
@@ -367,7 +404,7 @@ export function Structure3DView({
       </svg>
 
       <p className="mt-3 text-xs text-muted-foreground">
-        💡 Drag im Canvas zum Drehen. Horizontal = Yaw (Drehung um Z), Vertikal = Pitch (Neigung).
+        💡 Drag = Drehen (Yaw / Pitch) · Scrollrad oder ± = Zoomen · Reset stellt Standardansicht wieder her.
       </p>
     </section>
   )
