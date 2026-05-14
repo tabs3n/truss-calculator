@@ -12,9 +12,9 @@
 |---|---|---|---|---|
 | 1 | Live-Berechnung (debounced 300 ms auto-recalc) | ✅ Fertig | `9f5e81b` | Toggle in Sidebar, Pref in localStorage |
 | 5 | Print-Stylesheet für Calculator-Seite | ✅ Fertig | `025563c` | globals.css + data-print=hide auf Sidebar |
-| 8 | Mobile-friendly Layout (Tablet/Phone) | ⬜ Offen | — | Sidebar als Bottom-Sheet auf <lg |
+| 8 | Mobile-friendly Layout (Tablet/Phone) | ✅ Fertig | `98666ee` | kompakte Hero-Stats + Bottom-FAB unter xl |
 | 18 | Versionierung (letzte 10 Berechnungen) | ✅ Fertig | `9f5e81b` | CalculationHistory.tsx in Sidebar |
-| 21 | 3D-Darstellung mit Three.js | ⬜ Offen | — | Neue `ThreeDView.tsx`, optional als Sub-Tab |
+| 21 | 3D-Darstellung interaktiv | ✅ Fertig | (siehe nächster Commit) | `Structure3DView.tsx` — Drag-Rotate, dependency-frei (kein Three.js, manual SVG-Projection + Painter's Algorithm) |
 | 22 | Animation Wind-Richtung im Grundriss | ✅ Fertig | `af2a7b0` | Hover-Animation + Tooltip im SVG |
 | 23 | Drag & Drop für Stützenpositionen | ✅ Fertig | `af2a7b0` | Pointer-Events + Snap 0,1 m + Live-Koordinaten |
 
@@ -33,7 +33,7 @@
 | # | Item | Status | Commit | Notiz |
 |---|---|---|---|---|
 | 2 | Tooltips mit Norm-Referenzen | 🔄 In Arbeit | — | Tooltip-Primitive + Normtexte in Formularen begonnen |
-| 6 | Schnittkraft-Diagramme im Report | ⬜ Offen | — | M-, V-, Biegelinien-Verlauf je Beam |
+| 6 | Schnittkraft-Diagramme im Report | 🔄 In Arbeit | — | Beam-Samples in Engine + Report-Diagrammseite begonnen |
 | 7 | Was-wäre-wenn-Vergleich im Report | ⬜ Offen | — | `calculateVariants()` + neue Report-Seite |
 | 9 | Snow-Load UI Integration | 🔄 In Arbeit | — | Typen + Engine-Lastansatz + ProjectForm + Report begonnen |
 | 10 | Eingabe-Validierung mit Echo | 🔄 In Arbeit | — | `validation.ts` + erste Feld-Echos in Forms |

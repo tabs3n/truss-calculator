@@ -12,6 +12,7 @@ import { TemplateGallery } from "@/components/input/TemplateGallery"
 import { TrussGateWizard } from "@/components/input/TrussGateWizard"
 import { ReportButton } from "@/components/report/ReportButton"
 import { ElevationRenderer } from "@/components/rendering/ElevationRenderer"
+import { Structure3DView } from "@/components/rendering/Structure3DView"
 import { StructureRenderer } from "@/components/rendering/StructureRenderer"
 import { BallastTable } from "@/components/results/BallastTable"
 import { BeamResults } from "@/components/results/BeamResults"
@@ -180,6 +181,7 @@ export default function CalculatorPage() {
               <StructureRenderer input={input} result={result} onSupportsChange={updateSupports} />
               <ElevationRenderer input={input} result={result} />
             </div>
+            <Structure3DView input={input} result={result} />
           </div>
 
           <aside className="space-y-6 xl:sticky xl:top-6 xl:self-start">
