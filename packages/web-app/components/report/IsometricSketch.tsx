@@ -57,11 +57,44 @@ function getBeamSupports(result: CalculationResult, beam: Beam) {
   return { startSupport, endSupport }
 }
 
-function interpolateBeamPoint(beam: Beam, result: CalculationResult, distanceM: number): WorldPoint | null {
-  const beamSupports = getBeamSupports(result, beam)
-  if (!beamSupports) return null
+/**
+ * Liefert alle Stützen einer Traverse in Reihenfolge (Multi-Support-fähig).
+ * Fällt auf [start, end] zurück wenn supportIds nicht gesetzt.
+ */
+function getAllBeamSupports(result: CalculationResult, beam: Beam): Support[] {
+  const ids = beam.supportIds && beam.supportIds.length >= 2
+    ? beam.supportIds
+    : [beam.startSupportId, beam.endSupportId]
+  return ids
+    .map((id) => result.input.supports.find((support) => support.id === id))
+    .filter((support): support is Support => Boolean(support))
+}
 
-  const { startSupport, endSupport } = beamSupports
+function interpolateBeamPoint(beam: Beam, result: CalculationResult, distanceM: number): WorldPoint | null {
+  const supports = getAllBeamSupports(result, beam)
+  if (supports.length < 2) return null
+
+  // Multi-Support: Position entlang der Polylinie aller Stützpunkte ermitteln
+  let accumulated = 0
+  for (let i = 0; i < supports.length - 1; i++) {
+    const a = supports[i]!
+    const b = supports[i + 1]!
+    const segLength = Math.hypot(b.position.x - a.position.x, b.position.y - a.position.y)
+    if (distanceM <= accumulated + segLength || i === supports.length - 2) {
+      const localDistance = distanceM - accumulated
+      const ratio = segLength > 0 ? localDistance / segLength : 0
+      return {
+        x: a.position.x + (b.position.x - a.position.x) * ratio,
+        y: a.position.y + (b.position.y - a.position.y) * ratio,
+        z: a.height + (b.height - a.height) * ratio,
+      }
+    }
+    accumulated += segLength
+  }
+
+  // Fallback (unreachable, da der Loop oben immer returnt wenn supports.length>=2)
+  const startSupport = supports[0]!
+  const endSupport = supports[supports.length - 1]!
   const deltaX = endSupport.position.x - startSupport.position.x
   const deltaY = endSupport.position.y - startSupport.position.y
   const span = Math.hypot(deltaX, deltaY)
@@ -113,14 +146,14 @@ export function IsometricSketch({
   ])
 
   const beamPoints = result.input.beams.flatMap((beam) => {
-    const beamSupports = getBeamSupports(result, beam)
-    if (!beamSupports) return []
+    const beamSupports = getAllBeamSupports(result, beam)
+    if (beamSupports.length < 2) return []
 
-    const { startSupport, endSupport } = beamSupports
-    return [
-      { x: startSupport.position.x, y: startSupport.position.y, z: startSupport.height },
-      { x: endSupport.position.x, y: endSupport.position.y, z: endSupport.height },
-    ]
+    return beamSupports.map((support) => ({
+      x: support.position.x,
+      y: support.position.y,
+      z: support.height,
+    }))
   })
 
   const windSurfacePoints = result.input.beams.flatMap((beam) => {
@@ -270,34 +303,37 @@ export function IsometricSketch({
         )
       })}
 
-      {result.input.beams.map((beam) => {
-        const beamSupports = getBeamSupports(result, beam)
-        if (!beamSupports) return null
+      {result.input.beams.flatMap((beam) => {
+        const beamSupports = getAllBeamSupports(result, beam)
+        if (beamSupports.length < 2) return []
 
-        const { startSupport, endSupport } = beamSupports
-        const startPoint = toScreen({
-          x: startSupport.position.x,
-          y: startSupport.position.y,
-          z: startSupport.height,
-        })
-        const endPoint = toScreen({
-          x: endSupport.position.x,
-          y: endSupport.position.y,
-          z: endSupport.height,
-        })
         const strokeWidth = Math.max(1.2, Math.min(3.8, getTrussProperties(beam.trussType).weightPerMeter * 0.35))
 
-        return (
-          <Line
-            key={beam.id}
-            x1={startPoint.x}
-            y1={startPoint.y}
-            x2={endPoint.x}
-            y2={endPoint.y}
-            stroke="#0f172a"
-            strokeWidth={strokeWidth}
-          />
-        )
+        // Multi-Support: zeichne Linie zwischen jeweils zwei aufeinanderfolgenden Stützen
+        return beamSupports.slice(0, -1).map((startSupport, index) => {
+          const endSupport = beamSupports[index + 1]!
+          const startPoint = toScreen({
+            x: startSupport.position.x,
+            y: startSupport.position.y,
+            z: startSupport.height,
+          })
+          const endPoint = toScreen({
+            x: endSupport.position.x,
+            y: endSupport.position.y,
+            z: endSupport.height,
+          })
+          return (
+            <Line
+              key={`${beam.id}-seg-${index}`}
+              x1={startPoint.x}
+              y1={startPoint.y}
+              x2={endPoint.x}
+              y2={endPoint.y}
+              stroke="#0f172a"
+              strokeWidth={strokeWidth}
+            />
+          )
+        })
       })}
 
       {result.input.beams.flatMap((beam) => {

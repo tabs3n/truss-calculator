@@ -1,4 +1,6 @@
-﻿import { getFrictionCoefficient } from "@truss-calculator/calc-engine"
+﻿import { useState } from "react"
+
+import { getFrictionCoefficient } from "@truss-calculator/calc-engine"
 
 import { WindCompass } from "@/components/input/WindCompass"
 import {
@@ -11,6 +13,7 @@ import {
 } from "@/lib/constants"
 import type { FrictionPreset, StructureInput, TerrainCategory, WindZone } from "@/lib/types-bridge"
 import { cn } from "@/lib/utils"
+import { getWindZoneByPlz } from "@/lib/windzones-by-plz"
 
 const fieldClassName =
   "mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 text-sm shadow-sm transition-colors focus:border-primary focus:outline-none"
@@ -95,6 +98,31 @@ export function ProjectForm({
 }) {
   const setField = <K extends keyof StructureInput>(key: K, value: StructureInput[K]) => {
     onChange({ ...input, [key]: value })
+  }
+
+  const [plz, setPlz] = useState("")
+  const [plzHint, setPlzHint] = useState<{ message: string; tone: "muted" | "warning" | "success" } | null>(null)
+
+  const applyPlz = (value: string) => {
+    setPlz(value)
+    if (!value.trim()) {
+      setPlzHint(null)
+      return
+    }
+    const lookup = getWindZoneByPlz(value)
+    if (!lookup) {
+      setPlzHint({ message: "Ungültige PLZ — bitte 4–5 Ziffern eingeben.", tone: "warning" })
+      return
+    }
+    const newWindZone = lookup.zone
+    if (input.environment !== "INDOOR" && input.windZone !== newWindZone) {
+      onChange({ ...input, windZone: newWindZone })
+    }
+    const baseMsg = `Windzone ${newWindZone}${lookup.note ? ` (${lookup.note})` : ""}`
+    setPlzHint({
+      message: lookup.exact ? `${baseMsg} – automatisch übernommen.` : `${baseMsg} – Schätzung, ggf. prüfen.`,
+      tone: lookup.exact ? "success" : "warning",
+    })
   }
 
   const isIndoor = input.environment === "INDOOR"
@@ -259,9 +287,41 @@ export function ProjectForm({
             className={cn(fieldClassName, textWarnings.location && "border-destructive/60")}
             value={input.location}
             onChange={(event) => setField("location", event.target.value)}
-            placeholder="z. B. Koeln"
+            placeholder="z. B. Köln"
           />
           <InlineHint text={textWarnings.location} tone="danger" />
+        </label>
+
+        <label className="block text-sm font-medium">
+          PLZ <span className="text-xs font-normal text-muted-foreground">(optional, setzt Windzone automatisch)</span>
+          <input
+            className={fieldClassName}
+            type="text"
+            inputMode="numeric"
+            maxLength={5}
+            value={plz}
+            onChange={(event) => applyPlz(event.target.value)}
+            placeholder="z. B. 50677"
+            disabled={isIndoor}
+          />
+          {plzHint ? (
+            <p
+              className={cn(
+                "mt-2 text-xs",
+                plzHint.tone === "success"
+                  ? "text-emerald-700"
+                  : plzHint.tone === "warning"
+                    ? "text-amber-700"
+                    : "text-muted-foreground",
+              )}
+            >
+              {plzHint.message}
+            </p>
+          ) : (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Vereinfachte Zuordnung nach DIN EN 1991-1-4/NA Anhang A. Bei Grenzlagen amtliche Quelle prüfen.
+            </p>
+          )}
         </label>
 
         <label className="block text-sm font-medium">
