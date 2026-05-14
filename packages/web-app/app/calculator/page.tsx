@@ -158,7 +158,6 @@ export default function CalculatorPage() {
               onSelect={applyTemplate}
               onEmpty={() => applyTemplate(createEmptyInput())}
             />
-            <ConfigImportExport input={input} onImport={applyTemplate} />
             <ProjectForm input={input} onChange={updateInput} />
             <TrussGateWizard
               hasExistingStructure={input.supports.length > 0 || input.beams.length > 0}
@@ -221,6 +220,8 @@ export default function CalculatorPage() {
                 </div>
               )}
             </section>
+
+            <ConfigImportExport input={input} onImport={applyTemplate} variant="sidebar" />
 
             <ResultSummary result={result} />
             <Recommendations result={result} />

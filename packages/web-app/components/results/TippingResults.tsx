@@ -19,7 +19,12 @@ function DirectionCard({
   governing: boolean
   supports: Support[]
 }) {
-  const progress = `${Math.min(value.utilization, 1.3) * 100}%`
+  // Skala 0…1,5 — alles darüber wird gekappt aber explizit beschriftet
+  const SCALE_MAX = 1.5
+  const clamped = Math.min(Math.max(value.utilization, 0), SCALE_MAX)
+  const fillPct = (clamped / SCALE_MAX) * 100
+  const limitMarkerPct = (1 / SCALE_MAX) * 100  // 1,0-Marke bei ~66,7 %
+  const exceedsScale = value.utilization > SCALE_MAX
 
   return (
     <article
@@ -30,14 +35,14 @@ function DirectionCard({
       }`}
     >
       <div className="flex items-start justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <h3 className="text-base font-semibold">{label}</h3>
           <p className="mt-1 text-sm text-muted-foreground">
             Kippachse: {getTippingAxisLabel(supports, value.tippingAxisSupportIds)}
           </p>
         </div>
         <div
-          className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${
+          className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${
             value.isOk ? "bg-emerald-100 text-emerald-700" : "bg-destructive/10 text-destructive"
           }`}
         >
@@ -48,16 +53,30 @@ function DirectionCard({
       <div className="mt-4 space-y-3">
         <div>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Ausnutzung eta</span>
-            <span className="font-semibold">{value.utilization.toFixed(2)}</span>
+            <span className="text-muted-foreground">Ausnutzung η</span>
+            <span className={`font-semibold ${value.utilization > 1 ? "text-destructive" : ""}`}>
+              {value.utilization.toFixed(2)}
+              {exceedsScale ? " ⚠" : ""}
+            </span>
           </div>
-          <div className="mt-2 h-2 rounded-full bg-muted">
+          <div className="relative mt-2 h-2 overflow-hidden rounded-full bg-muted">
             <div
-              className={`h-2 rounded-full ${
+              className={`absolute inset-y-0 left-0 rounded-full ${
                 value.utilization <= 1 ? "bg-emerald-500" : "bg-destructive"
               }`}
-              style={{ width: progress }}
+              style={{ width: `${fillPct}%` }}
             />
+            {/* 1,0-Grenzlinie als kleiner schwarzer Marker */}
+            <div
+              className="absolute inset-y-0 w-px bg-foreground/40"
+              style={{ left: `${limitMarkerPct}%` }}
+              aria-label="1,0-Grenze"
+            />
+          </div>
+          <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
+            <span>0</span>
+            <span>1,0 (Grenze)</span>
+            <span>≥ 1,5</span>
           </div>
         </div>
 

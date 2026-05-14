@@ -8,7 +8,10 @@ function UtilizationBar({
   value: number
   tone: "emerald" | "amber" | "destructive"
 }) {
-  const width = `${Math.min(value, 1.3) * 100}%`
+  const SCALE_MAX = 1.5
+  const clamped = Math.min(Math.max(value, 0), SCALE_MAX)
+  const fillPct = (clamped / SCALE_MAX) * 100
+  const limitMarkerPct = (1 / SCALE_MAX) * 100
   const color =
     tone === "emerald"
       ? "bg-emerald-500"
@@ -17,8 +20,16 @@ function UtilizationBar({
         : "bg-destructive"
 
   return (
-    <div className="mt-2 h-2 rounded-full bg-muted">
-      <div className={`h-2 rounded-full ${color}`} style={{ width }} />
+    <div className="relative mt-2 h-2 overflow-hidden rounded-full bg-muted">
+      <div
+        className={`absolute inset-y-0 left-0 rounded-full ${color}`}
+        style={{ width: `${fillPct}%` }}
+      />
+      <div
+        className="absolute inset-y-0 w-px bg-foreground/40"
+        style={{ left: `${limitMarkerPct}%` }}
+        aria-label="1,0-Grenze"
+      />
     </div>
   )
 }

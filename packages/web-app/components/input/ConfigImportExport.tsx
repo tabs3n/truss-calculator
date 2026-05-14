@@ -35,9 +35,12 @@ function sanitizeFilename(name: string): string {
 export function ConfigImportExport({
   input,
   onImport,
+  variant = "section",
 }: {
   input: StructureInput
   onImport: (next: StructureInput) => void
+  /** "section" = eigene Karte mit Titel; "sidebar" = nur Buttons full-width */
+  variant?: "section" | "sidebar"
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
@@ -62,7 +65,7 @@ export function ConfigImportExport({
     link.click()
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
-    setSuccess(`Konfiguration als ${link.download} exportiert.`)
+    setSuccess(`Heruntergeladen: ${link.download}`)
   }
 
   const handleImportClick = () => {
@@ -82,13 +85,69 @@ export function ConfigImportExport({
         return
       }
       onImport(parsed.input)
-      setSuccess(`Konfiguration "${parsed.input.projectName || "ohne Namen"}" geladen.`)
+      setSuccess(`Geladen: „${parsed.input.projectName || "ohne Namen"}"`)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Datei konnte nicht gelesen werden.")
     } finally {
       // Input zurücksetzen, damit dieselbe Datei erneut gewählt werden kann
       if (fileInputRef.current) fileInputRef.current.value = ""
     }
+  }
+
+  const hiddenFileInput = (
+    <input
+      ref={fileInputRef}
+      type="file"
+      accept="application/json,.json"
+      className="hidden"
+      onChange={handleFileChange}
+    />
+  )
+
+  if (variant === "sidebar") {
+    return (
+      <section className="rounded-[1.5rem] border border-border/80 bg-card/90 p-5 shadow-sm">
+        <h2 className="text-xl font-semibold">Speichern &amp; Laden</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Konfiguration als JSON herunterladen oder von Festplatte einlesen.
+        </p>
+        <div className="mt-5 space-y-3">
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 w-full text-sm font-semibold"
+            onClick={handleExport}
+          >
+            <Download />
+            Als JSON exportieren
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 w-full text-sm font-semibold"
+            onClick={handleImportClick}
+          >
+            <Upload />
+            JSON importieren
+          </Button>
+          {hiddenFileInput}
+        </div>
+        {error ? (
+          <div className="mt-4 rounded-2xl border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
+            {error}
+          </div>
+        ) : success ? (
+          <div className="mt-4 rounded-2xl border border-emerald-300 bg-emerald-50 p-3 text-xs text-emerald-700">
+            {success}
+          </div>
+        ) : (
+          <p className="mt-4 text-xs text-muted-foreground">
+            Schema-versioniert (truss-calculator-config v{EXPORT_VERSION}). Funktioniert
+            geräteübergreifend.
+          </p>
+        )}
+      </section>
+    )
   }
 
   return (
@@ -102,13 +161,7 @@ export function ConfigImportExport({
           <Upload />
           Konfiguration importieren
         </Button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="application/json,.json"
-          className="hidden"
-          onChange={handleFileChange}
-        />
+        {hiddenFileInput}
       </div>
       {error ? (
         <p className="text-xs text-destructive">{error}</p>
