@@ -527,30 +527,6 @@ export function ReportDocument({ data }: { data: ReportData }) {
         </View>
 
         <View style={styles.section}>
-          <View style={styles.card}>
-            <Text style={styles.h3}>Isometrische Skizze der Konfiguration</Text>
-            <Text style={[styles.muted, { fontSize: 9, marginBottom: 6 }]}>
-              Stützen, Traversen, Windflächen, Lasten und maßgebende Windrichtung
-            </Text>
-            <View style={styles.sketchFrame}>
-              <IsometricSketch result={result} width={500} height={320} />
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <View style={styles.card}>
-            <Text style={styles.h3}>Grundriss (Draufsicht)</Text>
-            <Text style={[styles.muted, { fontSize: 9, marginBottom: 6 }]}>
-              Bodenplatten, Stützen, Traversen, alle Windrichtungen und Kippachse (rot gestrichelt)
-            </Text>
-            <View style={styles.sketchFrame}>
-              <PlanView result={result} width={500} height={340} />
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.section}>
           <Table
             headers={["Stütze", "Typ", "Höhe", "Fuß", "Ballast"]}
             rows={result.input.supports.map((support) => [
@@ -612,6 +588,50 @@ export function ReportDocument({ data }: { data: ReportData }) {
               ]
             })}
           />
+        </View>
+      </Page>
+
+      {/* ────────── SEITE: Isometrische Skizze (eigene Seite, damit immer rendert) ────────── */}
+      <Page size="A4" style={styles.page}>
+        <Text style={styles.h2}>Isometrische Skizze der Konfiguration</Text>
+        <Text style={[styles.muted, { fontSize: 10, marginBottom: 12 }]}>
+          Stützen, Traversen, Windflächen, Lasten und maßgebende Windrichtung
+        </Text>
+        <View style={styles.sketchFrame}>
+          <IsometricSketch result={result} width={520} height={560} />
+        </View>
+        <Text style={[styles.muted, { fontSize: 9, marginTop: 10 }]}>
+          Maßgebende Windrichtung: {getWindDirectionDisplay(result.tipping.governingAngleDeg)}
+        </Text>
+      </Page>
+
+      {/* ────────── SEITE: Grundriss (Draufsicht) ────────── */}
+      <Page size="A4" style={styles.page}>
+        <Text style={styles.h2}>Grundriss (Draufsicht)</Text>
+        <Text style={[styles.muted, { fontSize: 10, marginBottom: 12 }]}>
+          Bodenplatten, Stützen, Traversen, alle Windrichtungen — maßgebende Richtung rot fett,
+          Kippachse rot gestrichelt verlängert
+        </Text>
+        <View style={styles.sketchFrame}>
+          <PlanView result={result} width={520} height={560} />
+        </View>
+        <View style={{ marginTop: 12, flexDirection: "row", gap: 12, flexWrap: "wrap" }}>
+          {result.tipping.directions.map(({ angleDeg, result: directionResult }) => (
+            <View
+              key={angleDeg}
+              style={{
+                paddingVertical: 4,
+                paddingHorizontal: 8,
+                border: "1 solid #e2e8f0",
+                borderRadius: 6,
+              }}
+            >
+              <Text style={{ fontSize: 9, color: directionResult.isOk ? "#166534" : "#b91c1c" }}>
+                {getWindDirectionDisplay(angleDeg)}: η = {formatNumber(directionResult.utilization)}
+                {directionResult.isOk ? " ✓" : " ✗"}
+              </Text>
+            </View>
+          ))}
         </View>
       </Page>
 
