@@ -103,7 +103,7 @@ export default function CalculatorPage() {
   }
 
   return (
-    <main className="min-h-screen px-4 py-6 sm:px-6 lg:px-8">
+    <main className="min-h-screen px-4 pb-28 pt-6 sm:px-6 lg:px-8 xl:pb-6">
       <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-6">
         <section className="rounded-[1.75rem] border border-border/70 bg-card/90 px-6 py-6 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -124,17 +124,17 @@ export default function CalculatorPage() {
               </p>
             </div>
 
-            <div className="grid gap-3 rounded-2xl border border-border bg-background/80 p-4 text-sm text-muted-foreground sm:grid-cols-3">
+            <div className="grid grid-cols-3 gap-3 rounded-2xl border border-border bg-background/80 p-3 text-xs text-muted-foreground sm:gap-4 sm:p-4 sm:text-sm">
               <div>
-                <p className="font-semibold text-foreground">{input.supports.length}</p>
+                <p className="text-lg font-semibold text-foreground sm:text-base">{input.supports.length}</p>
                 <p>Stützen</p>
               </div>
               <div>
-                <p className="font-semibold text-foreground">{input.beams.length}</p>
+                <p className="text-lg font-semibold text-foreground sm:text-base">{input.beams.length}</p>
                 <p>Traversen</p>
               </div>
               <div>
-                <p className="font-semibold text-foreground">
+                <p className="text-lg font-semibold text-foreground sm:text-base">
                   {input.beams.reduce((sum, beam) => sum + beam.loads.length, 0)}
                 </p>
                 <p>Hängelasten</p>
@@ -280,6 +280,50 @@ export default function CalculatorPage() {
           </aside>
         </div>
       </div>
+
+      {/* Mobile-FAB: zeigt Berechnen-Action + Status nur auf Smartphone/Tablet */}
+      {!liveCalculation ? (
+        <div
+          data-print="hide"
+          className="fixed bottom-4 left-4 right-4 z-40 flex items-center gap-3 rounded-2xl border border-border bg-card/95 p-3 shadow-2xl backdrop-blur xl:hidden"
+        >
+          <div className="flex-1 min-w-0">
+            <p className="truncate text-xs text-muted-foreground">
+              {result
+                ? result.overallOk
+                  ? "✓ Standsicher"
+                  : `⚠ Nicht standsicher · ${(result.requiredBallastTotalKg / 1000).toFixed(1)} t Ballast`
+                : "Noch keine Berechnung"}
+            </p>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            onClick={runCalculation}
+            disabled={isCalculating}
+            className="h-10 px-4 text-xs font-semibold"
+          >
+            {isCalculating ? "..." : "Berechnen"}
+          </Button>
+        </div>
+      ) : result ? (
+        <div
+          data-print="hide"
+          className="fixed bottom-4 left-4 right-4 z-40 flex items-center gap-3 rounded-2xl border border-border bg-card/95 p-3 shadow-2xl backdrop-blur xl:hidden"
+        >
+          <span
+            className={`h-2.5 w-2.5 shrink-0 rounded-full ${
+              result.overallOk ? "bg-emerald-500" : "bg-destructive"
+            } animate-pulse`}
+          />
+          <p className="flex-1 truncate text-xs">
+            {result.overallOk ? "Standsicher · " : "Nicht standsicher · "}
+            <span className="font-semibold">
+              {(result.requiredBallastTotalKg / 1000).toFixed(1)} t Ballast
+            </span>
+          </p>
+        </div>
+      ) : null}
     </main>
   )
 }
