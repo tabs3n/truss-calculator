@@ -94,6 +94,15 @@ export interface HangingLoad {
   weight: number             // kg (Nenngewicht, ohne Dynamikfaktor)
 }
 
+/** Streckenlast über einen Abschnitt der Traverse (z.B. Trussbestückung mit Ketten/Kabeln) */
+export interface DistributedLoad {
+  id: string
+  label: string                  // z.B. "Ketten", "Kabelweg", "PA-Riser"
+  startPositionM: number         // Meter vom linken Auflager (kann negativ für linke Auskragung sein)
+  endPositionM: number           // Meter vom linken Auflager (> startPositionM)
+  loadKgPerM: number             // kg/m (Nenngewicht, ohne Dynamikfaktor)
+}
+
 /** Windangriffsfläche (Banner, LED-Wand, bestückte Traverse) */
 export interface WindSurface {
   id: string
@@ -138,18 +147,34 @@ export interface Support {
   numberOfConcreteBlocks?: number
 }
 
-/** Eine horizontale Traverse zwischen zwei Stützen */
+/** Eine horizontale Traverse über zwei oder mehr Stützen */
 export interface Beam {
   id: string
   label: string
+  /**
+   * Erste Stütze (Backward-Compat). Bei Multi-Support-Traverse identisch mit supportIds[0].
+   */
   startSupportId: string
+  /**
+   * Letzte Stütze (Backward-Compat). Bei Multi-Support-Traverse identisch mit
+   * supportIds[supportIds.length - 1].
+   */
   endSupportId: string
+  /**
+   * Optional: alle Stützpunkte der Traverse in Reihenfolge (mindestens 2).
+   * Wenn nicht gesetzt, wird [startSupportId, endSupportId] verwendet.
+   * Multi-Support-Traversen werden vereinfacht als Aneinanderreihung von
+   * Einfeldträgern berechnet (konservative Vereinfachung, dokumentiert).
+   */
+  supportIds?: string[]
   trussType: TrussType
   /** Auskragung über die Stütze hinaus links (Richtung Start) */
   cantileverStart: number    // m, 0 wenn keine Auskragung
   /** Auskragung über die Stütze hinaus rechts (Richtung End) */
   cantileverEnd: number      // m, 0 wenn keine Auskragung
   loads: HangingLoad[]
+  /** Streckenlasten (kg/m) über Abschnitte der Traverse */
+  distributedLoads?: DistributedLoad[]
   windSurfaces: WindSurface[]
 }
 

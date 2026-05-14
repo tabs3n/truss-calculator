@@ -165,17 +165,24 @@ export function calculate(input: StructureInput): CalculationResult {
     }
   }
   for (const beam of input.beams) {
-    const startSupport = input.supports.find(s => s.id === beam.startSupportId)
-    const endSupport   = input.supports.find(s => s.id === beam.endSupportId)
-    if (!startSupport || !endSupport) {
+    const supportIds = beam.supportIds && beam.supportIds.length >= 2
+      ? beam.supportIds
+      : [beam.startSupportId, beam.endSupportId]
+    const beamSupports = supportIds
+      .map(id => input.supports.find(s => s.id === id))
+      .filter((s): s is typeof input.supports[number] => Boolean(s))
+    if (beamSupports.length < 2) {
       errors.push(`Traverse ${beam.id}: Stütze nicht gefunden`)
       continue
     }
-    const span = Math.hypot(
-      endSupport.position.x - startSupport.position.x,
-      endSupport.position.y - startSupport.position.y,
-    )
-    const totalLength = beam.cantileverStart + span + beam.cantileverEnd
+    // Gesamtlänge der Traverse: Summe aller Spannweiten zwischen aufeinanderfolgenden Stützen + Auskragungen
+    let beamSpanTotal = 0
+    for (let i = 0; i < beamSupports.length - 1; i++) {
+      const a = beamSupports[i]!
+      const b = beamSupports[i + 1]!
+      beamSpanTotal += Math.hypot(b.position.x - a.position.x, b.position.y - a.position.y)
+    }
+    const totalLength = beam.cantileverStart + beamSpanTotal + beam.cantileverEnd
     const beamSelfKN = getBeamSelfWeight(beam.trussType, totalLength)
     totalPermanentSTR_KN += beamSelfKN * GAMMA_G
     totalPermanentEQU_KN += beamSelfKN * GAMMA_G_INF
@@ -184,6 +191,13 @@ export function calculate(input: StructureInput): CalculationResult {
       totalPermanentSTR_KN += getDesignLoad(loadKN, 'variable')
       // EQU: veränderliche Lasten, die GÜNSTIG (stabilisierend) wirken,
       // werden nicht angesetzt (γQ,fav = 0).
+    }
+    // Streckenlasten
+    for (const dl of beam.distributedLoads ?? []) {
+      const length = Math.max(0, dl.endPositionM - dl.startPositionM)
+      const totalKg = dl.loadKgPerM * length
+      const totalKN = (totalKg * G) / 1000
+      totalPermanentSTR_KN += getDesignLoad(totalKN, 'variable')
     }
   }
 
@@ -270,44 +284,117 @@ export function calculate(input: StructureInput): CalculationResult {
   )
 
   // ── Traversennachweise ───────────────────────────────────────────────────────
+  // Multi-Support-Traversen (>2 Stützen) werden als Aneinanderreihung von Einfeldträgern
+  // berechnet (konservative Vereinfachung – überschätzt Momente gegenüber Durchlaufträger).
   const beamResults: BeamResult[] = []
   for (const beam of input.beams) {
-    const startSupport = input.supports.find(s => s.id === beam.startSupportId)
-    const endSupport   = input.supports.find(s => s.id === beam.endSupportId)
-    if (!startSupport || !endSupport) continue
+    const supportIds = beam.supportIds && beam.supportIds.length >= 2
+      ? beam.supportIds
+      : [beam.startSupportId, beam.endSupportId]
+    const beamSupports = supportIds
+      .map(id => input.supports.find(s => s.id === id))
+      .filter((s): s is typeof input.supports[number] => Boolean(s))
+    if (beamSupports.length < 2) continue
 
-    const span = Math.hypot(
-      endSupport.position.x - startSupport.position.x,
-      endSupport.position.y - startSupport.position.y,
-    )
     const selfWeightPerMKNm = getBeamSelfWeight(beam.trussType, 1) * GAMMA_G
-    const pointLoads = beam.loads.map(load => ({
-      positionM: load.positionAlongBeam,
-      forceKN: getDesignLoad((load.weight * G) / 1000, 'variable'),
-    }))
+
+    // Spannweiten und kumulierte x-Positionen der Stützen entlang des Trägers
+    const spans: number[] = []
+    const cumulativeX: number[] = [0]
+    for (let i = 0; i < beamSupports.length - 1; i++) {
+      const a = beamSupports[i]!
+      const b = beamSupports[i + 1]!
+      const s = Math.hypot(b.position.x - a.position.x, b.position.y - a.position.y)
+      spans.push(s)
+      cumulativeX.push(cumulativeX[i]! + s)
+    }
+
+    // Sammle für jedes Segment Punkt- und Streckenlasten, sowie Auskragungs-Beiträge
+    let segmentMaxMoment = 0
+    let segmentMaxShear = 0
+    let segmentMaxDeflection = 0
+    let aggregateUtilization = { bending: 0, shear: 0, isOk: true, failureReason: undefined as string | undefined }
 
     try {
-      const forces = calculateBeam(
-        beam.trussType,
-        span,
-        beam.cantileverStart,
-        beam.cantileverEnd,
-        pointLoads,
-        selfWeightPerMKNm,
-      )
-      const utilization = checkBeamUtilization(beam.trussType, forces)
+      for (let i = 0; i < spans.length; i++) {
+        const segStart = cumulativeX[i]!
+        const segEnd   = cumulativeX[i + 1]!
+        const segSpan  = spans[i]!
+        const isFirst  = i === 0
+        const isLast   = i === spans.length - 1
+        const cantStart = isFirst ? beam.cantileverStart : 0
+        const cantEnd   = isLast  ? beam.cantileverEnd   : 0
+
+        // Punktlasten innerhalb des Segments (segStart - cantStart ≤ pos ≤ segEnd + cantEnd)
+        // Position relativ zum SEGMENT-Anfang umrechnen: positionRelativ = positionAlongBeam - segStart
+        const segPointLoads = beam.loads
+          .map(load => {
+            const positionM = load.positionAlongBeam - segStart
+            return {
+              positionM,
+              forceKN: getDesignLoad((load.weight * G) / 1000, 'variable'),
+              absPosition: load.positionAlongBeam,
+            }
+          })
+          .filter(load => {
+            const min = -cantStart
+            const max = segSpan + cantEnd
+            return load.positionM >= min && load.positionM <= max
+          })
+          .map(load => ({ positionM: load.positionM, forceKN: load.forceKN }))
+
+        // Streckenlasten: pro Segment auf [segStart, segEnd] clippen (+ Auskragungen)
+        const segMin = segStart - cantStart
+        const segMax = segEnd + cantEnd
+        const segDistributed = (beam.distributedLoads ?? [])
+          .map(dl => {
+            const clipStart = Math.max(dl.startPositionM, segMin)
+            const clipEnd = Math.min(dl.endPositionM, segMax)
+            if (clipEnd <= clipStart) return null
+            const loadKNm = getDesignLoad((dl.loadKgPerM * G) / 1000, 'variable')
+            return {
+              startM: clipStart - segStart,
+              endM: clipEnd - segStart,
+              loadKNm,
+            }
+          })
+          .filter((dl): dl is { startM: number; endM: number; loadKNm: number } => dl !== null)
+
+        const forces = calculateBeam(
+          beam.trussType,
+          segSpan,
+          cantStart,
+          cantEnd,
+          segPointLoads,
+          selfWeightPerMKNm,
+          segDistributed,
+        )
+        const utilization = checkBeamUtilization(beam.trussType, forces)
+
+        // Aggregiere maximale Werte über alle Segmente
+        if (forces.maxBendingMomentKNm > segmentMaxMoment) segmentMaxMoment = forces.maxBendingMomentKNm
+        if (forces.maxShearForceKN > segmentMaxShear) segmentMaxShear = forces.maxShearForceKN
+        if (forces.maxDeflectionMm > segmentMaxDeflection) segmentMaxDeflection = forces.maxDeflectionMm
+        if (utilization.bendingUtilization > aggregateUtilization.bending) aggregateUtilization.bending = utilization.bendingUtilization
+        if (utilization.shearUtilization > aggregateUtilization.shear) aggregateUtilization.shear = utilization.shearUtilization
+        if (!utilization.isOk) {
+          aggregateUtilization.isOk = false
+          if (!aggregateUtilization.failureReason) aggregateUtilization.failureReason = `Segment ${i + 1}: ${utilization.failureReason}`
+        }
+      }
+
       beamResults.push({
         beamId: beam.id,
-        maxBendingMomentKNm: forces.maxBendingMomentKNm,
-        maxShearForceKN: forces.maxShearForceKN,
-        bendingUtilization: utilization.bendingUtilization,
-        shearUtilization: utilization.shearUtilization,
-        maxDeflectionMm: forces.maxDeflectionMm,
-        isOk: utilization.isOk,
-        ...(utilization.failureReason ? { failureReason: utilization.failureReason } : {}),
+        maxBendingMomentKNm: segmentMaxMoment,
+        maxShearForceKN: segmentMaxShear,
+        bendingUtilization: aggregateUtilization.bending,
+        shearUtilization: aggregateUtilization.shear,
+        maxDeflectionMm: segmentMaxDeflection,
+        isOk: aggregateUtilization.isOk,
+        ...(aggregateUtilization.failureReason ? { failureReason: aggregateUtilization.failureReason } : {}),
       })
-      if (!utilization.isOk) {
-        errors.push(`Traverse ${beam.id}: ${utilization.failureReason}`)
+      if (!aggregateUtilization.isOk) {
+        errors.push(`Traverse ${beam.id}: ${aggregateUtilization.failureReason}`)
       }
     } catch (error) {
       errors.push(`Traverse ${beam.id}: ${(error as Error).message}`)

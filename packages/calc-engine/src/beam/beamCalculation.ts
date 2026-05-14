@@ -75,10 +75,54 @@ function calculateMaxDeflectionMm(momentSamples: MomentSample[], spanM: number, 
   return maxDeflectionM * 1000
 }
 
+export interface DistributedLoadSegment {
+  startM: number    // x-Position vom linken Auflager
+  endM: number      // x-Position vom linken Auflager (> startM)
+  loadKNm: number   // kN/m (positiv = nach unten wirkend)
+}
+
+/**
+ * Hilfsfunktion: Beitrag eines Streckenlastsegments [a,b] mit Intensität q (kN/m) zur
+ * Schubkraft an Position x (Aufsummierung von links nach rechts).
+ */
+function distributedShearAtX(segments: DistributedLoadSegment[], x: number): number {
+  let shear = 0
+  for (const seg of segments) {
+    if (x <= seg.startM) continue
+    const xEffective = Math.min(x, seg.endM)
+    shear -= seg.loadKNm * (xEffective - seg.startM)
+  }
+  return shear
+}
+
+/**
+ * Hilfsfunktion: Beitrag eines Streckenlastsegments [a,b] mit Intensität q (kN/m) zum
+ * Biegemoment an Position x.
+ */
+function distributedMomentAtX(segments: DistributedLoadSegment[], x: number): number {
+  let moment = 0
+  for (const seg of segments) {
+    if (x <= seg.startM) continue
+    if (x <= seg.endM) {
+      // Innerhalb des Segments: M(x) = -q × (x-a)² / 2
+      moment -= seg.loadKNm * (x - seg.startM) ** 2 / 2
+    } else {
+      // Hinter dem Segment: voller Block, Schwerpunkt bei (a+b)/2
+      const length = seg.endM - seg.startM
+      const centroid = (seg.startM + seg.endM) / 2
+      moment -= seg.loadKNm * length * (x - centroid)
+    }
+  }
+  return moment
+}
+
 /**
  * Balkenberechnung mit Gleichgewicht und numerischer Integration der Krümmung.
  * Koordinatensystem: x=0 am linken Auflager, x=L am rechten Auflager.
  * Linke Auskragungen liegen bei x<0, rechte Auskragungen bei x>L.
+ *
+ * Streckenlast wird über ein optionales Array von Segmenten beschrieben.
+ * Das Eigengewicht (selfWeightKNm) wirkt über die volle Trägerlänge inkl. Auskragungen.
  */
 export function calculateBeam(
   trussType: TrussType,
@@ -86,11 +130,12 @@ export function calculateBeam(
   cantileverStartM: number,
   cantileverEndM: number,
   pointLoads: { positionM: number; forceKN: number }[],
-  distributedLoadKNm: number,
+  selfWeightKNm: number,
+  distributedSegments: DistributedLoadSegment[] = [],
 ): BeamInternalForces {
   if (spanM <= 0) throw new Error(`Ungültige Stützweite: ${spanM} m`)
   if (cantileverStartM < 0 || cantileverEndM < 0) {
-    throw new Error('Auskragungen duerfen nicht negativ sein')
+    throw new Error('Auskragungen dürfen nicht negativ sein')
   }
 
   const props = getTrussProperties(trussType)
@@ -105,35 +150,46 @@ export function calculateBeam(
   }
 
   const totalLength = cantileverStartM + span + cantileverEndM
-  const totalDistributed = distributedLoadKNm * totalLength
-  const centroidOfDistributed = -cantileverStartM + totalLength / 2
-  sumMomentsAroundA += totalDistributed * centroidOfDistributed
-  sumVerticalLoads += totalDistributed
+  const totalSelfWeight = selfWeightKNm * totalLength
+  const centroidOfSelfWeight = -cantileverStartM + totalLength / 2
+  sumMomentsAroundA += totalSelfWeight * centroidOfSelfWeight
+  sumVerticalLoads += totalSelfWeight
+
+  for (const seg of distributedSegments) {
+    const length = seg.endM - seg.startM
+    if (length <= 0) continue
+    const segForce = seg.loadKNm * length
+    const segCentroid = (seg.startM + seg.endM) / 2
+    sumMomentsAroundA += segForce * segCentroid
+    sumVerticalLoads += segForce
+  }
 
   const reactionEnd = sumMomentsAroundA / span
   const reactionStart = sumVerticalLoads - reactionEnd
 
-  const segments = 1000
+  const numSamples = 1000
   const xStart = -cantileverStartM
   const xEnd = span + cantileverEndM
-  const dx = (xEnd - xStart) / segments
+  const dx = (xEnd - xStart) / numSamples
 
   let maxMoment = 0
   let posOfMaxMoment = 0
   let maxShear = 0
   const momentSamples: MomentSample[] = []
 
-  for (let index = 0; index <= segments; index += 1) {
+  for (let index = 0; index <= numSamples; index += 1) {
     const x = xStart + index * dx
 
-    let shearKN = -distributedLoadKNm * (x - xStart)
+    let shearKN = -selfWeightKNm * (x - xStart)
+    shearKN += distributedShearAtX(distributedSegments, x)
     if (x >= 0) shearKN += reactionStart
     if (x >= span) shearKN -= reactionEnd
     for (const load of pointLoads) {
       if (x >= load.positionM) shearKN -= load.forceKN
     }
 
-    let momentKNm = -distributedLoadKNm * (x - xStart) ** 2 / 2
+    let momentKNm = -selfWeightKNm * (x - xStart) ** 2 / 2
+    momentKNm += distributedMomentAtX(distributedSegments, x)
     if (x >= 0) momentKNm += reactionStart * x
     if (x >= span) momentKNm -= reactionEnd * (x - span)
     for (const load of pointLoads) {
