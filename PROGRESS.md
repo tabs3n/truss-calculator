@@ -10,10 +10,10 @@
 
 | # | Item | Status | Commit | Notiz |
 |---|---|---|---|---|
-| 1 | Live-Berechnung (debounced 300 ms auto-recalc) | ⬜ Offen | — | useCalculation Hook erweitern |
+| 1 | Live-Berechnung (debounced 300 ms auto-recalc) | ✅ Fertig | `9f5e81b` | Toggle in Sidebar, Pref in localStorage |
 | 5 | Print-Stylesheet für Calculator-Seite | ⬜ Offen | — | `@media print` in globals.css |
 | 8 | Mobile-friendly Layout (Tablet/Phone) | ⬜ Offen | — | Sidebar als Bottom-Sheet auf <lg |
-| 18 | Versionierung (letzte 10 Berechnungen) | ⬜ Offen | — | History-Stack in localStorage |
+| 18 | Versionierung (letzte 10 Berechnungen) | ✅ Fertig | `9f5e81b` | CalculationHistory.tsx in Sidebar |
 | 21 | 3D-Darstellung mit Three.js | ⬜ Offen | — | Neue `ThreeDView.tsx`, optional als Sub-Tab |
 | 22 | Animation Wind-Richtung im Grundriss | ⬜ Offen | — | StructureRenderer: Hover-Effekt |
 | 23 | Drag & Drop für Stützenpositionen | ⬜ Offen | — | StructureRenderer: SVG-Pointer-Events |
@@ -32,7 +32,7 @@
 
 | # | Item | Status | Commit | Notiz |
 |---|---|---|---|---|
-| 2 | Tooltips mit Norm-Referenzen | ⬜ Offen | — | Wrapper `<Tooltip>` + Texte aus `lib/tooltip-texts.ts` |
+| 2 | Tooltips mit Norm-Referenzen | 🔄 In Arbeit | — | Tooltip-Primitive + Normtexte in Formularen begonnen |
 | 6 | Schnittkraft-Diagramme im Report | ⬜ Offen | — | M-, V-, Biegelinien-Verlauf je Beam |
 | 7 | Was-wäre-wenn-Vergleich im Report | ⬜ Offen | — | `calculateVariants()` + neue Report-Seite |
 | 9 | Snow-Load UI Integration | ⬜ Offen | — | StructureInput.snowConfig + Engine + ProjectForm |

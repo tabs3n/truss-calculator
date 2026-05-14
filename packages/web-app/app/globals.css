@@ -133,3 +133,93 @@
     @apply font-sans;
   }
 }
+
+/* ────────────────────────────────────────────────────────────
+   PRINT-STYLESHEET — Browser-Druck (Ctrl/Cmd + P)
+   Reduziert die Calculator-Seite auf das Wesentliche.
+   ──────────────────────────────────────────────────────────── */
+@media print {
+  /* Hintergrund weg, klare Konturen, A4-tauglich */
+  html,
+  body {
+    background: white !important;
+    background-image: none !important;
+    color: #000 !important;
+    font-size: 10pt !important;
+  }
+
+  /* Vor dem Druck verstecken: alles was interaktiv ist */
+  .print\:hidden,
+  .no-print,
+  button,
+  [role="dialog"],
+  [aria-label="Schliessen"],
+  [data-print="hide"] {
+    display: none !important;
+  }
+
+  /* Karten flach, kein Schatten, schmaler Rahmen */
+  section[class*="rounded-"],
+  article[class*="rounded-"],
+  div[class*="rounded-"] {
+    box-shadow: none !important;
+    background: white !important;
+    border-color: #cbd5e1 !important;
+    page-break-inside: avoid;
+  }
+
+  /* Seitenränder, Layout 1-spaltig */
+  main {
+    padding: 0 !important;
+  }
+
+  .grid {
+    display: block !important;
+  }
+
+  aside {
+    position: static !important;
+    margin-top: 1rem !important;
+  }
+
+  /* Renderer-SVG immer auf 100% Seitenbreite */
+  svg {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  /* Page breaks vor wichtigen Sektionen */
+  h2 {
+    page-break-after: avoid;
+    margin-top: 0.5rem !important;
+  }
+
+  /* Tabellen nicht in der Mitte umbrechen */
+  table {
+    page-break-inside: avoid;
+  }
+
+  /* Links: URL anhängen für Doku */
+  a[href]:not([href^="#"])::after {
+    content: " (" attr(href) ")";
+    font-size: 8pt;
+    color: #64748b;
+  }
+
+  /* @page-Setup für Browser-PDF */
+  @page {
+    margin: 16mm 14mm 18mm 14mm;
+    size: A4;
+  }
+}
+
+/* Utility-Klasse für Elemente die explizit gedruckt werden sollen,
+   während ihre Geschwister versteckt sind */
+.print-only {
+  display: none;
+}
+@media print {
+  .print-only {
+    display: revert !important;
+  }
+}

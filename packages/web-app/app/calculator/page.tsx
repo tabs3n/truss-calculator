@@ -161,15 +161,19 @@ export default function CalculatorPage() {
 
         <div className="grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
           <div className="space-y-6">
-            <TemplateGallery
-              onSelect={applyTemplate}
-              onEmpty={() => applyTemplate(createEmptyInput())}
-            />
+            <div data-print="hide">
+              <TemplateGallery
+                onSelect={applyTemplate}
+                onEmpty={() => applyTemplate(createEmptyInput())}
+              />
+            </div>
             <ProjectForm input={input} onChange={updateInput} />
-            <TrussGateWizard
-              hasExistingStructure={input.supports.length > 0 || input.beams.length > 0}
-              onApply={applyTrussGateWizard}
-            />
+            <div data-print="hide">
+              <TrussGateWizard
+                hasExistingStructure={input.supports.length > 0 || input.beams.length > 0}
+                onApply={applyTrussGateWizard}
+              />
+            </div>
             <SupportList supports={input.supports} onChange={updateSupports} />
             <BeamList beams={input.beams} supports={input.supports} onChange={updateBeams} />
             <div className="grid gap-6 xl:grid-cols-2">
@@ -179,7 +183,7 @@ export default function CalculatorPage() {
           </div>
 
           <aside className="space-y-6 xl:sticky xl:top-6 xl:self-start">
-            <section className="rounded-[1.5rem] border border-border/80 bg-card/90 p-5 shadow-sm">
+            <section data-print="hide" className="rounded-[1.5rem] border border-border/80 bg-card/90 p-5 shadow-sm">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h2 className="text-xl font-semibold">Berechnung</h2>
@@ -255,7 +259,18 @@ export default function CalculatorPage() {
               )}
             </section>
 
-            <ConfigImportExport input={input} onImport={applyTemplate} variant="sidebar" />
+            <div data-print="hide">
+              <ConfigImportExport input={input} onImport={applyTemplate} variant="sidebar" />
+            </div>
+
+            <div data-print="hide">
+              <CalculationHistory
+                history={history}
+                onRestore={restoreFromHistory}
+                onDelete={deleteHistoryEntry}
+                onClear={clearHistory}
+              />
+            </div>
 
             <ResultSummary result={result} />
             <Recommendations result={result} />
