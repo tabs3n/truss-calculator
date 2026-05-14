@@ -19,6 +19,8 @@ import {
   G,
   GAMMA_G,
   GAMMA_G_INF,
+  GAMMA_M1,
+  GAMMA_M2,
   GAMMA_Q,
   getBeamSelfWeight,
   getDesignLoad,
@@ -48,6 +50,12 @@ function emptyTippingDirection(): TippingDirectionResult {
     requiredBallastTotalKg: 0,
     utilization: Infinity,
     isOk: false,
+    designHorizontalForceKN: 0,
+    designTippingMomentKNm: 0,
+    designStabilizingMomentKNm: 0,
+    effectiveLeverArmM: 0,
+    totalEquVerticalReactionKN: 0,
+    applicationHeightM: 0,
   }
 }
 
@@ -90,6 +98,15 @@ function failedCalculationResult(
     calculatedAt: new Date().toISOString(),
     warnings,
     errors,
+    designFactors: {
+      gammaG: GAMMA_G,
+      gammaGinf: GAMMA_G_INF,
+      gammaQ: GAMMA_Q,
+      dynamicFactor: DYNAMIC_FACTOR,
+      gammaM1: GAMMA_M1,
+      gammaM2: GAMMA_M2,
+      horizontalDesignFactor: 0,
+    },
   }
 }
 
@@ -302,6 +319,7 @@ export function calculate(input: StructureInput): CalculationResult {
   const supportResults: SupportResult[] = []
   for (const support of input.supports) {
     const verticalReactionKN = supportVerticalReactionsSTR.get(support.id) ?? 0
+    const equVerticalReactionKN = supportVerticalReactionsEQU.get(support.id) ?? 0
     let bucklingUtilization = 0
     let isOk = true
     let failureReason: string | undefined
@@ -328,6 +346,7 @@ export function calculate(input: StructureInput): CalculationResult {
     supportResults.push({
       supportId: support.id,
       verticalReactionKN,
+      equVerticalReactionKN,
       horizontalReactionXKN: horizontalPerSupport,
       horizontalReactionYKN: horizontalPerSupport,
       bucklingUtilization,
@@ -436,5 +455,14 @@ export function calculate(input: StructureInput): CalculationResult {
     calculatedAt: new Date().toISOString(),
     warnings,
     errors,
+    designFactors: {
+      gammaG: GAMMA_G,
+      gammaGinf: GAMMA_G_INF,
+      gammaQ: GAMMA_Q,
+      dynamicFactor: DYNAMIC_FACTOR,
+      gammaM1: GAMMA_M1,
+      gammaM2: GAMMA_M2,
+      horizontalDesignFactor: designFactorHorizontal,
+    },
   }
 }

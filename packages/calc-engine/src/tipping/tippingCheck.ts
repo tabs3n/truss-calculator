@@ -165,6 +165,15 @@ export function calculateTipping(
   // tippingAxisSupportIds: 1-2 windseitige Stützen
   const tippingAxisSupportIds: string[] = [...windwardIds]
 
+  // Summe der EQU-Vertikalreaktionen aller stabilisierenden Stützen
+  const totalEquVerticalReactionKN = allStabilizing.reduce((sum, entry) => {
+    return sum + Math.max(0, supportVerticalReactions.get(entry.support.id) ?? 0)
+  }, 0)
+  // Wirksamer (gewichteter) Hebelarm = Ms / Rz_total
+  const effectiveLeverArmM = totalEquVerticalReactionKN > 0
+    ? stabilizingMomentKNm / totalEquVerticalReactionKN
+    : windwardTippingArmM
+
   return {
     minVerticalReactionKN: minVerticalReaction,
     tippingAxisSupportIds,
@@ -173,6 +182,12 @@ export function calculateTipping(
     requiredBallastTotalKg,
     utilization,
     isOk: minVerticalReaction >= 0 && utilization <= 1,
+    designHorizontalForceKN: totalWindForceKN,
+    designTippingMomentKNm: tippingMomentKNm,
+    designStabilizingMomentKNm: stabilizingMomentKNm,
+    effectiveLeverArmM,
+    totalEquVerticalReactionKN,
+    applicationHeightM: windApplicationHeightM,
   }
 }
 

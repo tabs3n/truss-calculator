@@ -630,29 +630,44 @@ export function ReportDocument({ data }: { data: ReportData }) {
           </View>
 
           <View style={styles.formulaCard}>
-            <Text style={styles.formulaHeading}>Kippsicherheitsnachweis</Text>
+            <Text style={styles.formulaHeading}>Kippsicherheitsnachweis (EQU, DIN EN 1990)</Text>
             <Text style={styles.formulaLine}>
               Maßgebende Windrichtung: {formatNumber(result.tipping.governingAngleDeg, 0)}°
             </Text>
             <Text style={styles.formulaLine}>Kippachse: {tippingProof.tippingAxisLabel}</Text>
             <Text style={styles.formulaLine}>
-              Mk = Fw x h = {formatNumber(horizontalLoadProof.forceKN)} kN x {formatNumber(horizontalLoadProof.applicationHeightM)} m = {formatNumber(tippingProof.tippingMomentKNm)} kN.m
+              Faktoren: γQ = {formatNumber(result.designFactors.gammaQ)}, Dyn = {formatNumber(result.designFactors.dynamicFactor)}, γG,inf = {formatNumber(result.designFactors.gammaGinf)}
             </Text>
             <Text style={styles.formulaLine}>
-              Ms = Rz x a = {formatNumber(tippingProof.stabilizingVerticalKN)} kN x {formatNumber(tippingProof.effectiveLeverArmM)} m = {formatNumber(tippingProof.stabilizingMomentKNm)} kN.m
+              Fw,d = Fw,k x γQ x Dyn = {formatNumber(horizontalLoadProof.forceKN)} x {formatNumber(result.designFactors.horizontalDesignFactor)} = {formatNumber(result.tipping.governing.designHorizontalForceKN)} kN
             </Text>
             <Text style={styles.formulaLine}>
-              Ausnutzung: eta = Mk / Ms = {formatNumber(tippingProof.tippingMomentKNm)} / {formatNumber(tippingProof.stabilizingMomentKNm)} = {formatNumber(result.tipping.governing.utilization)} {result.tipping.governing.utilization <= 1 ? "<= 1,0 OK" : "> 1,0 NICHT OK"}
+              Mk,d = Fw,d x h = {formatNumber(result.tipping.governing.designHorizontalForceKN)} kN x {formatNumber(result.tipping.governing.applicationHeightM)} m = {formatNumber(result.tipping.governing.designTippingMomentKNm)} kN.m
+            </Text>
+            <Text style={styles.formulaLine}>
+              Ms,d = Σ(Rz,EQU x a) = {formatNumber(result.tipping.governing.totalEquVerticalReactionKN)} kN x {formatNumber(result.tipping.governing.effectiveLeverArmM)} m = {formatNumber(result.tipping.governing.designStabilizingMomentKNm)} kN.m
+            </Text>
+            <Text style={styles.formulaLine}>
+              Ausnutzung: eta = Mk,d / Ms,d = {formatNumber(result.tipping.governing.designTippingMomentKNm)} / {formatNumber(result.tipping.governing.designStabilizingMomentKNm)} = {formatNumber(result.tipping.governing.utilization)} {result.tipping.governing.utilization <= 1 ? "<= 1,0 OK" : "> 1,0 NICHT OK"}
+            </Text>
+            <Text style={styles.formulaLine}>
+              Erf. Ballast = (Mk,d − Ms,d) / (g x a) = ({formatNumber(result.tipping.governing.designTippingMomentKNm)} − {formatNumber(result.tipping.governing.designStabilizingMomentKNm)}) / (9,81 x {formatNumber(result.tipping.governing.effectiveLeverArmM)}) = {formatNumber(result.tipping.governing.requiredBallastTotalKg, 0)} kg
             </Text>
           </View>
 
           <View style={styles.formulaCard}>
-            <Text style={styles.formulaHeading}>Gleitnachweis</Text>
+            <Text style={styles.formulaHeading}>Gleitnachweis (DIN EN 13814)</Text>
             <Text style={styles.formulaLine}>
-              res.Fh = sqrt(Fx^2 + Fy^2) = sqrt({formatNumber(slidingProof.forceXKN)}^2 + {formatNumber(slidingProof.forceYKN)}^2) = {formatNumber(slidingProof.resultingHorizontalForceKN)} kN
+              Fh,d = {formatNumber(result.sliding.resultingHorizontalForceKN)} kN (Bemessungswert, maßgebende Richtung)
             </Text>
             <Text style={styles.formulaLine}>
-              erf. Ballast = Fh/mu - Fv = {formatNumber(slidingProof.resultingHorizontalForceKN)}/{formatNumber(frictionCoefficient)} - {formatNumber(slidingProof.totalVerticalReactionKN)} = {formatNumber(slidingProof.requiredVerticalDeficitKN)} kN
+              Fv,EQU = {formatNumber(result.tipping.governing.totalEquVerticalReactionKN)} kN (γG,inf = {formatNumber(result.designFactors.gammaGinf)})
+            </Text>
+            <Text style={styles.formulaLine}>
+              µ = {formatNumber(frictionCoefficient)} (Reibbeiwert)
+            </Text>
+            <Text style={styles.formulaLine}>
+              Erf. Ballast = Fh,d/µ − Fv,EQU = {formatNumber(result.sliding.resultingHorizontalForceKN)}/{formatNumber(frictionCoefficient)} − {formatNumber(result.tipping.governing.totalEquVerticalReactionKN)} = {formatNumber(Math.max(0, result.sliding.requiredBallastKg) * 9.81 / 1000)} kN ≙ {formatNumber(Math.max(0, result.sliding.requiredBallastKg), 0)} kg {result.sliding.isOk ? "(OK, kein Zusatzballast)" : ""}
             </Text>
           </View>
 

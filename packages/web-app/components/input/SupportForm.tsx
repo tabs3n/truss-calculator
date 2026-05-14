@@ -346,6 +346,17 @@ export function SupportForm({
                   <ErrorText text={errors.outriggerLength} />
                 </label>
               </div>
+              {(!draft.outriggerLength || draft.outriggerLength <= 0) ? (
+                <div className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
+                  <p className="font-semibold">Hinweis: kein Outrigger</p>
+                  <p className="mt-1">
+                    Ohne Outrigger wird nur die halbe Plattenbreite ({((draft.baseplateSize ?? 0.6) / 2).toFixed(2)} m)
+                    als Kipparm angesetzt. Bei Windangriff quer zur Stützenachse führt das schnell zu sehr hohem
+                    Ballastbedarf. Outrigger oder Concrete Blocks (Kipparm 0,60 m) verbessern die Standsicherheit
+                    erheblich.
+                  </p>
+                </div>
+              ) : null}
             </div>
           ) : null}
         </div>

@@ -221,8 +221,10 @@ export interface BeamResult {
 
 export interface SupportResult {
   supportId: string
-  /** Vertikale Auflagerkraft unter Bemessungslasten */
+  /** Vertikale Auflagerkraft unter STR-Bemessungslasten (γG=1.35) */
   verticalReactionKN: number
+  /** Vertikale Auflagerkraft unter EQU-Bemessungslasten (γG,inf=0.90) – stabilisierend */
+  equVerticalReactionKN: number
   horizontalReactionXKN: number
   horizontalReactionYKN: number
   bucklingUtilization: number    // η Knicken, ≤ 1.0 = OK
@@ -247,6 +249,18 @@ export interface TippingDirectionResult {
   requiredBallastTotalKg: number
   utilization: number            // η = M_kippend / M_stabilisierend, ≤ 1.0 = OK
   isOk: boolean
+  /** Bemessungs-Horizontalkraft (Fw_d = Fw_k × γQ × Dyn outdoor, oder Indoor-Ersatzlast) [kN] */
+  designHorizontalForceKN: number
+  /** Bemessungs-Kippmoment Mk_d = Fw_d × h [kN·m] */
+  designTippingMomentKNm: number
+  /** Bemessungs-Stabilisierungsmoment Ms_d aus EQU-Vertikalreaktionen [kN·m] */
+  designStabilizingMomentKNm: number
+  /** Wirksamer Hebelarm (gewichtet) der stabilisierenden Stützen [m] */
+  effectiveLeverArmM: number
+  /** Summe der EQU-Vertikalreaktionen aller stabilisierenden Stützen [kN] */
+  totalEquVerticalReactionKN: number
+  /** Angriffshöhe der Horizontalkraft [m] */
+  applicationHeightM: number
 }
 
 export interface TippingResult {
@@ -270,6 +284,24 @@ export interface SlidingResult {
   frictionCoefficientUsed: number
 }
 
+/** Verwendete Teilsicherheits- und Lastfaktoren (für Report-Transparenz) */
+export interface DesignFactors {
+  /** γG ständige Lasten, ungünstig (STR) */
+  gammaG: number
+  /** γG,inf ständige Lasten, günstig (EQU) */
+  gammaGinf: number
+  /** γQ veränderliche Lasten, ungünstig */
+  gammaQ: number
+  /** Dynamikzuschlag DGUV 215-313 */
+  dynamicFactor: number
+  /** γM1 Stabilität (EC9) */
+  gammaM1: number
+  /** γM2 Querschnitt/Verbindung (EC9) */
+  gammaM2: number
+  /** Wirksamer Faktor auf Horizontalkraft (Outdoor: γQ × Dyn = 1.80, Indoor: 1.00) */
+  horizontalDesignFactor: number
+}
+
 export interface CalculationResult {
   // Eingabe (für Report)
   input: StructureInput
@@ -283,6 +315,9 @@ export interface CalculationResult {
   supports: SupportResult[]
   tipping: TippingResult
   sliding: SlidingResult
+
+  /** Verwendete Bemessungsfaktoren (für Report) */
+  designFactors: DesignFactors
 
   // Zusammenfassung
   overallOk: boolean
