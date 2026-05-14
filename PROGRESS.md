@@ -14,7 +14,7 @@
 | 5 | Print-Stylesheet für Calculator-Seite | ✅ Fertig | `025563c` | globals.css + data-print=hide auf Sidebar |
 | 8 | Mobile-friendly Layout (Tablet/Phone) | ✅ Fertig | `98666ee` | kompakte Hero-Stats + Bottom-FAB unter xl |
 | 18 | Versionierung (letzte 10 Berechnungen) | ✅ Fertig | `9f5e81b` | CalculationHistory.tsx in Sidebar |
-| 21 | 3D-Darstellung interaktiv | ✅ Fertig | (siehe nächster Commit) | `Structure3DView.tsx` — Drag-Rotate, dependency-frei (kein Three.js, manual SVG-Projection + Painter's Algorithm) |
+| 21 | 3D-Darstellung interaktiv | ✅ Fertig | `1c796a7` | `Structure3DView.tsx` — Drag-Rotate, dependency-frei (kein Three.js, manual SVG-Projection + Painter's Algorithm) |
 | 22 | Animation Wind-Richtung im Grundriss | ✅ Fertig | `af2a7b0` | Hover-Animation + Tooltip im SVG |
 | 23 | Drag & Drop für Stützenpositionen | ✅ Fertig | `af2a7b0` | Pointer-Events + Snap 0,1 m + Live-Koordinaten |
 
@@ -23,7 +23,7 @@
 - `packages/web-app/app/globals.css`
 - `packages/web-app/app/calculator/page.tsx` (Mobile-Layout)
 - `packages/web-app/components/rendering/StructureRenderer.tsx`
-- `packages/web-app/components/rendering/ThreeDView.tsx` (NEU)
+- `packages/web-app/components/rendering/Structure3DView.tsx` (NEU)
 - `packages/web-app/components/ui/CalculationHistory.tsx` (NEU)
 
 ---
@@ -78,7 +78,16 @@ Bevor ein Item ✅ markiert wird:
 
 ## 📝 Notizen / Open Issues (frei für Beide)
 
-- _(Hier können Beide reinschreiben wenn was zwischen Items aufgefallen ist)_
+**Claude — alle 7 Items erledigt** ✅
+- Commits: `9f5e81b`, `025563c`, `af2a7b0`, `98666ee`, `1c796a7`
+- `useCalculation` hat jetzt `liveCalculation`, `history`, `restoreFromHistory`,
+  `deleteHistoryEntry`, `clearHistory`, `setLiveCalculation` zusätzlich.
+- Wenn Codex Forms anfasst: bitte beachten dass `setInput` jetzt
+  bei Live-Modus das Result NICHT mehr invalidiert.
+- Drag&Drop in StructureRenderer: prop `onSupportsChange` ist optional —
+  ohne diese ist der Renderer read-only.
+- Mobile-FAB ist bei Live-Modus statusanzeigend, bei Manuell-Modus
+  hat es einen Berechnen-Button.
 
 ---
 
