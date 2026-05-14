@@ -1,7 +1,8 @@
 ﻿"use client"
 
 import { useRef, useState, type ChangeEvent } from "react"
-import { FileUp } from "lucide-react"
+import Link from "next/link"
+import { ArrowLeft, FileUp } from "lucide-react"
 
 import { ProjectForm } from "@/components/input/ProjectForm"
 import { BeamList } from "@/components/input/BeamList"
@@ -100,15 +101,19 @@ export default function CalculatorPage() {
         <section className="rounded-[1.75rem] border border-border/70 bg-card/90 px-6 py-6 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-                Arbeitsoberfläche
-              </p>
+              <Link
+                href="/"
+                className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                Zurück
+              </Link>
               <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
-                Truss Calculator
+                Planungsrechner
               </h1>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground sm:text-base">
-                Eingaben, Visualisierung, Ergebnisauswertung und PDF-Report greifen jetzt direkt
-                auf die angebundene `calc-engine` zu.
+                Konfiguration erfassen, Kipp-, Gleit- und Knicknachweis nach DIN EN rechnen
+                und als signaturfertigen PDF-Bericht exportieren.
               </p>
             </div>
 

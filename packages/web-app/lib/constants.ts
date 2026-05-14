@@ -2,13 +2,13 @@
 
 export const COMPANY = {
   name: "Cologne Hunters Licht & Ton Service GmbH",
-  address: "Bonner Wall 31, 50677 Koeln",
+  address: "Bonner Wall 31, 50677 Köln",
 }
 
 export const DISCLAIMER =
   "Dieses Dokument ist eine Planungsgrundlage und kein geprüfter " +
   "Standsicherheitsnachweis nach den jeweiligen landesrechtlichen Anforderungen. " +
-  "Die Verantwortung für die korrekte Ausfuehrung liegt beim Betreiber."
+  "Die Verantwortung für die korrekte Ausführung liegt beim Betreiber."
 
 export const TRUSS_LABELS: Record<TrussType, string> = {
   PROLYTE_H30D: "Prolyte H30D",
