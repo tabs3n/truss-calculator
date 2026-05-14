@@ -3,6 +3,8 @@ export type {
   Beam,
   BeamResult,
   CalculationResult,
+  DesignFactors,
+  DistributedLoad,
   FootType,
   FrictionConfig,
   FrictionPreset,

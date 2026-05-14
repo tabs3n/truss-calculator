@@ -527,9 +527,12 @@ export function ReportDocument({ data }: { data: ReportData }) {
 
         <View style={styles.section}>
           <View style={styles.card}>
-            <Text style={styles.h3}>Isometrische Skizze</Text>
+            <Text style={styles.h3}>Isometrische Skizze der Konfiguration</Text>
+            <Text style={[styles.muted, { fontSize: 9, marginBottom: 6 }]}>
+              Stützen, Traversen, Windflächen, Lasten und maßgebende Windrichtung
+            </Text>
             <View style={styles.sketchFrame}>
-              <IsometricSketch result={result} width={340} height={227} />
+              <IsometricSketch result={result} width={500} height={320} />
             </View>
           </View>
         </View>
@@ -548,7 +551,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.h3}>Lasten</Text>
+          <Text style={styles.h3}>Punktlasten</Text>
           <Table
             headers={["Traverse", "Element", "Position", "Gewicht"]}
             rows={result.input.beams.flatMap((beam) =>
@@ -562,15 +565,39 @@ export function ReportDocument({ data }: { data: ReportData }) {
           />
         </View>
 
+        {result.input.beams.some((beam) => (beam.distributedLoads ?? []).length > 0) ? (
+          <View style={styles.section}>
+            <Text style={styles.h3}>Streckenlasten</Text>
+            <Table
+              headers={["Traverse", "Element", "Bereich", "Last"]}
+              rows={result.input.beams.flatMap((beam) =>
+                (beam.distributedLoads ?? []).map((dl) => [
+                  beam.label,
+                  dl.label,
+                  `${formatNumber(dl.startPositionM)} – ${formatNumber(dl.endPositionM)} m`,
+                  `${formatNumber(dl.loadKgPerM, 1)} kg/m`,
+                ]),
+              )}
+            />
+          </View>
+        ) : null}
+
         <View style={styles.section}>
           <Table
-            headers={["Traverse", "Typ", "Lasten", "Windflächen"]}
-            rows={result.input.beams.map((beam) => [
-              beam.label,
-              TRUSS_LABELS[beam.trussType],
-              `${beam.loads.length}`,
-              `${beam.windSurfaces.length}`,
-            ])}
+            headers={["Traverse", "Typ", "Stützen", "Punktl.", "Streckenl.", "Windfl."]}
+            rows={result.input.beams.map((beam) => {
+              const supportIds = beam.supportIds && beam.supportIds.length >= 2
+                ? beam.supportIds
+                : [beam.startSupportId, beam.endSupportId]
+              return [
+                beam.label,
+                TRUSS_LABELS[beam.trussType],
+                `${supportIds.length}`,
+                `${beam.loads.length}`,
+                `${(beam.distributedLoads ?? []).length}`,
+                `${beam.windSurfaces.length}`,
+              ]
+            })}
           />
         </View>
       </Page>

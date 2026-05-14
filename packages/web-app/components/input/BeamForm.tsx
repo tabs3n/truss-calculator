@@ -7,19 +7,28 @@ import { LoadForm } from "@/components/input/LoadForm"
 import { WindSurfaceForm } from "@/components/input/WindSurfaceForm"
 import { Button } from "@/components/ui/button"
 import { getWindSurfaceTypeDragCoefficient, TRUSS_OPTIONS } from "@/lib/constants"
-import type { Beam, HangingLoad, Support, TrussType, WindSurface } from "@/lib/types-bridge"
+import type { Beam, DistributedLoad, HangingLoad, Support, TrussType, WindSurface } from "@/lib/types-bridge"
 import { cn } from "@/lib/utils"
 
 const fieldClassName =
   "mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 text-sm shadow-sm transition-colors focus:border-primary focus:outline-none"
 
+function getBeamSupportIds(beam: Beam): string[] {
+  if (beam.supportIds && beam.supportIds.length >= 2) return beam.supportIds
+  return [beam.startSupportId, beam.endSupportId]
+}
+
 function distanceBetweenSupports(beam: Beam, supports: Support[]) {
-  const start = supports.find((support) => support.id === beam.startSupportId)
-  const end = supports.find((support) => support.id === beam.endSupportId)
-
-  if (!start || !end) return 0
-
-  return Math.hypot(end.position.x - start.position.x, end.position.y - start.position.y)
+  const ids = getBeamSupportIds(beam)
+  let total = 0
+  for (let i = 0; i < ids.length - 1; i++) {
+    const a = supports.find((s) => s.id === ids[i])
+    const b = supports.find((s) => s.id === ids[i + 1])
+    if (a && b) {
+      total += Math.hypot(b.position.x - a.position.x, b.position.y - a.position.y)
+    }
+  }
+  return total
 }
 
 function validateBeam(beam: Beam, supports: Support[], spanLength: number) {
@@ -70,6 +79,16 @@ function createLoad(index: number): HangingLoad {
     label: `Last ${index + 1}`,
     positionAlongBeam: 0,
     weight: 50,
+  }
+}
+
+function createDistributedLoad(index: number, beamLength: number): DistributedLoad {
+  return {
+    id: crypto.randomUUID(),
+    label: `Streckenlast ${index + 1}`,
+    startPositionM: 0,
+    endPositionM: Math.max(1, beamLength),
+    loadKgPerM: 10,
   }
 }
 
@@ -239,6 +258,83 @@ export function BeamForm({
             </label>
           </div>
 
+          {/* Zwischenstützen für Multi-Support-Traversen */}
+          <section className="rounded-2xl border border-border bg-muted/20 p-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h4 className="text-base font-semibold">Zwischenstützen</h4>
+                <p className="text-xs text-muted-foreground">
+                  Optionale Stützen zwischen Start und Ende — die Traverse läuft in Reihenfolge durch alle.
+                  Multi-Support wird als Aneinanderreihung von Einfeldträgern berechnet (konservativ).
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const current = getBeamSupportIds(draft)
+                  const intermediates = current.slice(1, -1)
+                  const used = new Set(current)
+                  const candidate = supports.find((s) => !used.has(s.id))
+                  const nextIntermediates = [...intermediates, candidate?.id ?? ""]
+                  updateField("supportIds", [draft.startSupportId, ...nextIntermediates, draft.endSupportId])
+                }}
+              >
+                <Plus />
+                Stütze einfügen
+              </Button>
+            </div>
+
+            {(() => {
+              const intermediates = getBeamSupportIds(draft).slice(1, -1)
+              if (intermediates.length === 0) {
+                return (
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Keine Zwischenstützen — klassischer Einfeldträger.
+                  </p>
+                )
+              }
+              return (
+                <div className="mt-3 space-y-2">
+                  {intermediates.map((id, idx) => (
+                    <div key={`${id}-${idx}`} className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">#{idx + 2}</span>
+                      <select
+                        className={cn(fieldClassName, "mt-0 flex-1")}
+                        value={id}
+                        onChange={(event) => {
+                          const next = [...intermediates]
+                          next[idx] = event.target.value
+                          updateField("supportIds", [draft.startSupportId, ...next, draft.endSupportId])
+                        }}
+                      >
+                        <option value="">Stütze wählen</option>
+                        {supports.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.label}
+                          </option>
+                        ))}
+                      </select>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          const next = intermediates.filter((_, i) => i !== idx)
+                          updateField("supportIds", [draft.startSupportId, ...next, draft.endSupportId])
+                        }}
+                        aria-label="Stütze entfernen"
+                      >
+                        <X />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )
+            })()}
+          </section>
+
           <section className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -282,6 +378,132 @@ export function BeamForm({
                     )
                   }
                 />
+              ))}
+            </div>
+          </section>
+
+          {/* Streckenlasten */}
+          <section className="space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h4 className="text-lg font-semibold">Streckenlasten</h4>
+                <p className="text-sm text-muted-foreground">
+                  Kontinuierliche Last über einen Abschnitt (z.B. Ketten, Kabelwege, PA-Riser).
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  const current = draft.distributedLoads ?? []
+                  updateField("distributedLoads", [
+                    ...current,
+                    createDistributedLoad(current.length, spanLength),
+                  ])
+                }}
+              >
+                <Plus />
+                Streckenlast hinzufügen
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              {(draft.distributedLoads ?? []).length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-border p-4 text-sm text-muted-foreground">
+                  Noch keine Streckenlasten erfasst.
+                </div>
+              ) : null}
+              {(draft.distributedLoads ?? []).map((dl) => (
+                <div key={dl.id} className="rounded-2xl border border-border bg-background p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <input
+                      className={cn(fieldClassName, "mt-0 flex-1")}
+                      value={dl.label}
+                      placeholder="Beschriftung"
+                      onChange={(event) =>
+                        updateField(
+                          "distributedLoads",
+                          (draft.distributedLoads ?? []).map((item) =>
+                            item.id === dl.id ? { ...item, label: event.target.value } : item,
+                          ),
+                        )
+                      }
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() =>
+                        updateField(
+                          "distributedLoads",
+                          (draft.distributedLoads ?? []).filter((item) => item.id !== dl.id),
+                        )
+                      }
+                    >
+                      <X />
+                    </Button>
+                  </div>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                    <label className="block text-xs font-medium">
+                      Start (m)
+                      <input
+                        className={fieldClassName}
+                        type="number"
+                        step="0.05"
+                        value={dl.startPositionM}
+                        onChange={(event) =>
+                          updateField(
+                            "distributedLoads",
+                            (draft.distributedLoads ?? []).map((item) =>
+                              item.id === dl.id
+                                ? { ...item, startPositionM: Number(event.target.value) }
+                                : item,
+                            ),
+                          )
+                        }
+                      />
+                    </label>
+                    <label className="block text-xs font-medium">
+                      Ende (m)
+                      <input
+                        className={fieldClassName}
+                        type="number"
+                        step="0.05"
+                        value={dl.endPositionM}
+                        onChange={(event) =>
+                          updateField(
+                            "distributedLoads",
+                            (draft.distributedLoads ?? []).map((item) =>
+                              item.id === dl.id
+                                ? { ...item, endPositionM: Number(event.target.value) }
+                                : item,
+                            ),
+                          )
+                        }
+                      />
+                    </label>
+                    <label className="block text-xs font-medium">
+                      Last (kg/m)
+                      <input
+                        className={fieldClassName}
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        value={dl.loadKgPerM}
+                        onChange={(event) =>
+                          updateField(
+                            "distributedLoads",
+                            (draft.distributedLoads ?? []).map((item) =>
+                              item.id === dl.id
+                                ? { ...item, loadKgPerM: Number(event.target.value) }
+                                : item,
+                            ),
+                          )
+                        }
+                      />
+                    </label>
+                  </div>
+                </div>
               ))}
             </div>
           </section>
