@@ -268,9 +268,9 @@ export interface TippingDirectionResult {
   tippingAxisSupportIds: string[]
   /** IDs der Stützen, auf denen Zusatzballast stabilisierend angesetzt wird */
   ballastSupportIds: string[]
-  /** Erforderlicher Ballast pro stabilisierender Ballaststütze */
+  /** Erforderlicher Zusatzballast pro stabilisierender Ballaststütze */
   requiredBallastPerSupportKg: number
-  /** Gesamterforderlicher Ballast für diesen Lastfall */
+  /** Gesamterforderlicher Zusatzballast für diesen Lastfall */
   requiredBallastTotalKg: number
   utilization: number            // η = M_kippend / M_stabilisierend, ≤ 1.0 = OK
   isOk: boolean
@@ -347,15 +347,17 @@ export interface CalculationResult {
   // Zusammenfassung
   overallOk: boolean
 
-  /** Gesamterforderlicher Ballast (max aus Kippen und Gleiten) in kg */
+  /** Gesamterforderlicher Zusatzballast (max aus Kippen und Gleiten) in kg */
   requiredBallastTotalKg: number
 
-  /** Aufschlüsselung pro Stütze (für Report-Tabelle) */
+  /** Aufschlüsselung des Zusatzballasts pro Stütze (für Report-Tabelle) */
   ballastPerSupport: {
     supportId: string
     supportLabel: string
+    /** Erforderlicher Zusatzballast an dieser Stütze */
     requiredBallastKg: number
     existingBallastKg: number
+    /** Alias für requiredBallastKg, damit bestehende UI-Clients kompatibel bleiben */
     additionalBallastNeededKg: number
   }[]
 

@@ -679,7 +679,7 @@ export function calculate(input: StructureInput): CalculationResult {
       supportLabel: support.label,
       requiredBallastKg,
       existingBallastKg: support.existingBallast,
-      additionalBallastNeededKg: Math.max(0, requiredBallastKg - support.existingBallast),
+      additionalBallastNeededKg: requiredBallastKg,
     }
   })
 

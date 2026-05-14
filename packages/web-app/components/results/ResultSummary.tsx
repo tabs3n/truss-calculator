@@ -44,7 +44,7 @@ export function ResultSummary({ result }: { result: CalculationResult | null }) 
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-2xl border border-white/50 bg-background/80 p-4">
-            <p className="text-sm text-muted-foreground">Erforderlicher Ballast gesamt</p>
+            <p className="text-sm text-muted-foreground">Erforderlicher Zusatzballast gesamt</p>
             <p className="mt-2 text-3xl font-semibold">
               {result.requiredBallastTotalKg.toFixed(0)} kg
             </p>

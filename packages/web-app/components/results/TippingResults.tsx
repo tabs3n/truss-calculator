@@ -67,7 +67,7 @@ function DirectionCard({
             <dd className="font-semibold">{value.minVerticalReactionKN.toFixed(2)} kN</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Ballast gesamt</dt>
+            <dt className="text-muted-foreground">Zusatzballast</dt>
             <dd className="font-semibold">{value.requiredBallastTotalKg.toFixed(0)} kg</dd>
           </div>
         </dl>

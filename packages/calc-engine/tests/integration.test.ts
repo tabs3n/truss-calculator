@@ -168,6 +168,67 @@ describe('Gesamtberechnung Integration (OUTDOOR)', () => {
     expect(result.supports[0]!.verticalReactionKN).toBeCloseTo(result.supports[1]!.verticalReactionKN, 1)
   })
 
+  it('Vorhandener Ballast wird beim ausgewiesenen Zusatzbedarf nicht doppelt abgezogen', () => {
+    const supportIds = ['S1', 'S2', 'S3', 'S4', 'S5']
+    const ballastInput: StructureInput = {
+      ...baseInput,
+      frictionConfig: { mode: 'PRESET', preset: 'RUBBER_ON_CONCRETE' },
+      supports: supportIds.map((id, index) => ({
+        id,
+        label: `Stütze ${index + 1}`,
+        position: { x: index * 2.65, y: 0 },
+        trussType: 'PROLYTE_H30V',
+        height: 5,
+        footType: 'BASEPLATE',
+        baseplateSize: 0.6,
+        outriggerLength: 2,
+        existingBallast: 1100,
+      })),
+      beams: [
+        {
+          id: 'B1',
+          label: 'Traverse 1',
+          startSupportId: 'S1',
+          endSupportId: 'S5',
+          supportIds,
+          trussType: 'PROLYTE_H30V',
+          cantileverStart: 0,
+          cantileverEnd: 0,
+          loads: [],
+          distributedLoads: [
+            {
+              id: 'D1',
+              label: 'Streckenlast',
+              startPositionM: 0,
+              endPositionM: 10.6,
+              loadKgPerM: 50,
+            },
+          ],
+          windSurfaces: [
+            {
+              id: 'W1',
+              label: 'Windfläche',
+              width: 7,
+              height: 4,
+              centerHeightAboveGround: 3,
+              surfaceType: 'BANNER_SOLID',
+              surfaceOrientationDeg: 0,
+              dragCoefficient: 1.3,
+            },
+          ],
+        },
+      ],
+    }
+
+    const result = calculate(ballastInput)
+    const additionalSum = result.ballastPerSupport.reduce((sum, b) => sum + b.additionalBallastNeededKg, 0)
+
+    expect(result.requiredBallastTotalKg).toBeGreaterThan(0)
+    expect(additionalSum).toBeCloseTo(result.requiredBallastTotalKg, 1)
+    expect(result.ballastPerSupport.every(b => b.additionalBallastNeededKg === b.requiredBallastKg)).toBe(true)
+    expect(result.ballastPerSupport.some(b => b.existingBallastKg > b.requiredBallastKg)).toBe(true)
+  })
+
   it('liefert bei zu wenigen Stützen ein typisiertes Ergebnis mit errors', () => {
     const result = calculate({
       ...baseInput,

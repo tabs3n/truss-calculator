@@ -480,7 +480,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
               </Text>
             </View>
             <View style={[styles.card, styles.cardGap]}>
-              <Text style={styles.muted}>Erforderlicher Ballast gesamt</Text>
+              <Text style={styles.muted}>Erforderlicher Zusatzballast gesamt</Text>
               <Text>{formatNumber(result.requiredBallastTotalKg, 0)} kg</Text>
             </View>
           </View>
@@ -822,12 +822,12 @@ export function ReportDocument({ data }: { data: ReportData }) {
 
         <View style={styles.section}>
           <Table
-            headers={["Stütze", "Erforderlich", "Vorhanden", "Zusätzlich"]}
+            headers={["Stütze", "Vorhanden", "Zusatzbedarf", "Nach Ergänzung"]}
             rows={result.ballastPerSupport.map((entry) => [
               entry.supportLabel,
-              `${formatNumber(entry.requiredBallastKg, 0)} kg`,
               `${formatNumber(entry.existingBallastKg, 0)} kg`,
               `${formatNumber(entry.additionalBallastNeededKg, 0)} kg`,
+              `${formatNumber(entry.existingBallastKg + entry.additionalBallastNeededKg, 0)} kg`,
             ])}
           />
         </View>

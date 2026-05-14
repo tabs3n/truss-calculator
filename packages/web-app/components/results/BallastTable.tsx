@@ -23,9 +23,9 @@ export function BallastTable({ result }: { result: CalculationResult | null }) {
           <thead className="text-left text-muted-foreground">
             <tr className="border-b border-border">
               <th className="pb-3 font-medium">Stütze</th>
-              <th className="pb-3 font-medium">Erforderlich</th>
               <th className="pb-3 font-medium">Vorhanden</th>
-              <th className="pb-3 font-medium">Zusätzlich noetig</th>
+              <th className="pb-3 font-medium">Zusatzbedarf</th>
+              <th className="pb-3 font-medium">Nach Ergänzung</th>
             </tr>
           </thead>
           <tbody>
@@ -37,10 +37,12 @@ export function BallastTable({ result }: { result: CalculationResult | null }) {
                 }`}
               >
                 <td className="py-3 font-medium">{entry.supportLabel}</td>
-                <td className="py-3">{entry.requiredBallastKg.toFixed(0)} kg</td>
                 <td className="py-3">{entry.existingBallastKg.toFixed(0)} kg</td>
                 <td className="py-3 font-semibold">
                   {entry.additionalBallastNeededKg.toFixed(0)} kg
+                </td>
+                <td className="py-3">
+                  {(entry.existingBallastKg + entry.additionalBallastNeededKg).toFixed(0)} kg
                 </td>
               </tr>
             ))}
