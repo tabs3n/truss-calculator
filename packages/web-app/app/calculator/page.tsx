@@ -192,7 +192,7 @@ export default function CalculatorPage() {
                   <p className="mt-1 text-sm text-muted-foreground">
                     {liveCalculation
                       ? "Live-Modus: Berechnung läuft bei jeder Eingabe automatisch."
-                      : "Manueller Modus: Berechnung mit „Berechnen" auslösen."}
+                      : 'Manueller Modus: Berechnung mit "Berechnen" auslösen.'}
                   </p>
                 </div>
                 <label
