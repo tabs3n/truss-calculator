@@ -177,7 +177,7 @@ export default function CalculatorPage() {
             <SupportList supports={input.supports} onChange={updateSupports} />
             <BeamList beams={input.beams} supports={input.supports} onChange={updateBeams} />
             <div className="grid gap-6 xl:grid-cols-2">
-              <StructureRenderer input={input} result={result} />
+              <StructureRenderer input={input} result={result} onSupportsChange={updateSupports} />
               <ElevationRenderer input={input} result={result} />
             </div>
           </div>
