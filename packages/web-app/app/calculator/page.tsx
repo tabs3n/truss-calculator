@@ -19,6 +19,7 @@ import { Recommendations } from "@/components/results/Recommendations"
 import { ResultSummary } from "@/components/results/ResultSummary"
 import { TippingResults } from "@/components/results/TippingResults"
 import { Button } from "@/components/ui/button"
+import { CalculationHistory } from "@/components/ui/CalculationHistory"
 import { useCalculation } from "@/hooks/useCalculation"
 import { importFromVW } from "@/lib/importVW"
 import { createEmptyInput } from "@/lib/templates"
@@ -35,6 +36,12 @@ export default function CalculatorPage() {
     hasRestoredDraft,
     dismissRestoredDraft,
     resetToDefault,
+    liveCalculation,
+    setLiveCalculation,
+    history,
+    restoreFromHistory,
+    deleteHistoryEntry,
+    clearHistory,
   } = useCalculation()
   const [importMessage, setImportMessage] = useState<string | null>(null)
   const [importError, setImportError] = useState<string | null>(null)
@@ -173,13 +180,40 @@ export default function CalculatorPage() {
 
           <aside className="space-y-6 xl:sticky xl:top-6 xl:self-start">
             <section className="rounded-[1.5rem] border border-border/80 bg-card/90 p-5 shadow-sm">
-              <h2 className="text-xl font-semibold">Berechnung</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Berechnung, PDF-Report und VW-Import sind direkt in den Arbeitsfluss eingebunden.
-              </p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-xl font-semibold">Berechnung</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {liveCalculation
+                      ? "Live-Modus: Berechnung läuft bei jeder Eingabe automatisch."
+                      : "Manueller Modus: Berechnung mit „Berechnen" auslösen."}
+                  </p>
+                </div>
+                <label
+                  className="flex shrink-0 cursor-pointer items-center gap-2 text-xs font-medium text-muted-foreground"
+                  title="Auto-Berechnung bei jeder Änderung (300 ms debounced)"
+                >
+                  <span>Live</span>
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-border"
+                    checked={liveCalculation}
+                    onChange={(event) => setLiveCalculation(event.target.checked)}
+                  />
+                </label>
+              </div>
               <div className="mt-5 space-y-3">
-                <Button type="button" className="h-11 w-full text-sm font-semibold" onClick={runCalculation} disabled={isCalculating}>
-                  {isCalculating ? "Berechne..." : "Berechnen"}
+                <Button
+                  type="button"
+                  className="h-11 w-full text-sm font-semibold"
+                  onClick={runCalculation}
+                  disabled={isCalculating}
+                >
+                  {isCalculating
+                    ? "Berechne..."
+                    : liveCalculation
+                      ? "Berechnen & speichern"
+                      : "Berechnen"}
                 </Button>
                 <ReportButton result={result} />
                 <Button
