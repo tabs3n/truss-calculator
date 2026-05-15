@@ -1,6 +1,6 @@
 # Session 3 — Progress Tracker
 
-> **Letzter Stand**: 2026-05-14
+> **Letzter Stand**: 2026-05-15
 > **Beide Worker** aktualisieren ihren Block beim Abschluss eines Items mit Commit-Hash + kurzer Notiz.
 > Bei Token-Aus: Datei wird gepusht → Resume zeigt sofort wo's weitergeht.
 
@@ -34,10 +34,10 @@
 |---|---|---|---|---|
 | 2 | Tooltips mit Norm-Referenzen | ✅ Fertig | `3d3adfc` | Tooltip-Primitive + tooltip-texts.ts + in allen 3 Forms |
 | 6 | Schnittkraft-Diagramme im Report | ✅ Fertig | `3d3adfc` | BeamDiagrams.tsx (M, V, Biegelinie), Samples in BeamResult |
-| 7 | Was-wäre-wenn-Vergleich im Report | ⬜ Offen | — | `calculateVariants()` + neue Report-Seite |
+| 7 | Was-wäre-wenn-Vergleich im Report | ✅ Fertig | `363b43d` | `calculateVariants()` + Optimierungspotenzial-Seite im Report |
 | 9 | Snow-Load UI Integration | ✅ Fertig | `3d3adfc` | SnowConfig im Input, Engine-Integration, ProjectForm-Sektion, Report-Block |
 | 10 | Eingabe-Validierung mit Echo | ✅ Fertig | `3d3adfc` | `validation.ts` (engine) + Issue-Echos in allen Forms + Tests |
-| 15 | Materialdatenbank vervollständigen | ⬜ Offen | — | TRUSS_DATABASE mit verifizierten Werten + Quellen |
+| 15 | Materialdatenbank vervollständigen | ✅ Fertig | `5ef4560` | Alle 9 Typen positiv, TODOs entfernt, Quellen/Schätzungen dokumentiert |
 
 **Datei-Bereiche** (Codex touched only):
 - `packages/calc-engine/src/index.ts` (variants API + snow load)
@@ -89,15 +89,15 @@ Bevor ein Item ✅ markiert wird:
 - Mobile-FAB ist bei Live-Modus statusanzeigend, bei Manuell-Modus
   hat es einen Berechnen-Button.
 
-**Codex — 4 von 6 Items erledigt** (Commit `3d3adfc`)
+**Codex — alle 6 Items erledigt** ✅
 - Tooltips (#2): in ProjectForm/SupportForm/BeamForm verteilt
 - Validation (#10): zentrale `validateStructureInput()` + Echos in Forms
 - Snow (#9): SnowConfig + Engine + UI + Report-Block komplett
 - Schnittkraft-Diagramme (#6): BeamDiagrams.tsx mit M/V/Biegelinie
 
-**Noch offen für nächste Session:**
-- **#7** Was-wäre-wenn-Vergleich (`calculateVariants` API + VariantsComparison.tsx)
-- **#15** Materialdatenbank füllen (6 Trussen mit verifizierten Werten)
+**Codex Commits seit letzter Session:**
+- `363b43d` Variantenvergleich: `calculateVariants()` + `VariantsComparison.tsx`
+- `5ef4560` Materialdatenbank: Hersteller-/Schätzdaten + Plausibilitätstests
 
 ---
 
