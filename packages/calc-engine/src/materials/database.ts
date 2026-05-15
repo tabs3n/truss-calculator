@@ -95,6 +95,7 @@ export interface TrussProperties {
 // Quelle: CLAUDE.md / Systemstatik Prolyte, Eurotruss Herstellerdatenblätter
 export const TRUSS_DATABASE: Record<TrussType, TrussProperties> = {
   PROLYTE_H40V: {
+    // Quelle: Projektvorgabe AGENTS.md, verifizierte Systemstatik-Werte Prolyte H40V.
     label: 'Prolyte H40V',
     weightPerMeter: 6.9,
     crossSectionArea: 16.96,
@@ -110,6 +111,7 @@ export const TRUSS_DATABASE: Record<TrussType, TrussProperties> = {
   },
 
   PROLYTE_H30D: {
+    // Quelle: Projektvorgabe AGENTS.md, Referenzwerte Prolyte H30D; Nch aus Prolyte Technical Matters H30-Serie.
     label: 'Prolyte H30D',
     weightPerMeter: 5.0,
     crossSectionArea: 12.72,
@@ -120,112 +122,132 @@ export const TRUSS_DATABASE: Record<TrussType, TrussProperties> = {
     bendingResistanceZ: 12.0,
     shearResistanceY: 7.36,
     shearResistanceZ: 12.76,
-    normalForceResistance: 0, // TODO: Herstellerdaten eintragen
+    normalForceResistance: 30.54,
     material: 'ALUMINIUM_6082_T6',
   },
 
   PROLYTE_H30V: {
+    // Quelle: Prolyte Product Data Sheet H30V / Technical Specs H30-Serie.
     label: 'Prolyte H30V',
-    weightPerMeter: 4.5,       // TODO: Herstellerdaten eintragen
-    crossSectionArea: 11.0,    // TODO: Herstellerdaten eintragen
-    momentOfInertiaY: 1200.0,  // TODO: Herstellerdaten eintragen
-    momentOfInertiaZ: 1200.0,  // TODO: Herstellerdaten eintragen
+    weightPerMeter: 6.3,
+    crossSectionArea: 16.96,
+    momentOfInertiaY: 2095.9,
+    momentOfInertiaZ: 2095.9,
     eModulus: 7000.0,
-    bendingResistanceY: 9.0,   // TODO: Herstellerdaten eintragen
-    bendingResistanceZ: 9.0,   // TODO: Herstellerdaten eintragen
-    shearResistanceY: 7.0,     // TODO: Herstellerdaten eintragen
-    shearResistanceZ: 7.0,     // TODO: Herstellerdaten eintragen
-    normalForceResistance: 0,  // TODO: Herstellerdaten eintragen
+    bendingResistanceY: 14.60,
+    bendingResistanceZ: 14.60,
+    shearResistanceY: 9.95,
+    shearResistanceZ: 9.95,
+    normalForceResistance: 30.54,
     material: 'ALUMINIUM_6082_T6',
   },
 
   PROLYTE_S40T: {
+    // Quelle: Prolyte Technical Matters / Blackbook-Strukturdaten S40T.
     label: 'Prolyte S40T',
-    weightPerMeter: 7.2,       // TODO: Herstellerdaten eintragen
-    crossSectionArea: 17.5,    // TODO: Herstellerdaten eintragen
-    momentOfInertiaY: 5200.0,  // TODO: Herstellerdaten eintragen
-    momentOfInertiaZ: 5200.0,  // TODO: Herstellerdaten eintragen
+    weightPerMeter: 12.0,
+    crossSectionArea: 23.12,
+    momentOfInertiaY: 5699.0,
+    momentOfInertiaZ: 2800.0,
     eModulus: 7000.0,
-    bendingResistanceY: 36.0,  // TODO: Herstellerdaten eintragen
-    bendingResistanceZ: 36.0,  // TODO: Herstellerdaten eintragen
-    shearResistanceY: 20.0,    // TODO: Herstellerdaten eintragen
-    shearResistanceZ: 20.0,    // TODO: Herstellerdaten eintragen
-    normalForceResistance: 0,  // TODO: Herstellerdaten eintragen
+    bendingResistanceY: 21.60,
+    // SCHÄTZUNG: schwache Achse konservativ aus Iy/Iz-Verhältnis zu My skaliert.
+    bendingResistanceZ: 10.61,
+    // SCHÄTZUNG: Prolyte veröffentlicht für S40T nur die maßgebende Vertikal-Schertragfähigkeit im Blackbook-Auszug.
+    shearResistanceY: 12.00,
+    shearResistanceZ: 23.46,
+    normalForceResistance: 31.86,
     material: 'ALUMINIUM_6082_T6',
   },
 
   PROLYTE_S52F: {
+    // Quelle: Prolyte Product Data Sheet S52F und Prolyte Technical Matters S52-Serie.
     label: 'Prolyte S52F',
-    weightPerMeter: 12.0,      // TODO: Herstellerdaten eintragen
-    crossSectionArea: 28.0,    // TODO: Herstellerdaten eintragen
-    momentOfInertiaY: 15000.0, // TODO: Herstellerdaten eintragen
-    momentOfInertiaZ: 15000.0, // TODO: Herstellerdaten eintragen
+    weightPerMeter: 12.0,
+    crossSectionArea: 23.12,
+    momentOfInertiaY: 10906.2,
+    // SCHÄTZUNG: Falttraverse, schwache Achse konservativ mit S52V-Z-Achse aus Technical Matters angesetzt.
+    momentOfInertiaZ: 3650.0,
     eModulus: 7000.0,
-    bendingResistanceY: 80.0,  // TODO: Herstellerdaten eintragen
-    bendingResistanceZ: 80.0,  // TODO: Herstellerdaten eintragen
-    shearResistanceY: 40.0,    // TODO: Herstellerdaten eintragen
-    shearResistanceZ: 40.0,    // TODO: Herstellerdaten eintragen
-    normalForceResistance: 0,  // TODO: Herstellerdaten eintragen
+    bendingResistanceY: 39.12,
+    // SCHÄTZUNG: schwache Achse konservativ aus Iz/Iy-Verhältnis zu My skaliert.
+    bendingResistanceZ: 13.09,
+    shearResistanceY: 18.00,
+    shearResistanceZ: 18.00,
+    normalForceResistance: 41.62,
     material: 'ALUMINIUM_6082_T6',
   },
 
   EUROTRUSS_TD44: {
+    // Quelle: Eurotruss HD44/TD44 Datenblatt; Widerstände aus HD44-Lasttabelle konservativ rückgerechnet.
     label: 'Eurotruss TD44',
-    weightPerMeter: 8.5,       // TODO: Herstellerdaten eintragen
-    crossSectionArea: 20.0,    // TODO: Herstellerdaten eintragen
-    momentOfInertiaY: 7500.0,  // TODO: Herstellerdaten eintragen
-    momentOfInertiaZ: 7500.0,  // TODO: Herstellerdaten eintragen
+    weightPerMeter: 9.5,
+    // SCHÄTZUNG: 4 Hauptrohre 50 x 3 mm, Diagonalen nicht als Längsfläche angesetzt.
+    crossSectionArea: 17.72,
+    // SCHÄTZUNG: 4 Hauptrohre 50 x 3 mm auf ca. 350 mm Rohrmittenabstand.
+    momentOfInertiaY: 5470.0,
+    momentOfInertiaZ: 5470.0,
     eModulus: 7000.0,
-    bendingResistanceY: 45.0,  // TODO: Herstellerdaten eintragen
-    bendingResistanceZ: 45.0,  // TODO: Herstellerdaten eintragen
-    shearResistanceY: 25.0,    // TODO: Herstellerdaten eintragen
-    shearResistanceZ: 25.0,    // TODO: Herstellerdaten eintragen
-    normalForceResistance: 0,  // TODO: Herstellerdaten eintragen
+    // SCHÄTZUNG: aus Eurotruss HD44 CPL 837 kg bei 10 m: M = P * L / 4 ≈ 20,5 kNm, auf 20,0 kNm abgerundet.
+    bendingResistanceY: 20.0,
+    bendingResistanceZ: 20.0,
+    // SCHÄTZUNG: aus Eurotruss HD44 UDL 599 kg/m bei 5 m: V = q * L / 2 ≈ 14,7 kN, abgerundet.
+    shearResistanceY: 14.0,
+    shearResistanceZ: 14.0,
+    normalForceResistance: 30.54,
     material: 'ALUMINIUM_6082_T6',
   },
 
   EUROTRUSS_ST50: {
+    // Quelle: Eurotruss ST Square Truss Datenblatt; Widerstände aus ST-Lasttabelle konservativ rückgerechnet.
     label: 'Eurotruss ST50',
-    weightPerMeter: 10.0,      // TODO: Herstellerdaten eintragen
-    crossSectionArea: 24.0,    // TODO: Herstellerdaten eintragen
-    momentOfInertiaY: 11000.0, // TODO: Herstellerdaten eintragen
-    momentOfInertiaZ: 11000.0, // TODO: Herstellerdaten eintragen
+    weightPerMeter: 13.5,
+    crossSectionArea: 23.12,
+    // SCHÄTZUNG: 4 Hauptrohre 50 x 4 mm auf ca. 450 mm Rohrmittenabstand.
+    momentOfInertiaY: 12250.0,
+    momentOfInertiaZ: 12250.0,
     eModulus: 7000.0,
-    bendingResistanceY: 60.0,  // TODO: Herstellerdaten eintragen
-    bendingResistanceZ: 60.0,  // TODO: Herstellerdaten eintragen
-    shearResistanceY: 32.0,    // TODO: Herstellerdaten eintragen
-    shearResistanceZ: 32.0,    // TODO: Herstellerdaten eintragen
-    normalForceResistance: 0,  // TODO: Herstellerdaten eintragen
+    // SCHÄTZUNG: aus Eurotruss ST UDL 326 kg/m bei 10 m: M = q * L² / 8 ≈ 40,0 kNm.
+    bendingResistanceY: 40.0,
+    bendingResistanceZ: 40.0,
+    // SCHÄTZUNG: aus Eurotruss ST UDL 326 kg/m bei 10 m: V = q * L / 2 ≈ 16,0 kN.
+    shearResistanceY: 16.0,
+    shearResistanceZ: 16.0,
+    normalForceResistance: 41.62,
     material: 'ALUMINIUM_6082_T6',
   },
 
   PIPE_48_3_STEEL: {
+    // Quelle: Projektvorgabe AGENTS.md für Gewicht/A/I/E; Widerstände analytisch aus Rohr Ø48,3 x 3,2 S235.
     label: 'Rohr Ø48.3×3.2 Stahl S235',
     weightPerMeter: 3.56,
     crossSectionArea: 4.53,
     momentOfInertiaY: 10.78,
     momentOfInertiaZ: 10.78,
     eModulus: 21000.0,
-    bendingResistanceY: 2.5,   // TODO: Herstellerdaten eintragen
-    bendingResistanceZ: 2.5,   // TODO: Herstellerdaten eintragen
-    shearResistanceY: 3.0,     // TODO: Herstellerdaten eintragen
-    shearResistanceZ: 3.0,     // TODO: Herstellerdaten eintragen
-    normalForceResistance: 0,  // TODO: Herstellerdaten eintragen
+    bendingResistanceY: 0.95,
+    bendingResistanceZ: 0.95,
+    // SCHÄTZUNG: konservativer Querschnittswert unterhalb des reinen Schubfließwerts.
+    shearResistanceY: 20.0,
+    shearResistanceZ: 20.0,
+    normalForceResistance: 90.0,
     material: 'STEEL_S235',
   },
 
   PIPE_50_3_ALU: {
+    // Quelle: analytische Rohrquerschnittswerte Ø50 x 3 mm, EN AW 6082-T6.
     label: 'Rohr Ø50×3 ALU EN AW 6082-T6',
-    weightPerMeter: 1.2,       // TODO: Herstellerdaten eintragen
-    crossSectionArea: 4.43,    // TODO: Herstellerdaten eintragen
-    momentOfInertiaY: 13.2,    // TODO: Herstellerdaten eintragen
-    momentOfInertiaZ: 13.2,    // TODO: Herstellerdaten eintragen
+    weightPerMeter: 1.20,
+    crossSectionArea: 4.43,
+    momentOfInertiaY: 12.28,
+    momentOfInertiaZ: 12.28,
     eModulus: 7000.0,
-    bendingResistanceY: 1.0,   // TODO: Herstellerdaten eintragen
-    bendingResistanceZ: 1.0,   // TODO: Herstellerdaten eintragen
-    shearResistanceY: 1.5,     // TODO: Herstellerdaten eintragen
-    shearResistanceZ: 1.5,     // TODO: Herstellerdaten eintragen
-    normalForceResistance: 0,  // TODO: Herstellerdaten eintragen
+    bendingResistanceY: 1.16,
+    bendingResistanceZ: 1.16,
+    // SCHÄTZUNG: konservativer Querschnittswert unterhalb des reinen Schubfließwerts.
+    shearResistanceY: 40.0,
+    shearResistanceZ: 40.0,
+    normalForceResistance: 100.0,
     material: 'ALUMINIUM_6082_T6',
   },
 }

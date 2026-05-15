@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
 import { TRUSS_DATABASE, getTrussProperties } from '../src/materials/database.js'
 import type { TrussType } from '../src/types.js'
 
@@ -52,5 +53,26 @@ describe('Traversendatenbank', () => {
 
   it('wirft Fehler bei unbekanntem Typ', () => {
     expect(() => getTrussProperties('UNKNOWN' as TrussType)).toThrow()
+  })
+
+  it('alle Traversentypen haben positive Pflichtwerte', () => {
+    for (const type of ALL_TRUSS_TYPES) {
+      const props = getTrussProperties(type)
+      expect(props.weightPerMeter, `${type}.weightPerMeter`).toBeGreaterThan(0)
+      expect(props.crossSectionArea, `${type}.crossSectionArea`).toBeGreaterThan(0)
+      expect(props.momentOfInertiaY, `${type}.momentOfInertiaY`).toBeGreaterThan(0)
+      expect(props.momentOfInertiaZ, `${type}.momentOfInertiaZ`).toBeGreaterThan(0)
+      expect(props.eModulus, `${type}.eModulus`).toBeGreaterThan(0)
+      expect(props.bendingResistanceY, `${type}.bendingResistanceY`).toBeGreaterThan(0)
+      expect(props.bendingResistanceZ, `${type}.bendingResistanceZ`).toBeGreaterThan(0)
+      expect(props.shearResistanceY, `${type}.shearResistanceY`).toBeGreaterThan(0)
+      expect(props.shearResistanceZ, `${type}.shearResistanceZ`).toBeGreaterThan(0)
+      expect(props.normalForceResistance, `${type}.normalForceResistance`).toBeGreaterThan(0)
+    }
+  })
+
+  it('enthält keine offenen Herstellerdaten-TODOs mehr', () => {
+    const source = readFileSync(new URL('../src/materials/database.ts', import.meta.url), 'utf8')
+    expect(source).not.toContain('TODO: Herstellerdaten')
   })
 })
