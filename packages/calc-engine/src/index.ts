@@ -1,6 +1,7 @@
 ﻿export * from './types'
 
 export * from './validation'
+export * from './variants'
 
 import type {
   Beam,

@@ -24,6 +24,8 @@ export type {
   TippingDirectionResult,
   TippingResult,
   TrussType,
+  Variant,
+  VariantResult,
   VWExportData,
   WindLoadResult,
   WindSurface,

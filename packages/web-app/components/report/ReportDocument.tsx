@@ -7,6 +7,7 @@
 } from "@react-pdf/renderer"
 import { getGoverningIndoorLoad } from "@calc-engine/loads/indoorLoads"
 import { getFootProperties, getTrussProperties } from "@calc-engine/materials/database"
+import { calculateVariants } from "@calc-engine/variants"
 import {
   calculateSurfaceWindForce,
   calculateWindForce,
@@ -21,6 +22,7 @@ import { getFrictionCoefficient } from "@truss-calculator/calc-engine"
 import { BeamDiagrams } from "@/components/report/BeamDiagrams"
 import { IsometricSketch } from "@/components/report/IsometricSketch"
 import { PlanView } from "@/components/report/PlanView"
+import { VariantsComparison } from "@/components/report/VariantsComparison"
 import type { CalculationResult, ReportData, Support, WindZone } from "@/lib/types-bridge"
 import {
   FOOT_LABELS,
@@ -483,6 +485,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
   const tippingProof = getTippingProof(result, horizontalLoadProof)
   const slidingProof = getSlidingProof(result, horizontalLoadProof, frictionCoefficient)
   const overallStatus = getOverallStatus(result)
+  const variantResults = result.overallOk ? [] : calculateVariants(result.input)
 
   return (
     <Document title={`Report ${result.input.projectName || "truss-calculator"}`}>
@@ -882,6 +885,16 @@ export function ReportDocument({ data }: { data: ReportData }) {
           <Text style={styles.muted}>Keine Traversennachweise vorhanden.</Text>
         )}
       </Page>
+
+      {variantResults.length > 0 ? (
+        <Page size="A4" style={styles.page}>
+          <Text style={styles.h2}>Optimierungspotenzial</Text>
+          <Text style={[styles.muted, { fontSize: 10, marginBottom: 12 }]}>
+            Variantenrechnung mit unveränderter Geometrie, aber angepassten Fußsystemen, Reibwerten oder Windflächen.
+          </Text>
+          <VariantsComparison baseline={result} variants={variantResults} />
+        </Page>
+      ) : null}
 
       <Page size="A4" style={styles.page}>
         <Text style={styles.h2}>Ballast und Normen</Text>
