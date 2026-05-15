@@ -48,6 +48,9 @@ type ScreenPt = { x: number; y: number }
 /** Querschnitts-Frame einer Traverse: vier Eck-Punkte (Bottom-Left/Right, Top-Left/Right). */
 type TrussFrame = { bl: ScreenPt; br: ScreenPt; tl: ScreenPt; tr: ScreenPt }
 
+/** Querschnitts-Frame einer Stütze: vier Ecken in der Draufsicht (SW/SE/NE/NW). */
+type SupportFrame = { sw: ScreenPt; se: ScreenPt; ne: ScreenPt; nw: ScreenPt }
+
 // ─── Projektion ───────────────────────────────────────────────────────────────
 function makeProjector(view: ViewAngles, scale: number, cx: number, cy: number) {
   const yawRad   = (view.yaw   * Math.PI) / 180
@@ -179,6 +182,7 @@ export function Structure3DView({
   type Renderable =
     | { kind: "ground";         depth: number; polygon: ScreenPt[] }
     | { kind: "support-column"; depth: number; support: Support; base: ScreenPt; top: ScreenPt }
+    | { kind: "support-truss";  depth: number; support: Support; frames: SupportFrame[] }
     | { kind: "beam-segment";   depth: number; a: ScreenPt; b: ScreenPt; label?: string }
     | {
         kind: "beam-truss"
@@ -214,15 +218,48 @@ export function Structure3DView({
 
   // Stützen
   for (const support of input.supports) {
-    const baseP = pw(support.position.x, support.position.y, 0)
-    const topP  = pw(support.position.x, support.position.y, support.height)
-    renderables.push({
-      kind:    "support-column",
-      depth:   (baseP.depth + topP.depth) / 2,
-      support,
-      base:    baseP.screen,
-      top:     topP.screen,
-    })
+    const sx = support.position.x, sy = support.position.y
+
+    if (!showTruss) {
+      // ── Linien-Fallback ──────────────────────────────────────────────────
+      const baseP = pw(sx, sy, 0)
+      const topP  = pw(sx, sy, support.height)
+      renderables.push({
+        kind:  "support-column",
+        depth: (baseP.depth + topP.depth) / 2,
+        support,
+        base:  baseP.screen,
+        top:   topP.screen,
+      })
+    } else {
+      // ── Traverse-Geometrie: 4 vertikale Gurtrohre + X-Lacing ────────────
+      const widthM = getTrussWidthM(support.trussType)
+      const half   = widthM / 2
+
+      // Frame an gegebener Höhe z: 4 Ecken SW/SE/NE/NW
+      const makeFrame = (z: number): SupportFrame => {
+        return {
+          sw: pw(sx - half, sy - half, z).screen,
+          se: pw(sx + half, sy - half, z).screen,
+          ne: pw(sx + half, sy + half, z).screen,
+          nw: pw(sx - half, sy + half, z).screen,
+        }
+      }
+
+      const lacingSpacing = getLacingSpacingM(widthM)
+      const nSections     = Math.max(1, Math.round(support.height / lacingSpacing))
+      const frames: SupportFrame[] = []
+      for (let k = 0; k <= nSections; k++) {
+        frames.push(makeFrame((k / nSections) * support.height))
+      }
+
+      renderables.push({
+        kind:   "support-truss",
+        depth:  pw(sx, sy, support.height / 2).depth,
+        support,
+        frames,
+      })
+    }
   }
 
   // Traversen
@@ -387,7 +424,7 @@ export function Structure3DView({
             return <path key={`g-${idx}`} d={path} fill="rgba(241,245,249,0.6)" stroke="#cbd5e1" strokeWidth={0.5} />
           }
 
-          // ── Stütze ─────────────────────────────────────────────────────
+          // ── Stütze (Linie, Fallback) ───────────────────────────────────
           if (r.kind === "support-column") {
             return (
               <g key={`s-${r.support.id}-${idx}`}>
@@ -395,6 +432,58 @@ export function Structure3DView({
                   stroke={supportColor(r.support)} strokeWidth={5} strokeLinecap="round" />
                 <circle cx={r.base.x} cy={r.base.y} r={4} fill="#475569" />
                 <text x={r.top.x + 6} y={r.top.y - 4}
+                  className="fill-slate-700 text-[10px] font-semibold pointer-events-none">
+                  {r.support.label}
+                </text>
+              </g>
+            )
+          }
+
+          // ── Stütze als Traverse-Geometrie ──────────────────────────────
+          if (r.kind === "support-truss") {
+            const col    = supportColor(r.support)
+            const top    = r.frames[r.frames.length - 1]!
+            const base   = r.frames[0]!
+            const corners = ["sw", "se", "ne", "nw"] as const
+            const fpStr  = (f: SupportFrame) =>
+              `${f.sw.x.toFixed(1)},${f.sw.y.toFixed(1)} ${f.se.x.toFixed(1)},${f.se.y.toFixed(1)} ${f.ne.x.toFixed(1)},${f.ne.y.toFixed(1)} ${f.nw.x.toFixed(1)},${f.nw.y.toFixed(1)}`
+
+            return (
+              <g key={`st-${r.support.id}-${idx}`}>
+                {/* 4 vertikale Gurtrohre */}
+                {corners.map((c) => (
+                  <polyline key={c}
+                    points={r.frames.map((f) => `${f[c].x.toFixed(1)},${f[c].y.toFixed(1)}`).join(" ")}
+                    fill="none" stroke={col} strokeWidth={2} strokeLinecap="round"
+                  />
+                ))}
+                {/* Horizontale Lacing-Ringe (Querriegel) */}
+                {r.frames.map((f, fi) => (
+                  <polygon key={fi} points={fpStr(f)}
+                    fill={fi === r.frames.length - 1 ? "rgba(0,0,0,0.05)" : "none"}
+                    stroke={col}
+                    strokeWidth={fi === 0 || fi === r.frames.length - 1 ? 1.5 : 0.8}
+                    opacity={0.65}
+                  />
+                ))}
+                {/* X-Diagonalen zwischen aufeinanderfolgenden Ringen */}
+                {r.frames.slice(0, -1).map((f, fi) => {
+                  const next = r.frames[fi + 1]!
+                  return (
+                    <g key={fi}>
+                      <line x1={f.sw.x} y1={f.sw.y} x2={next.ne.x} y2={next.ne.y} stroke={col} strokeWidth={0.8} opacity={0.45} />
+                      <line x1={f.se.x} y1={f.se.y} x2={next.nw.x} y2={next.nw.y} stroke={col} strokeWidth={0.8} opacity={0.45} />
+                    </g>
+                  )
+                })}
+                {/* Bodenplatte-Punkt */}
+                <circle
+                  cx={(base.sw.x + base.se.x + base.ne.x + base.nw.x) / 4}
+                  cy={(base.sw.y + base.se.y + base.ne.y + base.nw.y) / 4}
+                  r={3} fill="#475569"
+                />
+                {/* Label oben rechts */}
+                <text x={top.ne.x + 6} y={top.ne.y - 4}
                   className="fill-slate-700 text-[10px] font-semibold pointer-events-none">
                   {r.support.label}
                 </text>
