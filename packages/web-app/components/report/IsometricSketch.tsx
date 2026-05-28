@@ -225,30 +225,31 @@ export function IsometricSketch({
 
   return (
     <Svg width={width} height={height}>
-      {/* Outrigger-Arme (gestrichelt, vor allen anderen Elementen) */}
+      {/* Outrigger-Wirkbereich (gestricheltes Parallelogramm = maßgebende Standfläche) */}
       {result.input.supports.flatMap((support) => {
         const outL = support.outriggerLength ?? 0
         if (outL <= 0) return []
+        const footSize = getFootSizeMeters(support)
+        const halfX = footSize.x / 2
+        const halfY = footSize.y / 2
         const cx = support.position.x
         const cy = support.position.y
-        const center = toScreen({ x: cx, y: cy, z: 0 })
-        // Vier Arme: ±X und ±Y
-        const tips = [
-          toScreen({ x: cx + outL, y: cy, z: 0 }),
-          toScreen({ x: cx - outL, y: cy, z: 0 }),
-          toScreen({ x: cx, y: cy + outL, z: 0 }),
-          toScreen({ x: cx, y: cy - outL, z: 0 }),
+        const effectiveFootprint = [
+          toScreen({ x: cx - halfX - outL, y: cy - halfY - outL, z: 0 }),
+          toScreen({ x: cx + halfX + outL, y: cy - halfY - outL, z: 0 }),
+          toScreen({ x: cx + halfX + outL, y: cy + halfY + outL, z: 0 }),
+          toScreen({ x: cx - halfX - outL, y: cy + halfY + outL, z: 0 }),
         ]
-        return tips.map((tip, i) => (
-          <Line
-            key={`${support.id}-out-${i}`}
-            x1={center.x} y1={center.y}
-            x2={tip.x}    y2={tip.y}
+        return [
+          <Path
+            key={`${support.id}-outrigger`}
+            d={createClosedPath(effectiveFootprint)}
+            fill="none"
             stroke="#64748b"
-            strokeWidth={1.5}
+            strokeWidth={1.2}
             strokeDasharray="4 3"
-          />
-        ))
+          />,
+        ]
       })}
 
       {result.input.supports.map((support) => {

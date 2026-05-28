@@ -671,7 +671,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
         <Text style={styles.h2}>Rechnerische Nachweise</Text>
 
         <View style={styles.section}>
-          <View style={styles.formulaCard}>
+          <View style={styles.formulaCard} wrap={false}>
             <Text style={styles.formulaHeading}>
               {result.input.environment === "INDOOR" ? "Horizontallastberechnung" : "Windlastberechnung"}
             </Text>
@@ -722,7 +722,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
           </View>
 
           {result.snowLoad ? (
-            <View style={styles.formulaCard}>
+            <View style={styles.formulaCard} wrap={false}>
               <Text style={styles.formulaHeading}>Schneelast (DIN EN 1991-1-3)</Text>
               <Text style={styles.formulaLine}>
                 s = μ · C_e · C_t · s_k = {formatNumber(result.snowLoad.shapeFactor)} · {formatNumber(result.snowLoad.exposureFactor)} · {formatNumber(result.snowLoad.thermalFactor)} · {formatNumber(result.snowLoad.characteristicGroundLoadKNm2)} = {formatNumber(result.snowLoad.roofLoadKNm2)} kN/m²
@@ -736,7 +736,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
             </View>
           ) : null}
 
-          <View style={styles.formulaCard}>
+          <View style={styles.formulaCard} wrap={false}>
             <Text style={styles.formulaHeading}>Kippsicherheitsnachweis (EQU, DIN EN 1990)</Text>
             <Text style={styles.formulaLine}>
               Maßgebende Windrichtung: {formatNumber(result.tipping.governingAngleDeg, 0)}°
@@ -762,7 +762,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
             </Text>
           </View>
 
-          <View style={styles.formulaCard}>
+          <View style={styles.formulaCard} wrap={false}>
             <Text style={styles.formulaHeading}>Gleitnachweis (DIN EN 13814)</Text>
             <Text style={styles.formulaLine}>
               Fh,d = {formatNumber(result.sliding.resultingHorizontalForceKN)} kN (Bemessungswert, maßgebende Richtung)
@@ -778,30 +778,27 @@ export function ReportDocument({ data }: { data: ReportData }) {
             </Text>
           </View>
 
-          <View style={styles.formulaCard}>
-            <Text style={styles.formulaHeading}>Biegemomentnachweis je Traverse</Text>
-            {result.beams.map((beamResult) => {
-              const beamInput = result.input.beams.find((beam) => beam.id === beamResult.beamId)
-              const trussType = beamInput?.trussType
-              const trussProperties = trussType ? getTrussProperties(trussType) : null
-              const beamLabel = beamInput?.label ?? beamResult.beamId
+          {result.beams.map((beamResult) => {
+            const beamInput = result.input.beams.find((beam) => beam.id === beamResult.beamId)
+            const trussType = beamInput?.trussType
+            const trussProperties = trussType ? getTrussProperties(trussType) : null
+            const beamLabel = beamInput?.label ?? beamResult.beamId
 
-              return (
-                <View key={beamResult.beamId} style={{ marginBottom: 8 }}>
-                  <Text style={styles.formulaLine}>{beamLabel}</Text>
-                  <Text style={styles.formulaLine}>
-                    MEd = {formatNumber(beamResult.maxBendingMomentKNm)} kN·m
-                  </Text>
-                  <Text style={styles.formulaLine}>
-                    MRd = {formatNumber(trussProperties?.bendingResistanceY ?? 0)} kN·m (aus Systemstatik {trussType ? TRUSS_LABELS[trussType] : beamResult.beamId})
-                  </Text>
-                  <Text style={styles.formulaLine}>
-                    η = MEd/MRd = {formatNumber(beamResult.maxBendingMomentKNm)}/{formatNumber(trussProperties?.bendingResistanceY ?? 0)} = {formatNumber(beamResult.bendingUtilization)} {beamResult.bendingUtilization <= 1 ? "≤ 1,0 OK" : "> 1,0 NICHT OK"}
-                  </Text>
-                </View>
-              )
-            })}
-          </View>
+            return (
+              <View key={beamResult.beamId} style={styles.formulaCard} wrap={false}>
+                <Text style={styles.formulaHeading}>Biegemomentnachweis: {beamLabel}</Text>
+                <Text style={styles.formulaLine}>
+                  MEd = {formatNumber(beamResult.maxBendingMomentKNm)} kN·m
+                </Text>
+                <Text style={styles.formulaLine}>
+                  MRd = {formatNumber(trussProperties?.bendingResistanceY ?? 0)} kN·m (aus Systemstatik {trussType ? TRUSS_LABELS[trussType] : beamResult.beamId})
+                </Text>
+                <Text style={styles.formulaLine}>
+                  η = MEd/MRd = {formatNumber(beamResult.maxBendingMomentKNm)}/{formatNumber(trussProperties?.bendingResistanceY ?? 0)} = {formatNumber(beamResult.bendingUtilization)} {beamResult.bendingUtilization <= 1 ? "≤ 1,0 OK" : "> 1,0 NICHT OK"}
+                </Text>
+              </View>
+            )
+          })}
         </View>
       </Page>
 

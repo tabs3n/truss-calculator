@@ -127,7 +127,7 @@ export function BeamDiagrams({
   const samples = beam.samples ?? []
 
   return (
-    <View style={styles.wrapper}>
+    <View style={styles.wrapper} wrap={false}>
       <Text style={styles.beamTitle}>
         {beamLabel}: Mmax {formatNumber(beam.maxBendingMomentKNm)} kN*m, Vmax {formatNumber(beam.maxShearForceKN)} kN,
         wmax {formatNumber(beam.maxDeflectionMm)} mm
