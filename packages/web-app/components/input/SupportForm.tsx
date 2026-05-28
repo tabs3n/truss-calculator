@@ -330,27 +330,73 @@ export function SupportForm({
           ) : null}
 
           {isBaseplate ? (
-            <div className="rounded-2xl border border-border bg-muted/30 p-4">
-              <h4 className="text-sm font-semibold">Bodenplattenparameter</h4>
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <label className="block text-sm font-medium">
-                  Kantenlänge Platte (m)
+            <div className="rounded-2xl border border-border bg-muted/30 p-4 space-y-5">
+              <h4 className="text-sm font-semibold">Bodenplatte &amp; Outrigger</h4>
+
+              {/* ── Bodenplatte ────────────────────────────────────── */}
+              <div>
+                <p className="text-sm font-medium">Bodenplatte — Kantenlänge</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Quadratische Stahl- oder Alugrundplatte direkt unter dem Traversenfuß.
+                  Typische Maße: SB-60 = 0,60 m · SB-80 = 0,80 m · SB-100 = 1,00 m
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {[0.6, 0.8, 1.0, 1.2].map((size) => (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => updateField("baseplateSize", size)}
+                      className={cn(
+                        "rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
+                        (draft.baseplateSize ?? 0.6) === size
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-background hover:bg-muted",
+                      )}
+                    >
+                      {size.toFixed(2)} m
+                    </button>
+                  ))}
+                </div>
+                <label className="mt-2 block text-xs text-muted-foreground">
+                  Anderes Maß:
                   <input
                     className={cn(fieldClassName, errors.baseplateSize && "border-destructive/60")}
                     type="number"
-                    min="0"
+                    min="0.1"
                     step="0.05"
                     value={draft.baseplateSize ?? ""}
                     onChange={(event) => updateField("baseplateSize", Number(event.target.value))}
                   />
                   <ErrorText text={errors.baseplateSize} />
                 </label>
+              </div>
 
-                <label className="block text-sm font-medium">
-                  <span className="flex items-center gap-2">
-                    Outrigger-Länge (m)
-                    <Tooltip text={TOOLTIP_TEXTS.baseplateOutrigger}>(?)</Tooltip>
-                  </span>
+              {/* ── Outrigger ──────────────────────────────────────── */}
+              <div>
+                <p className="text-sm font-medium">Outrigger — Länge des Ausleger-Traversenstücks</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Traversenstück das nach <strong>hinten</strong> vom Fuß wegläuft und den Ballast trägt.
+                  Maß = Stützen-Achse → Ballastauflager. <strong>0 = kein Outrigger.</strong>
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {[0, 1.0, 1.5, 2.0, 2.5].map((len) => (
+                    <button
+                      key={len}
+                      type="button"
+                      onClick={() => updateField("outriggerLength", len)}
+                      className={cn(
+                        "rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
+                        (draft.outriggerLength ?? 0) === len
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-background hover:bg-muted",
+                      )}
+                    >
+                      {len === 0 ? "Kein" : `${len.toFixed(1)} m`}
+                    </button>
+                  ))}
+                </div>
+                <label className="mt-2 block text-xs text-muted-foreground">
+                  Anderes Maß:
                   <input
                     className={cn(fieldClassName, errors.outriggerLength && "border-destructive/60")}
                     type="number"
@@ -362,17 +408,27 @@ export function SupportForm({
                   <ErrorText text={errors.outriggerLength} />
                 </label>
               </div>
-              {(!draft.outriggerLength || draft.outriggerLength <= 0) ? (
-                <div className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
-                  <p className="font-semibold">Hinweis: kein Outrigger</p>
+
+              {/* ── Kipparm-Info ───────────────────────────────────── */}
+              {(draft.outriggerLength ?? 0) > 0 ? (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900">
+                  <p className="font-semibold">Kipparm aus Fußsystem</p>
                   <p className="mt-1">
-                    Ohne Outrigger wird nur die halbe Plattenbreite ({((draft.baseplateSize ?? 0.6) / 2).toFixed(2)} m)
-                    als Kipparm angesetzt. Bei Windangriff quer zur Stützenachse führt das schnell zu sehr hohem
-                    Ballastbedarf. Outrigger oder Concrete Blocks (Kipparm 0,60 m) verbessern die Standsicherheit
-                    erheblich.
+                    Mit Outrigger: <strong>{(draft.outriggerLength ?? 0).toFixed(2)} m</strong> — Hebelarm von der
+                    Stützenachse bis zum Ballastauflager (IBC-Container / Wasserballast).
                   </p>
                 </div>
-              ) : null}
+              ) : (
+                <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
+                  <p className="font-semibold">Kein Outrigger — geringer Kipparm</p>
+                  <p className="mt-1">
+                    Ohne Outrigger wirkt nur die halbe Plattenbreite als Kipparm:{" "}
+                    <strong>{((draft.baseplateSize ?? 0.6) / 2).toFixed(2)} m</strong>.
+                    Bei Windangriff steigt der Ballastbedarf erheblich. Outrigger-Traverse oder
+                    Betonblöcke (Kipparm 0,60 m) deutlich vorteilhafter.
+                  </p>
+                </div>
+              )}
             </div>
           ) : null}
         </div>

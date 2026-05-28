@@ -1,7 +1,7 @@
 ﻿"use client"
 
 import { useMemo, useState } from "react"
-import { Pencil, Plus, Trash2 } from "lucide-react"
+import { Copy, Pencil, Plus, Trash2 } from "lucide-react"
 
 import { SupportForm } from "@/components/input/SupportForm"
 import { Button } from "@/components/ui/button"
@@ -47,6 +47,17 @@ export function SupportList({
 
   const openEdit = (support: Support) => {
     setDraft(support)
+    setOpen(true)
+  }
+
+  const openDuplicate = (support: Support) => {
+    const copy: Support = {
+      ...support,
+      id: crypto.randomUUID(),
+      label: `${support.label} (Kopie)`,
+      position: { x: support.position.x + 1, y: support.position.y },
+    }
+    setDraft(copy)
     setOpen(true)
   }
 
@@ -101,13 +112,17 @@ export function SupportList({
                 <td className="py-3">{support.existingBallast.toFixed(0)}</td>
                 <td className="py-3">
                   <div className="flex justify-end gap-2">
-                    <Button type="button" variant="outline" size="icon" onClick={() => openEdit(support)}>
+                    <Button type="button" variant="outline" size="icon" title="Bearbeiten" onClick={() => openEdit(support)}>
                       <Pencil />
+                    </Button>
+                    <Button type="button" variant="outline" size="icon" title="Duplizieren" onClick={() => openDuplicate(support)}>
+                      <Copy />
                     </Button>
                     <Button
                       type="button"
                       variant="outline"
                       size="icon"
+                      title="Löschen"
                       onClick={() => onChange(supports.filter((item) => item.id !== support.id))}
                     >
                       <Trash2 />
@@ -136,13 +151,17 @@ export function SupportList({
                 </p>
               </div>
               <div className="flex gap-2">
-                <Button type="button" variant="outline" size="icon" onClick={() => openEdit(support)}>
+                <Button type="button" variant="outline" size="icon" title="Bearbeiten" onClick={() => openEdit(support)}>
                   <Pencil />
+                </Button>
+                <Button type="button" variant="outline" size="icon" title="Duplizieren" onClick={() => openDuplicate(support)}>
+                  <Copy />
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   size="icon"
+                  title="Löschen"
                   onClick={() => onChange(supports.filter((item) => item.id !== support.id))}
                 >
                   <Trash2 />
