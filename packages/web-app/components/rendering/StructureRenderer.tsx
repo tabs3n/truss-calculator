@@ -267,7 +267,8 @@ export function StructureRenderer({
           if (outL <= 0) return []
           const cx = projectX(support.position.x)
           const cy = projectY(support.position.y)
-          const px = outL * scale
+          // Pixel-Länge des Outriggers: Differenz zweier projizierter Weltkoordinaten
+          const px = projectX(support.position.x + outL) - cx
           const tips = [
             [cx + px, cy], [cx - px, cy],
             [cx, cy + px], [cx, cy - px],
