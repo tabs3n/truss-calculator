@@ -90,6 +90,23 @@ function DirectionCard({
             <dd className="font-semibold">{value.requiredBallastTotalKg.toFixed(0)} kg</dd>
           </div>
         </dl>
+
+        {/* Abhebenachweis */}
+        <div
+          className={`mt-1 flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium ${
+            value.minVerticalReactionKN >= 0
+              ? "bg-emerald-50 text-emerald-700"
+              : "bg-destructive/10 text-destructive"
+          }`}
+        >
+          <span>{value.minVerticalReactionKN >= 0 ? "✓" : "✗"}</span>
+          <span>
+            Abhebenachweis:{" "}
+            {value.minVerticalReactionKN >= 0
+              ? `kein Abheben (Rz,min = ${value.minVerticalReactionKN.toFixed(2)} kN)`
+              : `Abheben! Rz,min = ${value.minVerticalReactionKN.toFixed(2)} kN < 0`}
+          </span>
+        </div>
       </div>
     </article>
   )
@@ -106,11 +123,24 @@ export function TippingResults({ result }: { result: CalculationResult | null })
 
   return (
     <section className="rounded-[1.5rem] border border-border/80 bg-card/90 p-5 shadow-sm">
-      <div className="mb-4">
-        <h2 className="text-xl font-semibold">Kippsicherheit</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Berechnete Lastfälle mit hervorgehobenem maßgebenden Nachweis.
-        </p>
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-semibold">Kippsicherheit</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Berechnete Lastfälle mit hervorgehobenem maßgebenden Nachweis.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2 text-xs">
+          <span className="rounded-full border border-border px-2.5 py-1 text-muted-foreground">
+            γH = {result.designFactors.horizontalDesignFactor.toFixed(2)}
+            {!result.designFactors.applyDynamicFactorToWind ? " (ohne DGUV-Wind)" : ""}
+          </span>
+          {result.designFactors.windReturnPeriodYears < 50 ? (
+            <span className="rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-amber-700">
+              T={result.designFactors.windReturnPeriodYears} J · qp×{result.designFactors.windProbabilityFactor.toFixed(2)}
+            </span>
+          ) : null}
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">

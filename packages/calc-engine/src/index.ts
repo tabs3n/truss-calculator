@@ -39,7 +39,7 @@ import { getFootProperties, getFootWeightKg, getTrussProperties } from './materi
 import { checkSliding } from './sliding/slidingCheck'
 import { checkBuckling } from './stability/bucklingCheck'
 import { calculateTippingAllDirections } from './tipping/tippingCheck'
-import { calculateSurfaceWindForce, calculateWindForce, getDragCoefficient, getPeakVelocityPressure } from './wind/windLoad'
+import { calculateSurfaceWindForce, calculateWindForce, getDragCoefficient, getPeakVelocityPressure, getWindProbabilityFactor } from './wind/windLoad'
 import { resolveAllWindSurfaces, resolveWindSurfacesForBeam } from './wind/windSurfaceGeometry'
 
 const normReferences = [
@@ -280,6 +280,9 @@ function failedCalculationResult(
       gammaM1: GAMMA_M1,
       gammaM2: GAMMA_M2,
       horizontalDesignFactor: 0,
+      windProbabilityFactor: 1.0,
+      windReturnPeriodYears: 50,
+      applyDynamicFactorToWind: true,
     },
   }
 }
@@ -463,9 +466,11 @@ export function calculate(input: StructureInput): CalculationResult {
     }
   } else {
     // OUTDOOR: Windlast nach DIN EN 1991-1-4, richtungsabhängig je WindSurface
+    const windReturnPeriod = input.windReturnPeriodYears ?? 50
+    const windProbFactor = getWindProbabilityFactor(windReturnPeriod)
     let windQp = 0
     try {
-      windQp = getPeakVelocityPressure(input.windZone, input.terrainCategory, maxSupportHeight)
+      windQp = getPeakVelocityPressure(input.windZone, input.terrainCategory, maxSupportHeight) * windProbFactor
     } catch (error) {
       errors.push(`Windlastberechnung: ${(error as Error).message}`)
     }
@@ -682,7 +687,9 @@ export function calculate(input: StructureInput): CalculationResult {
   // ── Kippsicherheit (EQU, DIN EN 1990 Tab. A.1.2(A)) ──────────────────────────
   // Destabilisierende Horizontalkraft mit γQ × Dynamikzuschlag (Outdoor: Wind);
   // Indoor: Ersatzlast aus DIN EN 17879 ist bereits Bemessungswert.
-  const designFactorHorizontal = isIndoor ? 1.0 : GAMMA_Q * DYNAMIC_FACTOR
+  // applyDynamicFactorToWind=false: DGUV ×1.20 nicht auf Wind (qp enthält bereits Iv-Dynamik)
+  const applyDGUVToWind = input.applyDynamicFactorToWind ?? true
+  const designFactorHorizontal = isIndoor ? 1.0 : (applyDGUVToWind ? GAMMA_Q * DYNAMIC_FACTOR : GAMMA_Q)
   const getDesignHorizontalForceKN = (angleDeg: number): number =>
     getHorizontalForceKN(angleDeg) * designFactorHorizontal
 
@@ -788,6 +795,9 @@ export function calculate(input: StructureInput): CalculationResult {
       gammaM1: GAMMA_M1,
       gammaM2: GAMMA_M2,
       horizontalDesignFactor: designFactorHorizontal,
+      windProbabilityFactor: isIndoor ? 1.0 : (getWindProbabilityFactor(input.windReturnPeriodYears ?? 50)),
+      windReturnPeriodYears: isIndoor ? 50 : (input.windReturnPeriodYears ?? 50),
+      applyDynamicFactorToWind: applyDGUVToWind,
     },
   }
 }

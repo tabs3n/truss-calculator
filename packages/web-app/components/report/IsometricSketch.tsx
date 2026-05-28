@@ -121,12 +121,13 @@ export function IsometricSketch({
     const footSize = getFootSizeMeters(support)
     const halfX = footSize.x / 2
     const halfY = footSize.y / 2
+    const outL = support.outriggerLength ?? 0
 
     return [
-      { x: support.position.x - halfX, y: support.position.y - halfY, z: 0 },
-      { x: support.position.x + halfX, y: support.position.y - halfY, z: 0 },
-      { x: support.position.x + halfX, y: support.position.y + halfY, z: 0 },
-      { x: support.position.x - halfX, y: support.position.y + halfY, z: 0 },
+      { x: support.position.x - halfX - outL, y: support.position.y - halfY - outL, z: 0 },
+      { x: support.position.x + halfX + outL, y: support.position.y - halfY - outL, z: 0 },
+      { x: support.position.x + halfX + outL, y: support.position.y + halfY + outL, z: 0 },
+      { x: support.position.x - halfX - outL, y: support.position.y + halfY + outL, z: 0 },
     ]
   })
 
@@ -224,6 +225,32 @@ export function IsometricSketch({
 
   return (
     <Svg width={width} height={height}>
+      {/* Outrigger-Arme (gestrichelt, vor allen anderen Elementen) */}
+      {result.input.supports.flatMap((support) => {
+        const outL = support.outriggerLength ?? 0
+        if (outL <= 0) return []
+        const cx = support.position.x
+        const cy = support.position.y
+        const center = toScreen({ x: cx, y: cy, z: 0 })
+        // Vier Arme: ±X und ±Y
+        const tips = [
+          toScreen({ x: cx + outL, y: cy, z: 0 }),
+          toScreen({ x: cx - outL, y: cy, z: 0 }),
+          toScreen({ x: cx, y: cy + outL, z: 0 }),
+          toScreen({ x: cx, y: cy - outL, z: 0 }),
+        ]
+        return tips.map((tip, i) => (
+          <Line
+            key={`${support.id}-out-${i}`}
+            x1={center.x} y1={center.y}
+            x2={tip.x}    y2={tip.y}
+            stroke="#64748b"
+            strokeWidth={1.5}
+            strokeDasharray="4 3"
+          />
+        ))
+      })}
+
       {result.input.supports.map((support) => {
         const footSize = getFootSizeMeters(support)
         const halfX = footSize.x / 2

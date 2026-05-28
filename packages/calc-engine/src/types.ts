@@ -245,6 +245,20 @@ export interface StructureInput {
   // Reibung
   frictionConfig: FrictionConfig
 
+  /**
+   * DGUV-Dynamikzuschlag (×1.20) auf Windlasten anwenden.
+   * Default: true (konservativ). false = DGUV-Faktor nur auf Nutzlasten,
+   * da qp bereits Turbulenzdynamik enthält (Iv-Term).
+   */
+  applyDynamicFactorToWind?: boolean
+
+  /**
+   * Wiederkehrperiode für die Windlast in Jahren (DIN EN 1991-1-4 §4.2 / c_prob).
+   * Default: 50 (Normwert). Für temporäre Veranstaltungsbauten:
+   *   10 J ≈ 0.81 × qp | 5 J ≈ 0.73 × qp | 2 J ≈ 0.60 × qp
+   */
+  windReturnPeriodYears?: 50 | 10 | 5 | 2
+
   // Windrichtung
   /** AUTO = alle 4 Hauptrichtungen, MANUAL = nur manualWindDirections. Default: AUTO */
   windMode?: 'AUTO' | 'MANUAL'
@@ -380,6 +394,12 @@ export interface DesignFactors {
   gammaM2: number
   /** Wirksamer Faktor auf Horizontalkraft (Outdoor: γQ × Dyn = 1.80, Indoor: 1.00) */
   horizontalDesignFactor: number
+  /** c_prob²-Faktor auf qp nach DIN EN 1991-1-4 §4.2 (1.0 für T=50 J) */
+  windProbabilityFactor: number
+  /** Verwendete Wiederkehrperiode in Jahren */
+  windReturnPeriodYears: number
+  /** Ob DGUV ×1.20 auf Wind angesetzt wurde */
+  applyDynamicFactorToWind: boolean
 }
 
 export interface CalculationResult {

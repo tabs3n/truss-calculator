@@ -261,6 +261,28 @@ export function StructureRenderer({
           </line>
         ) : null}
 
+        {/* Outrigger-Arme (gestrichelt, hinter Stützen-Circles) */}
+        {input.supports.flatMap((support) => {
+          const outL = support.outriggerLength ?? 0
+          if (outL <= 0) return []
+          const cx = projectX(support.position.x)
+          const cy = projectY(support.position.y)
+          const px = outL * scale
+          const tips = [
+            [cx + px, cy], [cx - px, cy],
+            [cx, cy + px], [cx, cy - px],
+          ] as [number, number][]
+          return tips.map(([tx, ty], i) => (
+            <line
+              key={`${support.id}-out-${i}`}
+              x1={cx} y1={cy} x2={tx} y2={ty}
+              stroke="#94a3b8"
+              strokeWidth="2"
+              strokeDasharray="6 4"
+            />
+          ))
+        })}
+
         {/* Stützen — mit Pointer-Events für Drag */}
         {input.supports.map((support) => {
           const cx = projectX(support.position.x)

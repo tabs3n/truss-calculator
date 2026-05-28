@@ -65,6 +65,42 @@ export function getPeakVelocityPressure(
   return qp_Nm2 / 1000
 }
 
+/**
+ * Wahrscheinlichkeitsfaktor c_prob² auf qp nach DIN EN 1991-1-4 §4.2 / Anhang A4.
+ * Gibt den Reduktionsfaktor auf den Böengeschwindigkeitsdruck zurück (bereits quadriert,
+ * da qp ∝ v²).
+ *
+ * Formel: c_prob = [(1 − K·ln(−ln(1−p))) / (1 − K·ln(−ln(0.98)))]^n
+ *   K = 0.20, n = 0.50 (Typ-I-Extremwertverteilung, DIN NA §4.2)
+ *   p = jährliche Überschreitungswahrscheinlichkeit = 1 / T
+ *   Referenz T=50 J → p=0.02 → Faktor = 1.00
+ *
+ * Untere Grenze: T=2 Jahre (p=0.50) → Faktor ≈ 0.60
+ */
+export function getWindProbabilityFactor(returnPeriodYears: 50 | 10 | 5 | 2 | number): number {
+  const T = Math.max(2, returnPeriodYears)  // min. 2 Jahre (Formel divergiert bei T=1)
+  if (T >= 50) return 1.0
+
+  const K = 0.20
+  const n = 0.50
+
+  function gumbel(p: number) {
+    // ln(−ln(1−p)); p = annual exceedance probability
+    const inner = Math.max(1e-9, -Math.log(1 - Math.min(p, 0.9999)))
+    return Math.log(inner)
+  }
+
+  const p_T = Math.min(0.9999, 1 / T)
+  const p_ref = 0.02   // T=50 Jahre
+
+  const c_prob = Math.pow(
+    (1 - K * gumbel(p_T)) / (1 - K * gumbel(p_ref)),
+    n,
+  )
+  // c_prob auf qp anwenden: qp ∝ v² → Faktor = c_prob²
+  return Math.min(1.0, Math.max(0.3, c_prob * c_prob))
+}
+
 // Windkraft Fw in kN nach DIN EN 1991-1-4 Gl. 5.3
 export function calculateWindForce(
   qp: number,       // kN/m²

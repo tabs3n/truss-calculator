@@ -560,6 +560,96 @@ export function ProjectForm({
             </div>
           ) : null}
         </div>
+
+        {/* ── Windlast-Optionen ─────────────────────────────────── */}
+        <div className="rounded-[1.5rem] border border-border/80 bg-background/60 p-4 md:col-span-2">
+          <p className="text-sm font-medium">Windlast-Optionen</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Nur für Outdoor-Einsatz. Vereinfachungen erfordern Zustimmung eines Tragwerksplaners.
+          </p>
+
+          {/* Wiederkehrperiode */}
+          <div className="mt-4">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Wiederkehrperiode (DIN EN 1991-1-4 §4.2)
+            </p>
+            <div className="grid gap-2 sm:grid-cols-4">
+              {(
+                [
+                  { years: 50, label: "50 Jahre", sub: "Norm-Standard", factor: 1.0 },
+                  { years: 10, label: "10 Jahre", sub: "Mehrwöchige Veranstaltung", factor: 0.81 },
+                  { years: 5,  label: "5 Jahre",  sub: "Einwöchige Veranstaltung", factor: 0.73 },
+                  { years: 2,  label: "2 Jahre",  sub: "1–2 Tage Einsatz", factor: 0.60 },
+                ] as const
+              ).map(({ years, label, sub, factor }) => {
+                const isSelected = (input.windReturnPeriodYears ?? 50) === years
+                return (
+                  <button
+                    key={years}
+                    type="button"
+                    onClick={() => setField("windReturnPeriodYears", years)}
+                    className={cn(
+                      "rounded-2xl border px-3 py-3 text-left transition-colors",
+                      isSelected
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-card hover:bg-muted",
+                    )}
+                  >
+                    <span className="block text-sm font-semibold">{label}</span>
+                    <span className="mt-0.5 block text-xs opacity-80">{sub}</span>
+                    <span className="mt-1 block text-xs font-mono opacity-70">qp × {factor.toFixed(2)}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* DGUV auf Wind */}
+          <div className="mt-4">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              DGUV-Dynamikzuschlag (×1.20) auf Windlast
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {(
+                [
+                  {
+                    value: true,
+                    label: "Anwenden (konservativ)",
+                    sub: "γQ × 1.20 = ×1.80 auf Windlast",
+                  },
+                  {
+                    value: false,
+                    label: "Nur auf Nutzlasten",
+                    sub: "Wind: ×1.50 | qp enthält bereits Iv-Dynamik",
+                  },
+                ] as const
+              ).map(({ value, label, sub }) => {
+                const isSelected = (input.applyDynamicFactorToWind ?? true) === value
+                return (
+                  <button
+                    key={String(value)}
+                    type="button"
+                    onClick={() => setField("applyDynamicFactorToWind", value)}
+                    className={cn(
+                      "rounded-2xl border px-3 py-3 text-left transition-colors",
+                      isSelected
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-card hover:bg-muted",
+                    )}
+                  >
+                    <span className="block text-sm font-semibold">{label}</span>
+                    <span className="mt-0.5 block text-xs opacity-80">{sub}</span>
+                  </button>
+                )
+              })}
+            </div>
+            {!(input.applyDynamicFactorToWind ?? true) ? (
+              <p className="mt-2 text-xs text-amber-700">
+                ⚠ Nur zulässig mit schriftlicher Zustimmung des verantwortlichen Tragwerksplaners.
+              </p>
+            ) : null}
+          </div>
+        </div>
       </div>
 
       <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_220px]">
