@@ -1,9 +1,11 @@
 import { Fragment } from "react"
 
+import { getBeamMountHeightM } from "@calc-engine"
 import { getFootProperties, getTrussProperties } from "@calc-engine/materials/database"
 import { Line, Path, Svg, Text } from "@react-pdf/renderer"
 
 import { getOrderedBeamSupports } from "@/lib/beam-helpers"
+import { getWindSurfaceWorldCorners } from "@/lib/frame-geometry"
 import type { Beam, CalculationResult, Support } from "@/lib/types-bridge"
 
 const COS_30 = Math.cos(Math.PI / 6)
@@ -49,15 +51,6 @@ function getFootSizeMeters(support: Support) {
   }
 }
 
-function getBeamSupports(result: CalculationResult, beam: Beam) {
-  const startSupport = result.input.supports.find((support) => support.id === beam.startSupportId)
-  const endSupport = result.input.supports.find((support) => support.id === beam.endSupportId)
-
-  if (!startSupport || !endSupport) return null
-
-  return { startSupport, endSupport }
-}
-
 /**
  * Liefert alle Stützen einer Traverse in physikalisch korrekter Reihenfolge
  * (sortiert nach Projektion auf Start→Ende-Vektor).
@@ -82,7 +75,7 @@ function interpolateBeamPoint(beam: Beam, result: CalculationResult, distanceM: 
       return {
         x: a.position.x + (b.position.x - a.position.x) * ratio,
         y: a.position.y + (b.position.y - a.position.y) * ratio,
-        z: a.height + (b.height - a.height) * ratio,
+        z: getBeamMountHeightM(beam, a) + (getBeamMountHeightM(beam, b) - getBeamMountHeightM(beam, a)) * ratio,
       }
     }
     accumulated += segLength
@@ -99,7 +92,8 @@ function interpolateBeamPoint(beam: Beam, result: CalculationResult, distanceM: 
   return {
     x: startSupport.position.x + deltaX * ratio,
     y: startSupport.position.y + deltaY * ratio,
-    z: startSupport.height + (endSupport.height - startSupport.height) * ratio,
+    z: getBeamMountHeightM(beam, startSupport) +
+      (getBeamMountHeightM(beam, endSupport) - getBeamMountHeightM(beam, startSupport)) * ratio,
   }
 }
 
@@ -148,59 +142,12 @@ export function IsometricSketch({
     return beamSupports.map((support) => ({
       x: support.position.x,
       y: support.position.y,
-      z: support.height,
+      z: getBeamMountHeightM(beam, support),
     }))
   })
 
   const windSurfacePoints = result.input.beams.flatMap((beam) => {
-    const beamSupports = getBeamSupports(result, beam)
-    if (!beamSupports || beam.windSurfaces.length === 0) return []
-
-    const { startSupport, endSupport } = beamSupports
-    const beamVector = {
-      x: endSupport.position.x - startSupport.position.x,
-      y: endSupport.position.y - startSupport.position.y,
-    }
-    const span = Math.hypot(beamVector.x, beamVector.y)
-    if (span <= 0) return []
-
-    const unit = { x: beamVector.x / span, y: beamVector.y / span }
-    const totalSurfaceWidth = beam.windSurfaces.reduce((sum, surface) => sum + surface.width, 0)
-    const gap = beam.windSurfaces.length > 1
-      ? Math.max(0.1, (span - totalSurfaceWidth) / (beam.windSurfaces.length + 1))
-      : Math.max(0, (span - totalSurfaceWidth) / 2)
-    let cursor = beam.windSurfaces.length > 1 ? gap : Math.max(0, (span - totalSurfaceWidth) / 2)
-
-    return beam.windSurfaces.flatMap((surface) => {
-      const startDistance = cursor
-      const endDistance = cursor + Math.min(surface.width, span)
-      cursor = endDistance + gap
-      const bottomZ = Math.max(0, surface.centerHeightAboveGround - surface.height / 2)
-      const topZ = surface.centerHeightAboveGround + surface.height / 2
-
-      return [
-        {
-          x: startSupport.position.x + unit.x * startDistance,
-          y: startSupport.position.y + unit.y * startDistance,
-          z: bottomZ,
-        },
-        {
-          x: startSupport.position.x + unit.x * endDistance,
-          y: startSupport.position.y + unit.y * endDistance,
-          z: bottomZ,
-        },
-        {
-          x: startSupport.position.x + unit.x * endDistance,
-          y: startSupport.position.y + unit.y * endDistance,
-          z: topZ,
-        },
-        {
-          x: startSupport.position.x + unit.x * startDistance,
-          y: startSupport.position.y + unit.y * startDistance,
-          z: topZ,
-        },
-      ]
-    })
+    return beam.windSurfaces.flatMap((surface) => getWindSurfaceWorldCorners(result.input, beam, surface) ?? [])
   })
 
   const windVector = getWindVectorWorld(result.tipping.governingAngleDeg)
@@ -311,12 +258,12 @@ export function IsometricSketch({
           const startPoint = toScreen({
             x: startSupport.position.x,
             y: startSupport.position.y,
-            z: startSupport.height,
+            z: getBeamMountHeightM(beam, startSupport),
           })
           const endPoint = toScreen({
             x: endSupport.position.x,
             y: endSupport.position.y,
-            z: endSupport.height,
+            z: getBeamMountHeightM(beam, endSupport),
           })
           return (
             <Line
@@ -333,52 +280,10 @@ export function IsometricSketch({
       })}
 
       {result.input.beams.flatMap((beam) => {
-        const beamSupports = getBeamSupports(result, beam)
-        if (!beamSupports || beam.windSurfaces.length === 0) return []
-
-        const { startSupport, endSupport } = beamSupports
-        const beamVector = {
-          x: endSupport.position.x - startSupport.position.x,
-          y: endSupport.position.y - startSupport.position.y,
-        }
-        const span = Math.hypot(beamVector.x, beamVector.y)
-        if (span <= 0) return []
-
-        const unit = { x: beamVector.x / span, y: beamVector.y / span }
-        const totalSurfaceWidth = beam.windSurfaces.reduce((sum, surface) => sum + surface.width, 0)
-        const gap = beam.windSurfaces.length > 1
-          ? Math.max(0.1, (span - totalSurfaceWidth) / (beam.windSurfaces.length + 1))
-          : Math.max(0, (span - totalSurfaceWidth) / 2)
-        let cursor = beam.windSurfaces.length > 1 ? gap : Math.max(0, (span - totalSurfaceWidth) / 2)
-
         return beam.windSurfaces.map((surface) => {
-          const startDistance = cursor
-          const endDistance = cursor + Math.min(surface.width, span)
-          cursor = endDistance + gap
-          const bottomZ = Math.max(0, surface.centerHeightAboveGround - surface.height / 2)
-          const topZ = surface.centerHeightAboveGround + surface.height / 2
-          const polygon = [
-            toScreen({
-              x: startSupport.position.x + unit.x * startDistance,
-              y: startSupport.position.y + unit.y * startDistance,
-              z: bottomZ,
-            }),
-            toScreen({
-              x: startSupport.position.x + unit.x * endDistance,
-              y: startSupport.position.y + unit.y * endDistance,
-              z: bottomZ,
-            }),
-            toScreen({
-              x: startSupport.position.x + unit.x * endDistance,
-              y: startSupport.position.y + unit.y * endDistance,
-              z: topZ,
-            }),
-            toScreen({
-              x: startSupport.position.x + unit.x * startDistance,
-              y: startSupport.position.y + unit.y * startDistance,
-              z: topZ,
-            }),
-          ]
+          const corners = getWindSurfaceWorldCorners(result.input, beam, surface)
+          if (!corners) return null
+          const polygon = corners.map(toScreen)
 
           return (
             <Path

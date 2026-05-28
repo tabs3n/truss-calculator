@@ -1,4 +1,7 @@
 ﻿import { getOrderedBeamSupports } from "@/lib/beam-helpers"
+import { getBeamMountHeightM } from "@calc-engine"
+
+import { getWindSurfaceWorldCorners } from "@/lib/frame-geometry"
 import type { CalculationResult, StructureInput } from "@/lib/types-bridge"
 
 function projectHeight(value: number, maxHeight: number, viewHeight: number) {
@@ -108,8 +111,8 @@ export function ElevationRenderer({
           const last = supports[supports.length - 1]!
           const startX = projectX(first.position.x)
           const endX = projectX(last.position.x)
-          const startY = projectHeight(first.height, maxHeight, viewHeight)
-          const endY = projectHeight(last.height, maxHeight, viewHeight)
+          const startY = projectHeight(getBeamMountHeightM(beam, first), maxHeight, viewHeight)
+          const endY = projectHeight(getBeamMountHeightM(beam, last), maxHeight, viewHeight)
           const beamY = Math.min(startY, endY)
 
           // Spannweiten und cumulative position für Lastenverteilung entlang Polylinie
@@ -123,6 +126,25 @@ export function ElevationRenderer({
 
           return (
             <g key={beam.id}>
+              {beam.windSurfaces.map((surface) => {
+                const corners = getWindSurfaceWorldCorners(input, beam, surface)
+                if (!corners || corners.length < 4) return null
+                const points = corners
+                  .map((point) =>
+                    `${projectX(point.x).toFixed(1)},${projectHeight(point.z, maxHeight, viewHeight).toFixed(1)}`,
+                  )
+                  .join(" ")
+
+                return (
+                  <polygon
+                    key={surface.id}
+                    points={points}
+                    fill="rgba(191,219,254,0.58)"
+                    stroke="#60a5fa"
+                    strokeWidth="1"
+                  />
+                )
+              })}
               {/* Segmente zwischen aufeinanderfolgenden Stützen */}
               {supports.slice(0, -1).map((s, idx) => {
                 const e = supports[idx + 1]!
@@ -130,9 +152,9 @@ export function ElevationRenderer({
                   <line
                     key={`${beam.id}-seg-${idx}`}
                     x1={projectX(s.position.x)}
-                    y1={projectHeight(s.height, maxHeight, viewHeight)}
+                    y1={projectHeight(getBeamMountHeightM(beam, s), maxHeight, viewHeight)}
                     x2={projectX(e.position.x)}
-                    y2={projectHeight(e.height, maxHeight, viewHeight)}
+                    y2={projectHeight(getBeamMountHeightM(beam, e), maxHeight, viewHeight)}
                     stroke="#0f172a"
                     strokeWidth="4"
                     strokeLinecap="round"

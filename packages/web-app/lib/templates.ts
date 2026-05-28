@@ -83,6 +83,8 @@ function createHangingLoad(label: string, positionAlongBeam: number, weight: num
 function createGoalpostTemplate(): StructureInput {
   const leftSupportId = crypto.randomUUID()
   const rightSupportId = crypto.randomUUID()
+  const topBeamId = crypto.randomUUID()
+  const bottomBeamId = crypto.randomUUID()
 
   const supports: Support[] = [
     {
@@ -111,7 +113,7 @@ function createGoalpostTemplate(): StructureInput {
 
   const beams: Beam[] = [
     {
-      id: crypto.randomUUID(),
+      id: topBeamId,
       label: "Kopftraverse",
       startSupportId: leftSupportId,
       endSupportId: rightSupportId,
@@ -120,8 +122,25 @@ function createGoalpostTemplate(): StructureInput {
       cantileverEnd: 0,
       loads: [],
       windSurfaces: [
-        createWindSurface("Banner mittig", 6, 3, 3.5, "BANNER_SOLID", 0),
+        {
+          ...createWindSurface("Banner im Rahmen", 7.9, 4.4, 2.75, "BANNER_SOLID", 0),
+          frameMode: "FILL_TRUSS_FRAME",
+          bottomBeamId,
+          edgeInsetM: 0.05,
+        },
       ],
+    },
+    {
+      id: bottomBeamId,
+      label: "Untertraverse",
+      startSupportId: leftSupportId,
+      endSupportId: rightSupportId,
+      trussType: "PROLYTE_H30V",
+      mountHeightM: 0.45,
+      cantileverStart: 0,
+      cantileverEnd: 0,
+      loads: [],
+      windSurfaces: [],
     },
   ]
 

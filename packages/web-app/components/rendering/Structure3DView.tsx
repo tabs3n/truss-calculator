@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from "react"
 import { RotateCcw } from "lucide-react"
+import { getBeamMountHeightM } from "@calc-engine"
 
 import { Button } from "@/components/ui/button"
 import { getOrderedBeamSupports } from "@/lib/beam-helpers"
+import { getWindSurfaceWorldCorners } from "@/lib/frame-geometry"
 import { getLacingSpacingM, getTrussWidthM } from "@/lib/truss-geometry"
 import type { CalculationResult, StructureInput, Support } from "@/lib/types-bridge"
 
@@ -183,6 +185,7 @@ export function Structure3DView({
     | { kind: "ground";         depth: number; polygon: ScreenPt[] }
     | { kind: "support-column"; depth: number; support: Support; base: ScreenPt; top: ScreenPt }
     | { kind: "support-truss";  depth: number; support: Support; frames: SupportFrame[] }
+    | { kind: "wind-surface";   depth: number; points: ScreenPt[]; label: string }
     | { kind: "beam-segment";   depth: number; a: ScreenPt; b: ScreenPt; label?: string }
     | {
         kind: "beam-truss"
@@ -268,8 +271,8 @@ export function Structure3DView({
     for (let i = 0; i < supports.length - 1; i++) {
       const a = supports[i]!
       const b = supports[i + 1]!
-      const ax = a.position.x, ay = a.position.y, az = a.height
-      const bx = b.position.x, by = b.position.y, bz = b.height
+      const ax = a.position.x, ay = a.position.y, az = getBeamMountHeightM(beam, a)
+      const bx = b.position.x, by = b.position.y, bz = getBeamMountHeightM(beam, b)
       const label = i === 0 && supports.length === 2 ? beam.label : undefined
 
       if (!showTruss) {
@@ -343,6 +346,22 @@ export function Structure3DView({
           label,
         })
       }
+    }
+  }
+
+  // Windflächen / Banner
+  for (const beam of input.beams) {
+    for (const surface of beam.windSurfaces) {
+      const corners = getWindSurfaceWorldCorners(input, beam, surface)
+      if (!corners || corners.length < 4) continue
+
+      const projected = corners.map((point) => pw(point.x, point.y, point.z))
+      renderables.push({
+        kind: "wind-surface",
+        depth: projected.reduce((sum, point) => sum + point.depth, 0) / projected.length,
+        points: projected.map((point) => point.screen),
+        label: surface.label,
+      })
     }
   }
 
@@ -492,6 +511,31 @@ export function Structure3DView({
           }
 
           // ── Traverse-Linie (Fallback) ──────────────────────────────────
+          if (r.kind === "wind-surface") {
+            const points = r.points.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ")
+            const labelX = r.points.reduce((sum, point) => sum + point.x, 0) / r.points.length
+            const labelY = r.points.reduce((sum, point) => sum + point.y, 0) / r.points.length
+
+            return (
+              <g key={`ws-${idx}`}>
+                <polygon
+                  points={points}
+                  fill="rgba(125,211,252,0.26)"
+                  stroke="#38bdf8"
+                  strokeWidth={1.2}
+                />
+                <text
+                  x={labelX}
+                  y={labelY}
+                  textAnchor="middle"
+                  className="fill-sky-900 text-[10px] font-semibold pointer-events-none"
+                >
+                  {r.label}
+                </text>
+              </g>
+            )
+          }
+
           if (r.kind === "beam-segment") {
             return (
               <g key={`bl-${idx}`}>

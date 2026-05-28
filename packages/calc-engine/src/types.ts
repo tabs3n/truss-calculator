@@ -136,6 +136,15 @@ export interface WindSurface {
   surfaceOrientationDeg: number
   /** cf nur bei surfaceType === 'CUSTOM' verwendet; für alle anderen Typen wird der Typ-Standardwert genutzt */
   dragCoefficient: number
+  /**
+   * MANUAL/undefined: width/height/centerHeightAboveGround werden direkt verwendet.
+   * FILL_TRUSS_FRAME: Fläche wird aus oberer Traverse + bottomBeamId hergeleitet.
+   */
+  frameMode?: 'MANUAL' | 'FILL_TRUSS_FRAME'
+  /** Untere Begrenzungstraverse, wenn frameMode === 'FILL_TRUSS_FRAME' */
+  bottomBeamId?: string
+  /** Abstand der Fläche vom Truss-Rahmen nach innen [m] */
+  edgeInsetM?: number
 }
 
 // ─────────────────────────────────────────────
@@ -184,6 +193,12 @@ export interface Beam {
    */
   supportIds?: string[]
   trussType: TrussType
+  /**
+   * Optional feste Montagehöhe der Traverse [m].
+   * Undefined = am Kopf der jeweiligen Stützen (Bestandsverhalten).
+   * Für untere Quertraversen wird z.B. 0.45 m eingetragen.
+   */
+  mountHeightM?: number
   /** Auskragung über die Stütze hinaus links (Richtung Start) */
   cantileverStart: number    // m, 0 wenn keine Auskragung
   /** Auskragung über die Stütze hinaus rechts (Richtung End) */
@@ -447,19 +462,29 @@ export interface VWExportData {
     height: number     // mm
     trussType: string  // muss auf TrussType gemappt werden
     footType: string
+    numberOfConcreteBlocks?: number  // Anzahl Betonblöcke (für Ballastvorschlag)
   }[]
   beams: {
     id: string
     label: string
     startId: string
     endId: string
+    /** supportIds: alle Zwischenstützen inkl. Start/End, in Reihenfolge */
+    supportIds?: string[]
     trussType: string
+    mountHeight?: number     // mm, optional: feste Montagehöhe der Traverse
     cantileverStart: number  // mm
     cantileverEnd: number    // mm
     loads: {
       label: string
       positionMm: number
       weightKg: number
+    }[]
+    distributedLoads?: {
+      label: string
+      startPositionMm: number  // mm vom linken Auflager
+      endPositionMm: number    // mm vom linken Auflager
+      loadKgPerM: number
     }[]
   }[]
 }

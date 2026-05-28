@@ -97,6 +97,12 @@ function validateBeams(input: StructureInput): ValidationIssue[] {
     const spanLengthM = getBeamSpanLengthM(beam, input.supports)
     const minPositionM = -beam.cantileverStart
     const maxPositionM = spanLengthM + beam.cantileverEnd
+    const beamSupports = getBeamSupportIds(beam)
+      .map(supportId => getSupportById(input.supports, supportId))
+      .filter((support): support is Support => Boolean(support))
+    const maxMountHeightM = beamSupports.length > 0
+      ? Math.min(...beamSupports.map(support => support.height))
+      : 0
 
     if (spanLengthM <= 0) {
       issues.push(issue(
@@ -141,6 +147,23 @@ function validateBeams(input: StructureInput): ValidationIssue[] {
         'Rechte Auskragung ist größer als die halbe Spannweite.',
         'Kragarm verkürzen oder zusätzliche Stütze setzen.',
       ))
+    }
+
+    if (beam.mountHeightM !== undefined) {
+      if (!Number.isFinite(beam.mountHeightM) || beam.mountHeightM < 0) {
+        issues.push(issue(
+          `${prefix}.mountHeightM`,
+          'error',
+          'Montagehöhe muss größer oder gleich 0 m sein.',
+        ))
+      } else if (beam.mountHeightM > maxMountHeightM) {
+        issues.push(issue(
+          `${prefix}.mountHeightM`,
+          'error',
+          `Montagehöhe darf die niedrigste Stütze (${maxMountHeightM.toFixed(2)} m) nicht überschreiten.`,
+          'Für Kopftraversen das Feld leer lassen, für Untertraversen z.B. 0,45 m eintragen.',
+        ))
+      }
     }
 
     const distributedLoads = beam.distributedLoads ?? []

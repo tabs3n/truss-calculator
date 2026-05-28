@@ -6,6 +6,7 @@ import { Pencil, Plus, Trash2 } from "lucide-react"
 import { BeamForm } from "@/components/input/BeamForm"
 import { Button } from "@/components/ui/button"
 import { TRUSS_LABELS } from "@/lib/constants"
+import { getBeamDisplayHeightM } from "@/lib/frame-geometry"
 import type { Beam, Support } from "@/lib/types-bridge"
 
 function createBeam(index: number, supports: Support[]): Beam {
@@ -20,6 +21,30 @@ function createBeam(index: number, supports: Support[]): Beam {
     loads: [],
     windSurfaces: [],
   }
+}
+
+function createLowerBeam(index: number, supports: Support[], beams: Beam[]): Beam {
+  const referenceBeam = beams[0]
+
+  return {
+    id: crypto.randomUUID(),
+    label: `Untertraverse ${index + 1}`,
+    startSupportId: referenceBeam?.startSupportId ?? supports[0]?.id ?? "",
+    endSupportId: referenceBeam?.endSupportId ?? supports[1]?.id ?? "",
+    supportIds: referenceBeam?.supportIds,
+    trussType: referenceBeam?.trussType ?? "PROLYTE_H30V",
+    mountHeightM: 0.45,
+    cantileverStart: 0,
+    cantileverEnd: 0,
+    loads: [],
+    windSurfaces: [],
+  }
+}
+
+function formatBeamHeight(beam: Beam, supports: Support[]) {
+  if (beam.mountHeightM === undefined) return "Stützenkopf"
+  const height = getBeamDisplayHeightM(beam, supports) ?? beam.mountHeightM
+  return `${height.toFixed(2)} m`
 }
 
 export function BeamList({
@@ -61,10 +86,24 @@ export function BeamList({
             Verbinde Stützen, pflege Auskragungen und hangle Lastfälle direkt an.
           </p>
         </div>
-        <Button type="button" onClick={openCreate} disabled={supports.length < 2}>
-          <Plus />
-          Traverse hinzufuegen
-        </Button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button type="button" onClick={openCreate} disabled={supports.length < 2}>
+            <Plus />
+            Traverse hinzufuegen
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setDraft(createLowerBeam(beams.length, supports, beams))
+              setOpen(true)
+            }}
+            disabled={supports.length < 2}
+          >
+            <Plus />
+            Untertraverse
+          </Button>
+        </div>
       </div>
 
       {supports.length < 2 ? (
@@ -74,13 +113,14 @@ export function BeamList({
       ) : null}
 
       <div className="mt-5 hidden overflow-x-auto lg:block">
-        <table className="w-full min-w-[760px] text-sm">
+        <table className="w-full min-w-[860px] text-sm">
           <thead className="text-left text-muted-foreground">
             <tr className="border-b border-border">
               <th className="pb-3 font-medium">Label</th>
               <th className="pb-3 font-medium">Von</th>
               <th className="pb-3 font-medium">Bis</th>
               <th className="pb-3 font-medium">Typ</th>
+              <th className="pb-3 font-medium">Höhe</th>
               <th className="pb-3 font-medium">Auskr. L</th>
               <th className="pb-3 font-medium">Auskr. R</th>
               <th className="pb-3 font-medium">Lasten</th>
@@ -94,6 +134,7 @@ export function BeamList({
                 <td className="py-3">{supportNameById.get(beam.startSupportId) ?? "Unbekannt"}</td>
                 <td className="py-3">{supportNameById.get(beam.endSupportId) ?? "Unbekannt"}</td>
                 <td className="py-3">{TRUSS_LABELS[beam.trussType]}</td>
+                <td className="py-3">{formatBeamHeight(beam, supports)}</td>
                 <td className="py-3">{beam.cantileverStart.toFixed(2)} m</td>
                 <td className="py-3">{beam.cantileverEnd.toFixed(2)} m</td>
                 <td className="py-3">
@@ -162,6 +203,10 @@ export function BeamList({
                 </dd>
               </div>
               <div>
+                <dt className="text-muted-foreground">Höhe</dt>
+                <dd>{formatBeamHeight(beam, supports)}</dd>
+              </div>
+              <div>
                 <dt className="text-muted-foreground">Lasten</dt>
                 <dd>{beam.loads.length}</dd>
               </div>
@@ -179,6 +224,7 @@ export function BeamList({
           key={draft.id}
           open={open}
           beam={draft}
+          allBeams={beams}
           supports={supports}
           onClose={() => setOpen(false)}
           onSave={saveBeam}

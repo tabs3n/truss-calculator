@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Tooltip } from "@/components/ui/Tooltip"
 import { getOrderedBeamSupportIds, getBeamPolylineLengthM } from "@/lib/beam-helpers"
 import { getWindSurfaceTypeDragCoefficient, TRUSS_OPTIONS } from "@/lib/constants"
+import { getBeamDisplayHeightM, getLowerFrameBeamOptions } from "@/lib/frame-geometry"
 import { TOOLTIP_TEXTS } from "@/lib/tooltip-texts"
 import type { Beam, DistributedLoad, HangingLoad, Support, TrussType, WindSurface } from "@/lib/types-bridge"
 import { cn } from "@/lib/utils"
@@ -30,6 +31,12 @@ function validateBeam(beam: Beam, supports: Support[], spanLength: number) {
   const errors: Record<string, string> = {}
   const minLoadPosition = -beam.cantileverStart
   const maxLoadPosition = spanLength + beam.cantileverEnd
+  const selectedSupports = getBeamSupportIds(beam)
+    .map((supportId) => supports.find((support) => support.id === supportId))
+    .filter((support): support is Support => Boolean(support))
+  const maxMountHeight = selectedSupports.length > 0
+    ? Math.min(...selectedSupports.map((support) => support.height))
+    : 0
 
   if (!beam.label.trim()) errors.label = "Label ist erforderlich."
   if (!beam.startSupportId) errors.startSupportId = "Startstuetze auswaehlen."
@@ -40,6 +47,13 @@ function validateBeam(beam: Beam, supports: Support[], spanLength: number) {
   if (supports.length < 2) errors.supports = "Mindestens zwei Stützen erforderlich."
   if (beam.cantileverStart < 0) errors.cantileverStart = "Auskragung darf nicht negativ sein."
   if (beam.cantileverEnd < 0) errors.cantileverEnd = "Auskragung darf nicht negativ sein."
+  if (beam.mountHeightM !== undefined) {
+    if (!Number.isFinite(beam.mountHeightM) || beam.mountHeightM < 0) {
+      errors.mountHeightM = "Montagehöhe muss größer oder gleich 0 m sein."
+    } else if (beam.mountHeightM > maxMountHeight) {
+      errors.mountHeightM = `Montagehöhe darf die niedrigste Stütze (${maxMountHeight.toFixed(2)} m) nicht überschreiten.`
+    }
+  }
 
   beam.loads.forEach((load) => {
     if (!load.label.trim()) errors[`load-${load.id}-label`] = "Label fehlt."
@@ -62,6 +76,9 @@ function validateBeam(beam: Beam, supports: Support[], spanLength: number) {
     }
     if (windSurface.surfaceType === "CUSTOM" && windSurface.dragCoefficient <= 0) {
       errors[`surface-${windSurface.id}-drag`] = "c_f ist ungültig."
+    }
+    if (windSurface.frameMode === "FILL_TRUSS_FRAME" && !windSurface.bottomBeamId) {
+      errors[`surface-${windSurface.id}-frame`] = "Untere Traverse für Rahmenfüllung auswählen."
     }
   })
 
@@ -130,12 +147,14 @@ function createWindSurface(index: number): WindSurface {
 export function BeamForm({
   open,
   beam,
+  allBeams,
   supports,
   onClose,
   onSave,
 }: {
   open: boolean
   beam: Beam
+  allBeams: Beam[]
   supports: Support[]
   onClose: () => void
   onSave: (beam: Beam) => void
@@ -151,6 +170,11 @@ export function BeamForm({
   const maxLoadPosition = spanLength + draft.cantileverEnd
   const errors = useMemo(() => validateBeam(draft, supports, spanLength), [draft, supports, spanLength])
   const warnings = useMemo(() => validateBeamWarnings(draft, spanLength), [draft, spanLength])
+  const displayedMountHeight = useMemo(() => getBeamDisplayHeightM(draft, supports), [draft, supports])
+  const lowerFrameBeamOptions = useMemo(
+    () => getLowerFrameBeamOptions(draft, allBeams, supports),
+    [allBeams, draft, supports],
+  )
 
   if (!open) return null
 
@@ -249,6 +273,30 @@ export function BeamForm({
                   </option>
                 ))}
               </select>
+            </label>
+
+            <label className="block text-sm font-medium">
+              Montagehöhe (m)
+              <input
+                className={cn(fieldClassName, errors.mountHeightM && "border-destructive/60")}
+                type="number"
+                min="0"
+                step="0.05"
+                placeholder="Stützenkopf"
+                value={draft.mountHeightM ?? ""}
+                onChange={(event) => {
+                  const rawValue = event.target.value
+                  updateField("mountHeightM", rawValue === "" ? undefined : Number(rawValue))
+                }}
+              />
+              <FieldIssue text={errors.mountHeightM} />
+              {!errors.mountHeightM ? (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Leer = Stützenkopf
+                  {displayedMountHeight !== null ? ` (${displayedMountHeight.toFixed(2)} m)` : ""}.
+                  Für untere Quertraversen z.B. 0,45 m.
+                </p>
+              ) : null}
             </label>
 
             <label className="block text-sm font-medium">
@@ -578,6 +626,7 @@ export function BeamForm({
                 <WindSurfaceForm
                   key={windSurface.id}
                   windSurface={windSurface}
+                  frameBeamOptions={lowerFrameBeamOptions}
                   onChange={(nextSurface) =>
                     updateField(
                       "windSurfaces",

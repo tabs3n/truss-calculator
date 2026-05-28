@@ -1,4 +1,5 @@
 import { calculateSurfaceWindForce, getDragCoefficient } from "@calc-engine/wind/windLoad"
+import { resolveWindSurfacesForBeam } from "@calc-engine"
 
 import type { CalculationResult } from "@/lib/types-bridge"
 
@@ -27,7 +28,7 @@ export function getWindSurfaceLoadEntries(
   return result.input.beams
     .filter((beam) => !options?.beamId || beam.id === options.beamId)
     .flatMap((beam) =>
-      beam.windSurfaces.map((surface) => ({
+      resolveWindSurfacesForBeam(result.input, beam).map((surface) => ({
         beamId: beam.id,
         beamLabel: beam.label,
         surfaceId: surface.id,

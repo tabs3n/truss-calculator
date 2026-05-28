@@ -10,7 +10,7 @@ import {
   normalizeWindDirectionAngle,
   WIND_SURFACE_TYPE_OPTIONS,
 } from "@/lib/constants"
-import type { WindSurface } from "@/lib/types-bridge"
+import type { Beam, WindSurface } from "@/lib/types-bridge"
 import { cn } from "@/lib/utils"
 
 const fieldClassName =
@@ -43,10 +43,12 @@ function OrientationPreview({ angleDeg }: { angleDeg: number }) {
 
 export function WindSurfaceForm({
   windSurface,
+  frameBeamOptions = [],
   onChange,
   onRemove,
 }: {
   windSurface: WindSurface
+  frameBeamOptions?: Beam[]
   onChange: (windSurface: WindSurface) => void
   onRemove: () => void
 }) {
@@ -58,6 +60,10 @@ export function WindSurfaceForm({
       windSurface.centerHeightAboveGround > 0 ? "" : "Höhe über Grund muss größer als 0 sein.",
     surfaceOrientationDeg: Number.isFinite(windSurface.surfaceOrientationDeg) ? "" : "Ausrichtung ist ungültig.",
     dragCoefficient: windSurface.dragCoefficient > 0 ? "" : "c_f muss größer als 0 sein.",
+    frame:
+      windSurface.frameMode === "FILL_TRUSS_FRAME" && !windSurface.bottomBeamId
+        ? "Untere Traverse auswählen."
+        : "",
   }
 
   const selectedSurfaceType = WIND_SURFACE_TYPE_OPTIONS.find((option) => option.value === windSurface.surfaceType)
@@ -162,6 +168,76 @@ export function WindSurfaceForm({
             <p className="mt-2 text-xs text-destructive">{errors.centerHeightAboveGround}</p>
           ) : null}
         </label>
+
+        <label className="block text-sm font-medium xl:col-span-2">
+          Einspannung
+          <select
+            className={cn(fieldClassName, errors.frame && "border-destructive/60")}
+            value={windSurface.frameMode ?? "MANUAL"}
+            onChange={(event) => {
+              const frameMode = event.target.value as NonNullable<WindSurface["frameMode"]>
+              if (frameMode === "FILL_TRUSS_FRAME") {
+                onChange({
+                  ...windSurface,
+                  frameMode,
+                  bottomBeamId: windSurface.bottomBeamId ?? frameBeamOptions[0]?.id,
+                  edgeInsetM: windSurface.edgeInsetM ?? 0.05,
+                })
+                return
+              }
+
+              onChange({
+                ...windSurface,
+                frameMode: "MANUAL",
+                bottomBeamId: undefined,
+                edgeInsetM: undefined,
+              })
+            }}
+          >
+            <option value="MANUAL">Manuell platzieren</option>
+            <option value="FILL_TRUSS_FRAME" disabled={frameBeamOptions.length === 0}>
+              In Truss-Rahmen einspannen
+            </option>
+          </select>
+          {errors.frame ? <p className="mt-2 text-xs text-destructive">{errors.frame}</p> : null}
+          {frameBeamOptions.length === 0 ? (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Für Rahmenfüllung zuerst eine tiefere Untertraverse mit denselben Stützen anlegen.
+            </p>
+          ) : null}
+        </label>
+
+        {windSurface.frameMode === "FILL_TRUSS_FRAME" ? (
+          <>
+            <label className="block text-sm font-medium xl:col-span-2">
+              Untere Traverse
+              <select
+                className={cn(fieldClassName, errors.frame && "border-destructive/60")}
+                value={windSurface.bottomBeamId ?? ""}
+                onChange={(event) => onChange({ ...windSurface, bottomBeamId: event.target.value })}
+              >
+                <option value="">Untertraverse wählen</option>
+                {frameBeamOptions.map((beam) => (
+                  <option key={beam.id} value={beam.id}>
+                    {beam.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block text-sm font-medium">
+              Rahmenabstand (m)
+              <input
+                className={fieldClassName}
+                type="number"
+                min="0"
+                step="0.01"
+                value={windSurface.edgeInsetM ?? 0.05}
+                onChange={(event) => onChange({ ...windSurface, edgeInsetM: Number(event.target.value) })}
+              />
+            </label>
+          </>
+        ) : null}
 
         <label className="block text-sm font-medium">
           Ausrichtung (Grad)

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import type { WindSurface } from '../src/types.js'
+import type { StructureInput, WindSurface } from '../src/types.js'
 import { calculateSurfaceWindForce, getDragCoefficient } from '../src/wind/windLoad.js'
+import { resolveWindSurfaceGeometry } from '../src/wind/windSurfaceGeometry.js'
 
 // Referenzfläche: 4 m × 3 m = 12 m², Normalvektor zeigt nach Nord (0°)
 const bannerNorth: WindSurface = {
@@ -35,6 +36,82 @@ describe('getDragCoefficient – Typ-Standardwerte', () => {
 
   it('CUSTOM → gibt dragCoefficient-Feld zurück', () => {
     expect(getDragCoefficient({ ...bannerNorth, surfaceType: 'CUSTOM', dragCoefficient: 0.9 })).toBe(0.9)
+  })
+})
+
+describe('resolveWindSurfaceGeometry - Banner im Truss-Rahmen', () => {
+  it('leitet Breite, Höhe und Schwerpunkt aus oberer und unterer Traverse ab', () => {
+    const input: StructureInput = {
+      projectName: 'Rahmen',
+      eventName: 'Test',
+      location: 'Köln',
+      date: '2026-05-21',
+      preparedBy: 'Codex',
+      windZone: 2,
+      terrainCategory: 'II',
+      environment: 'OUTDOOR',
+      supports: [
+        {
+          id: 'S1',
+          label: 'Links',
+          position: { x: 0, y: 0 },
+          trussType: 'PROLYTE_H30V',
+          height: 5,
+          footType: 'BASEPLATE',
+          existingBallast: 0,
+        },
+        {
+          id: 'S2',
+          label: 'Rechts',
+          position: { x: 6, y: 0 },
+          trussType: 'PROLYTE_H30V',
+          height: 5,
+          footType: 'BASEPLATE',
+          existingBallast: 0,
+        },
+      ],
+      beams: [
+        {
+          id: 'TOP',
+          label: 'Kopftraverse',
+          startSupportId: 'S1',
+          endSupportId: 'S2',
+          trussType: 'PROLYTE_H30V',
+          cantileverStart: 0,
+          cantileverEnd: 0,
+          loads: [],
+          windSurfaces: [],
+        },
+        {
+          id: 'BOTTOM',
+          label: 'Untertraverse',
+          startSupportId: 'S1',
+          endSupportId: 'S2',
+          trussType: 'PROLYTE_H30V',
+          mountHeightM: 0.45,
+          cantileverStart: 0,
+          cantileverEnd: 0,
+          loads: [],
+          windSurfaces: [],
+        },
+      ],
+      frictionConfig: { mode: 'CUSTOM', customValue: 0.3 },
+    }
+    const surface: WindSurface = {
+      ...bannerNorth,
+      frameMode: 'FILL_TRUSS_FRAME',
+      bottomBeamId: 'BOTTOM',
+      edgeInsetM: 0.05,
+      width: 1,
+      height: 1,
+      centerHeightAboveGround: 1,
+    }
+
+    const resolved = resolveWindSurfaceGeometry(input, input.beams[0]!, surface)
+
+    expect(resolved.width).toBeCloseTo(5.9, 6)
+    expect(resolved.height).toBeCloseTo(4.45, 6)
+    expect(resolved.centerHeightAboveGround).toBeCloseTo(2.725, 6)
   })
 })
 

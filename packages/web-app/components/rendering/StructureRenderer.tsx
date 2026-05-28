@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useRef, useState, type PointerEvent } from "react"
 
 import { getOrderedBeamSupports } from "@/lib/beam-helpers"
+import { getBeamDisplayHeightM } from "@/lib/frame-geometry"
 import type { CalculationResult, StructureInput, Support } from "@/lib/types-bridge"
 import { compassAngleToVector, getWindDirectionDisplay, getWindDirectionLabel } from "@/lib/constants"
 
@@ -209,6 +210,8 @@ export function StructureRenderer({
           const beamNearRight = midX > VIEW_WIDTH - 80
           const beamAnchor = beamNearLeft ? "start" : beamNearRight ? "end" : "middle"
           const beamLabelX = beamNearLeft ? midX + 12 : beamNearRight ? midX - 12 : midX
+          const beamHeight = getBeamDisplayHeightM(beam, input.supports)
+          const isLowerBeam = beam.mountHeightM !== undefined
 
           return (
             <g key={beam.id}>
@@ -221,8 +224,9 @@ export function StructureRenderer({
                     y1={projectY(start.position.y)}
                     x2={projectX(end.position.x)}
                     y2={projectY(end.position.y)}
-                    stroke="#334155"
-                    strokeWidth="4"
+                    stroke={isLowerBeam ? "#64748b" : "#334155"}
+                    strokeWidth={isLowerBeam ? "3" : "4"}
+                    strokeDasharray={isLowerBeam ? "7 5" : undefined}
                     strokeLinecap="round"
                   />
                 )
@@ -230,6 +234,7 @@ export function StructureRenderer({
               <text x={beamLabelX} y={midY} textAnchor={beamAnchor} className="fill-slate-700 text-[11px] font-semibold">
                 {beam.label}
                 {beamSupports.length > 2 ? ` (${beamSupports.length} Stützen)` : ""}
+                {isLowerBeam && beamHeight !== null ? ` · ${beamHeight.toFixed(2)} m` : ""}
               </text>
             </g>
           )

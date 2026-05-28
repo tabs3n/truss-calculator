@@ -2,6 +2,7 @@
 
 export * from './validation'
 export * from './variants'
+export * from './wind/windSurfaceGeometry'
 
 import type {
   Beam,
@@ -38,7 +39,8 @@ import { getFootProperties, getFootWeightKg, getTrussProperties } from './materi
 import { checkSliding } from './sliding/slidingCheck'
 import { checkBuckling } from './stability/bucklingCheck'
 import { calculateTippingAllDirections } from './tipping/tippingCheck'
-import { calculateSurfaceWindForce, calculateWindForce, getPeakVelocityPressure } from './wind/windLoad'
+import { calculateSurfaceWindForce, calculateWindForce, getDragCoefficient, getPeakVelocityPressure } from './wind/windLoad'
+import { resolveAllWindSurfaces, resolveWindSurfacesForBeam } from './wind/windSurfaceGeometry'
 
 const normReferences = [
   'DIN EN 1991-1-4: Windlasten',
@@ -302,7 +304,7 @@ export function calculate(input: StructureInput): CalculationResult {
   let totalWindAreaX = 0
   let totalWindAreaY = 0
   for (const beam of input.beams) {
-    for (const ws of beam.windSurfaces) {
+    for (const ws of resolveWindSurfacesForBeam(input, beam)) {
       const area = ws.width * ws.height
       totalWindAreaX += area
       totalWindAreaY += area
@@ -468,17 +470,37 @@ export function calculate(input: StructureInput): CalculationResult {
       errors.push(`Windlastberechnung: ${(error as Error).message}`)
     }
 
+    const allWindSurfaces = resolveAllWindSurfaces(input)
+
     // Stützen-Querschnittsfläche ist omnidirektional (zylindrisch), einmalig berechnet
     const supportWindForceKN = input.supports.reduce(
       (sum, s) => sum + calculateWindForce(windQp, 0.4, s.height),
       0,
     )
-    const allWindSurfaces = input.beams.flatMap(b => b.windSurfaces)
     const getWindForceKN = (compassAngleDeg: number): number =>
       allWindSurfaces.reduce(
         (sum, surface) => sum + calculateSurfaceWindForce(surface, compassAngleDeg, windQp),
         0,
       ) + supportWindForceKN
+
+    const surfaceHeightWeight = allWindSurfaces.reduce(
+      (sum, surface) => sum + getDragCoefficient(surface) * surface.width * surface.height,
+      0,
+    )
+    const supportHeightWeight = input.supports.reduce(
+      (sum, support) => sum + 1.3 * 0.4 * support.height,
+      0,
+    )
+    const weightedHeightNumerator =
+      allWindSurfaces.reduce(
+        (sum, surface) =>
+          sum + getDragCoefficient(surface) * surface.width * surface.height * surface.centerHeightAboveGround,
+        0,
+      ) +
+      input.supports.reduce(
+        (sum, support) => sum + 1.3 * 0.4 * support.height * (support.height / 2),
+        0,
+      )
 
     const windForceX = getWindForceKN(90)  // Ostwind (+X)
     const windForceY = getWindForceKN(0)   // Nordwind (+Y)
@@ -490,7 +512,9 @@ export function calculate(input: StructureInput): CalculationResult {
       windForceY,
     }
     totalHorizontalForceKN = Math.max(windForceX, windForceY)
-    horizontalForceHeightM = maxSupportHeight * 0.6
+    horizontalForceHeightM = surfaceHeightWeight + supportHeightWeight > 0
+      ? weightedHeightNumerator / (surfaceHeightWeight + supportHeightWeight)
+      : maxSupportHeight * 0.6
     getHorizontalForceKN = getWindForceKN
   }
 

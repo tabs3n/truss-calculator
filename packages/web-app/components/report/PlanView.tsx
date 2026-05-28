@@ -161,8 +161,9 @@ export function PlanView({
               y1={pa.y}
               x2={pb.x}
               y2={pb.y}
-              stroke="#0f172a"
-              strokeWidth={1.4}
+              stroke={beam.mountHeightM === undefined ? "#0f172a" : "#64748b"}
+              strokeWidth={beam.mountHeightM === undefined ? 1.4 : 1.1}
+              strokeDasharray={beam.mountHeightM === undefined ? undefined : "4 3"}
             />
           )
         })

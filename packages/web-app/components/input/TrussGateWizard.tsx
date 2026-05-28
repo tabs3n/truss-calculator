@@ -14,7 +14,9 @@ import type { Beam, StructureInput, Support, TrussType, WindSurface } from "@/li
 import { cn } from "@/lib/utils"
 
 function stepIsValid(step: number, config: WizardConfig) {
-  if (step === 0) return config.gateWidth > 0 && config.gateHeight > 0
+  if (step === 0) {
+    return config.gateWidth > 0 && config.gateHeight > 0 && config.bottomTrussHeight >= 0 && config.bottomTrussHeight < config.gateHeight
+  }
   if (step === 1) {
     return config.fillType === "EMPTY" || (config.fillWidth > 0 && config.fillHeight > 0)
   }
@@ -26,6 +28,7 @@ type FillType = (typeof TRUSS_GATE_FILL_OPTIONS)[number]["value"]
 interface WizardConfig {
   gateWidth: number
   gateHeight: number
+  bottomTrussHeight: number
   trussType: TrussType
   fillType: FillType
   fillWidth: number
@@ -37,6 +40,7 @@ interface WizardConfig {
 const initialConfig: WizardConfig = {
   gateWidth: 6,
   gateHeight: 4,
+  bottomTrussHeight: 0.45,
   trussType: "PROLYTE_H30V",
   fillType: "EMPTY",
   fillWidth: 6,
@@ -45,7 +49,7 @@ const initialConfig: WizardConfig = {
   existingBallast: 0,
 }
 
-function createGateWindSurface(config: WizardConfig): WindSurface[] {
+function createGateWindSurface(config: WizardConfig, bottomBeamId: string): WindSurface[] {
   if (config.fillType === "EMPTY") return []
 
   return [
@@ -54,10 +58,13 @@ function createGateWindSurface(config: WizardConfig): WindSurface[] {
       label: WIND_SURFACE_TYPE_LABELS[config.fillType],
       width: config.fillWidth,
       height: config.fillHeight,
-      centerHeightAboveGround: config.fillHeight / 2,
+      centerHeightAboveGround: config.bottomTrussHeight + (config.gateHeight - config.bottomTrussHeight) / 2,
       surfaceType: config.fillType,
       surfaceOrientationDeg: 0,
       dragCoefficient: getWindSurfaceTypeDragCoefficient(config.fillType) ?? 1.0,
+      frameMode: "FILL_TRUSS_FRAME",
+      bottomBeamId,
+      edgeInsetM: 0.05,
     },
   ]
 }
@@ -65,6 +72,8 @@ function createGateWindSurface(config: WizardConfig): WindSurface[] {
 function createGateStructure(config: WizardConfig): Pick<StructureInput, "supports" | "beams"> {
   const leftSupportId = crypto.randomUUID()
   const rightSupportId = crypto.randomUUID()
+  const topBeamId = crypto.randomUUID()
+  const bottomBeamId = crypto.randomUUID()
 
   const supports: Support[] = [
     {
@@ -93,7 +102,7 @@ function createGateStructure(config: WizardConfig): Pick<StructureInput, "suppor
 
   const beams: Beam[] = [
     {
-      id: crypto.randomUUID(),
+      id: topBeamId,
       label: "Tortraverse",
       startSupportId: leftSupportId,
       endSupportId: rightSupportId,
@@ -101,7 +110,19 @@ function createGateStructure(config: WizardConfig): Pick<StructureInput, "suppor
       cantileverStart: 0,
       cantileverEnd: 0,
       loads: [],
-      windSurfaces: createGateWindSurface(config),
+      windSurfaces: createGateWindSurface(config, bottomBeamId),
+    },
+    {
+      id: bottomBeamId,
+      label: "Untertraverse",
+      startSupportId: leftSupportId,
+      endSupportId: rightSupportId,
+      trussType: config.trussType,
+      mountHeightM: config.bottomTrussHeight,
+      cantileverStart: 0,
+      cantileverEnd: 0,
+      loads: [],
+      windSurfaces: [],
     },
   ]
 
@@ -171,7 +192,7 @@ export function TrussGateWizard({
 
       <div className="mt-5 rounded-[1.5rem] border border-border/80 bg-background/70 p-4">
         {currentStep === 0 ? (
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-4">
             <label className="block text-sm font-medium">
               Torbreite (m)
               <input
@@ -192,6 +213,17 @@ export function TrussGateWizard({
                 step="0.1"
                 value={config.gateHeight}
                 onChange={(event) => setField("gateHeight", Number(event.target.value))}
+              />
+            </label>
+            <label className="block text-sm font-medium">
+              Untertraverse (m)
+              <input
+                className="mt-2 h-11 w-full rounded-xl border border-border bg-background px-3 text-sm shadow-sm transition-colors focus:border-primary focus:outline-none"
+                type="number"
+                min="0"
+                step="0.05"
+                value={config.bottomTrussHeight}
+                onChange={(event) => setField("bottomTrussHeight", Number(event.target.value))}
               />
             </label>
             <label className="block text-sm font-medium">
