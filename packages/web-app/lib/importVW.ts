@@ -96,6 +96,7 @@ export function importFromVW(data: VWExportData): StructureInput {
     baseplateSize: 0.6,
     outriggerLength: 0,
     existingBallast: 0,
+    // numberOfConcreteBlocks wird im UI nachträglich gesetzt; hier ignoriert
   }))
 
   const supportIds = new Set(supports.map((support) => support.id))
@@ -114,7 +115,12 @@ export function importFromVW(data: VWExportData): StructureInput {
       label: beam.label || `Traverse ${originalIndex + 1}`,
       startSupportId: beam.startId,
       endSupportId: beam.endId,
+      // Zwischenstützen aus supportIds (ohne Start/End) ableiten
+      ...(beam.supportIds && beam.supportIds.length > 2
+        ? { additionalSupportIds: beam.supportIds.slice(1, -1).filter((id) => supportIds.has(id)) }
+        : {}),
       trussType: mapTrussType(beam.trussType, warnings),
+      ...(typeof beam.mountHeight === "number" ? { mountHeightM: mmToM(beam.mountHeight) } : {}),
       cantileverStart: mmToM(beam.cantileverStart),
       cantileverEnd: mmToM(beam.cantileverEnd),
       loads: beam.loads.map((load, loadIndex) => ({
@@ -122,6 +128,13 @@ export function importFromVW(data: VWExportData): StructureInput {
         label: load.label || `Last ${loadIndex + 1}`,
         positionAlongBeam: mmToM(load.positionMm),
         weight: load.weightKg,
+      })),
+      distributedLoads: (beam.distributedLoads ?? []).map((dl, dlIndex) => ({
+        id: `${beam.id}-dl-${dlIndex + 1}`,
+        label: dl.label || `Streckenlast ${dlIndex + 1}`,
+        startPositionM: mmToM(dl.startPositionMm),
+        endPositionM: mmToM(dl.endPositionMm),
+        loadKgPerM: dl.loadKgPerM,
       })),
       windSurfaces: [],
     }))

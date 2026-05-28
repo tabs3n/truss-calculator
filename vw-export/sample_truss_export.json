@@ -1,0 +1,134 @@
+{
+  "exportVersion": "1.0",
+  "_comment": "Beispiel-Export für Truss Calculator Import-Test (kein echtes VW-Projekt)",
+  "supports": [
+    {
+      "id": "S1",
+      "label": "Stütze A",
+      "x": 0,
+      "y": 0,
+      "height": 6000,
+      "trussType": "PROLYTE_H40V",
+      "footType": "CONCRETE_BLOCK_1250",
+      "numberOfConcreteBlocks": 4
+    },
+    {
+      "id": "S2",
+      "label": "Stütze B",
+      "x": 8000,
+      "y": 0,
+      "height": 6000,
+      "trussType": "PROLYTE_H40V",
+      "footType": "CONCRETE_BLOCK_1250",
+      "numberOfConcreteBlocks": 4
+    },
+    {
+      "id": "S3",
+      "label": "Stütze C",
+      "x": 0,
+      "y": 6000,
+      "height": 6000,
+      "trussType": "PROLYTE_H40V",
+      "footType": "CONCRETE_BLOCK_1250",
+      "numberOfConcreteBlocks": 4
+    },
+    {
+      "id": "S4",
+      "label": "Stütze D",
+      "x": 8000,
+      "y": 6000,
+      "height": 6000,
+      "trussType": "PROLYTE_H40V",
+      "footType": "CONCRETE_BLOCK_1250",
+      "numberOfConcreteBlocks": 4
+    }
+  ],
+  "beams": [
+    {
+      "id": "B1",
+      "label": "Front-Traverse",
+      "startId": "S1",
+      "endId": "S2",
+      "supportIds": ["S1", "S2"],
+      "trussType": "PROLYTE_H40V",
+      "mountHeight": 5500,
+      "cantileverStart": 0,
+      "cantileverEnd": 0,
+      "loads": [
+        {
+          "label": "Moving Head 1",
+          "positionMm": 2000,
+          "weightKg": 28
+        },
+        {
+          "label": "Moving Head 2",
+          "positionMm": 4000,
+          "weightKg": 28
+        },
+        {
+          "label": "Moving Head 3",
+          "positionMm": 6000,
+          "weightKg": 28
+        }
+      ],
+      "distributedLoads": [
+        {
+          "label": "Kabelweg",
+          "startPositionMm": 0,
+          "endPositionMm": 8000,
+          "loadKgPerM": 3.5
+        }
+      ]
+    },
+    {
+      "id": "B2",
+      "label": "Rear-Traverse",
+      "startId": "S3",
+      "endId": "S4",
+      "supportIds": ["S3", "S4"],
+      "trussType": "PROLYTE_H40V",
+      "mountHeight": 5500,
+      "cantileverStart": 0,
+      "cantileverEnd": 0,
+      "loads": [
+        {
+          "label": "Moving Head 4",
+          "positionMm": 2000,
+          "weightKg": 28
+        },
+        {
+          "label": "Moving Head 5",
+          "positionMm": 6000,
+          "weightKg": 28
+        }
+      ],
+      "distributedLoads": []
+    },
+    {
+      "id": "B3",
+      "label": "Side-Traverse Links",
+      "startId": "S1",
+      "endId": "S3",
+      "supportIds": ["S1", "S3"],
+      "trussType": "PROLYTE_H30V",
+      "mountHeight": 5500,
+      "cantileverStart": 0,
+      "cantileverEnd": 0,
+      "loads": [],
+      "distributedLoads": []
+    },
+    {
+      "id": "B4",
+      "label": "Side-Traverse Rechts",
+      "startId": "S2",
+      "endId": "S4",
+      "supportIds": ["S2", "S4"],
+      "trussType": "PROLYTE_H30V",
+      "mountHeight": 5500,
+      "cantileverStart": 0,
+      "cantileverEnd": 0,
+      "loads": [],
+      "distributedLoads": []
+    }
+  ]
+}

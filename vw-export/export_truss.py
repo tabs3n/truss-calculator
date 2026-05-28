@@ -82,6 +82,32 @@ def get_object_height_mm(obj_handle):
     return 4000.0  # Fallback
 
 
+def get_beam_mount_height_mm(obj_handle):
+    """
+    Liest optionale Montagehöhe einer horizontalen Traverse in mm.
+    Priorität: TrussCalc.MountHeight, danach Unterkante der 3D-Bounding-Box.
+    Gibt None zurück, wenn keine sinnvolle Höhe gefunden wurde.
+    """
+    val = get_record_field(obj_handle, RECORD_NAME, "MountHeight")
+    if val is not None:
+        try:
+            mount_height = float(val)
+            if mount_height > 0:
+                return mount_height
+        except (ValueError, TypeError):
+            pass
+
+    try:
+        (_, _, z1), (_, _, z2) = vs.Get3DBBox(obj_handle)
+        mount_height = min(z1, z2)
+        if abs(mount_height) > 10:
+            return mount_height
+    except Exception:
+        pass
+
+    return None
+
+
 def classify_truss_type(symbol_name: str, record_value: str) -> str:
     """Mappt Symbolname oder Record-Wert auf TrussType-String."""
     mapping = [
@@ -325,7 +351,16 @@ def collect_supports() -> list:
         foot_val = get_record_field(obj_handle, RECORD_NAME, "FootType") or ''
         foot_type = classify_foot_type(foot_val)
 
-        supports.append({
+        # Anzahl Betonblöcke aus Record (optional)
+        num_blocks_val = get_record_field(obj_handle, RECORD_NAME, "NumberOfConcreteBlocks")
+        num_blocks = None
+        if num_blocks_val:
+            try:
+                num_blocks = int(float(num_blocks_val))
+            except (ValueError, TypeError):
+                pass
+
+        support_entry = {
             "id": obj_id,
             "label": label,
             "x": round(cx, 1),
@@ -334,7 +369,10 @@ def collect_supports() -> list:
             "trussType": truss_type,
             "footType": foot_type,
             "_warnings": warnings,  # wird vor Export entfernt
-        })
+        }
+        if num_blocks is not None:
+            support_entry["numberOfConcreteBlocks"] = num_blocks
+        supports.append(support_entry)
         return True
 
     vs.ForEachObject(callback, "(ALL)")
@@ -396,21 +434,54 @@ def collect_beams(supports: list) -> list:
             if end_support:
                 cantilever_end = distance_2d(x2, y2, end_support['x'], end_support['y'])
 
-        # Lasten
+        # Lasten (Einzellasten)
         beam_start = (x1, y1)
         beam_end = (x2, y2)
         loads = collect_loads_for_beam(obj_handle, beam_start, beam_end)
+        mount_height = get_beam_mount_height_mm(obj_handle)
 
-        beams.append({
+        # Zwischenstützen ermitteln: alle Stützen innerhalb der Bounding Box der Traverse
+        (bx1, by1), (bx2, by2) = vs.GetBBox(obj_handle)
+        margin = SNAP_TOLERANCE_MM
+        intermediate_ids = []
+        for s in supports:
+            sid = s['id']
+            if sid in (start_id, end_id):
+                continue
+            if (bx1 - margin <= s['x'] <= bx2 + margin and
+                    by1 - margin <= s['y'] <= by2 + margin):
+                intermediate_ids.append(sid)
+
+        # Geordnete Liste Start → Zwischenstützen (nach Entfernung vom Start) → End
+        def dist_from_start(sid):
+            s = next((ss for ss in supports if ss['id'] == sid), None)
+            if not s:
+                return float('inf')
+            return distance_2d(x1, y1, s['x'], s['y'])
+
+        intermediate_ids.sort(key=dist_from_start)
+        all_support_ids = (
+            ([start_id] if start_id != "UNBEKANNT" else []) +
+            intermediate_ids +
+            ([end_id] if end_id != "UNBEKANNT" else [])
+        )
+
+        beam_data = {
             "id": beam_id,
             "label": label,
             "startId": start_id,
             "endId": end_id,
+            "supportIds": all_support_ids,
             "trussType": truss_type,
             "cantileverStart": round(cantilever_start, 1),
             "cantileverEnd": round(cantilever_end, 1),
             "loads": loads,
-        })
+            "distributedLoads": [],
+        }
+        if mount_height is not None:
+            beam_data["mountHeight"] = round(mount_height, 1)
+
+        beams.append(beam_data)
         return True
 
     vs.ForEachObject(callback, "(ALL)")

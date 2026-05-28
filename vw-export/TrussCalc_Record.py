@@ -15,11 +15,13 @@ RECORD_NAME = "TrussCalc"
 # vs.kFieldText    = Textfeld
 # vs.kFieldNumber  = Zahlenfeld
 FIELDS = [
-    ("Type",     vs.kFieldText,   "PROLYTE_H40V"),  # TrussType-String
-    ("Height",   vs.kFieldNumber, 4000),             # Stützenhöhe oder Traversenlänge in mm
-    ("FootType", vs.kFieldText,   "BASEPLATE"),      # FootType-String
-    ("Label",    vs.kFieldText,   ""),               # Freitext-Bezeichnung
-    ("Weight",   vs.kFieldNumber, 0),                # Gewicht einer Last in kg
+    ("Type",                  vs.kFieldText,   "PROLYTE_H40V"),  # TrussType-String
+    ("Height",                vs.kFieldNumber, 4000),             # Stützenhöhe in mm
+    ("MountHeight",           vs.kFieldNumber, 0),                # Montagehöhe horizontaler Traversen in mm
+    ("FootType",              vs.kFieldText,   "BASEPLATE"),      # FootType-String
+    ("Label",                 vs.kFieldText,   ""),               # Freitext-Bezeichnung
+    ("Weight",                vs.kFieldNumber, 0),                # Gewicht einer Last in kg
+    ("NumberOfConcreteBlocks", vs.kFieldNumber, 0),               # Anzahl Betonblöcke pro Stütze
 ]
 
 # Zulässige Werte (als Hilfe für Anwender – Vectorworks zeigt diese nicht automatisch)
@@ -87,11 +89,13 @@ def create_record():
         "TrussCalc Record erfolgreich angelegt!",
         "",
         "Felder:",
-        "  Type     – TrussType (z.B. PROLYTE_H40V)",
-        "  Height   – Höhe/Länge in mm",
-        "  FootType – Fußtyp (z.B. BASEPLATE)",
-        "  Label    – Bezeichnung (Freitext)",
-        "  Weight   – Gewicht einer Last in kg",
+        "  Type                  – TrussType (z.B. PROLYTE_H40V)",
+        "  Height                – Höhe/Länge in mm",
+        "  MountHeight           – Montagehöhe horizontaler Traversen in mm (0 = automatisch)",
+        "  FootType              – Fußtyp (z.B. BASEPLATE)",
+        "  Label                 – Bezeichnung (Freitext)",
+        "  Weight                – Gewicht einer Last in kg",
+        "  NumberOfConcreteBlocks – Anzahl Betonblöcke pro Stütze (optional)",
         "",
         "Zulässige Type-Werte:",
     ]
