@@ -49,6 +49,49 @@ export function getOrderedBeamSupportIds(beam: Beam, supports: Support[]): strin
 }
 
 /**
+ * Berechnet die "nach hinten" Richtung eines Outriggers (Einheitsvektor, 2-D).
+ *
+ * Logik: Der Outrigger liegt senkrecht zur Traverse (Spannrichtung).
+ * Von den zwei möglichen Senkrechten wählen wir die mit negativerer Y-Komponente
+ * (bzw. negativerer X-Komponente wenn Y gleich) – das entspricht der Konvention
+ * "nach hinten, weg vom Publikum" in der VectorWorks-Grundrissdarstellung.
+ * Fallback: (0, -1), d.h. rein nach Süden.
+ */
+export function getOutriggerBackwardDir(
+  support: Support,
+  beams: Beam[],
+  allSupports: Support[],
+): { x: number; y: number } {
+  // Alle Stützen sammeln, die über eine Traverse mit dieser verbunden sind
+  const connected: { x: number; y: number }[] = []
+  for (const beam of beams) {
+    const beamSupports = getOrderedBeamSupports(beam, allSupports)
+    if (!beamSupports.some((s) => s.id === support.id)) continue
+    for (const s of beamSupports) {
+      if (s.id !== support.id) connected.push(s.position)
+    }
+  }
+
+  if (connected.length === 0) return { x: 0, y: -1 }
+
+  // Mittlere Richtung zu den verbundenen Stützen = Traversenrichtung
+  let dx = 0, dy = 0
+  for (const p of connected) {
+    dx += p.x - support.position.x
+    dy += p.y - support.position.y
+  }
+  const len = Math.hypot(dx, dy)
+  if (len < 1e-6) return { x: 0, y: -1 }
+
+  const nx = dx / len, ny = dy / len
+  // Zwei senkrechte Richtungen zur Traverse
+  const p1 = { x: -ny, y: nx }
+  const p2 = { x: ny, y: -nx }
+  // Wähle die "hintere" Richtung (negativeres Y; bei Gleichstand negativeres X)
+  return p1.y < p2.y || (p1.y === p2.y && p1.x < p2.x) ? p1 : p2
+}
+
+/**
  * Berechnet die Gesamtspannweite (Summe aller Segmente) entlang der
  * korrekt sortierten Polylinie. KEIN Cantilever.
  */

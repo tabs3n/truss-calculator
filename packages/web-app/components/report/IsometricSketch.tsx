@@ -4,7 +4,7 @@ import { getBeamMountHeightM } from "@calc-engine"
 import { getFootProperties, getTrussProperties } from "@calc-engine/materials/database"
 import { Line, Path, Svg, Text } from "@react-pdf/renderer"
 
-import { getOrderedBeamSupports } from "@/lib/beam-helpers"
+import { getOrderedBeamSupports, getOutriggerBackwardDir } from "@/lib/beam-helpers"
 import { getWindSurfaceWorldCorners } from "@/lib/frame-geometry"
 import type { Beam, CalculationResult, Support } from "@/lib/types-bridge"
 
@@ -122,12 +122,20 @@ export function IsometricSketch({
     const halfX = footSize.x / 2
     const halfY = footSize.y / 2
     const outL = support.outriggerLength ?? 0
-
+    const basePts: WorldPoint[] = [
+      { x: support.position.x - halfX, y: support.position.y - halfY, z: 0 },
+      { x: support.position.x + halfX, y: support.position.y - halfY, z: 0 },
+      { x: support.position.x + halfX, y: support.position.y + halfY, z: 0 },
+      { x: support.position.x - halfX, y: support.position.y + halfY, z: 0 },
+    ]
+    if (outL <= 0) return basePts
+    const dir = getOutriggerBackwardDir(support, result.input.beams, result.input.supports)
+    const endX = support.position.x + dir.x * outL
+    const endY = support.position.y + dir.y * outL
     return [
-      { x: support.position.x - halfX - outL, y: support.position.y - halfY - outL, z: 0 },
-      { x: support.position.x + halfX + outL, y: support.position.y - halfY - outL, z: 0 },
-      { x: support.position.x + halfX + outL, y: support.position.y + halfY + outL, z: 0 },
-      { x: support.position.x - halfX - outL, y: support.position.y + halfY + outL, z: 0 },
+      ...basePts,
+      { x: endX - halfX, y: endY - halfY, z: 0 },
+      { x: endX + halfX, y: endY + halfY, z: 0 },
     ]
   })
 
@@ -225,28 +233,24 @@ export function IsometricSketch({
 
   return (
     <Svg width={width} height={height}>
-      {/* Outrigger-Wirkbereich (gestricheltes Parallelogramm = maßgebende Standfläche) */}
+      {/* Outrigger-Traverse nach hinten (gestrichelt, 1 Ausleger je Stütze) */}
       {result.input.supports.flatMap((support) => {
         const outL = support.outriggerLength ?? 0
         if (outL <= 0) return []
-        const footSize = getFootSizeMeters(support)
-        const halfX = footSize.x / 2
-        const halfY = footSize.y / 2
-        const cx = support.position.x
-        const cy = support.position.y
-        const effectiveFootprint = [
-          toScreen({ x: cx - halfX - outL, y: cy - halfY - outL, z: 0 }),
-          toScreen({ x: cx + halfX + outL, y: cy - halfY - outL, z: 0 }),
-          toScreen({ x: cx + halfX + outL, y: cy + halfY + outL, z: 0 }),
-          toScreen({ x: cx - halfX - outL, y: cy + halfY + outL, z: 0 }),
-        ]
+        const dir = getOutriggerBackwardDir(support, result.input.beams, result.input.supports)
+        const start = toScreen({ x: support.position.x, y: support.position.y, z: 0 })
+        const end = toScreen({
+          x: support.position.x + dir.x * outL,
+          y: support.position.y + dir.y * outL,
+          z: 0,
+        })
         return [
-          <Path
+          <Line
             key={`${support.id}-outrigger`}
-            d={createClosedPath(effectiveFootprint)}
-            fill="none"
+            x1={start.x} y1={start.y}
+            x2={end.x}   y2={end.y}
             stroke="#64748b"
-            strokeWidth={1.2}
+            strokeWidth={2}
             strokeDasharray="4 3"
           />,
         ]

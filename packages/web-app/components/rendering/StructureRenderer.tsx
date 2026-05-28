@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState, type PointerEvent } from "react"
 
-import { getOrderedBeamSupports } from "@/lib/beam-helpers"
+import { getOrderedBeamSupports, getOutriggerBackwardDir } from "@/lib/beam-helpers"
 import { getBeamDisplayHeightM } from "@/lib/frame-geometry"
 import type { CalculationResult, StructureInput, Support } from "@/lib/types-bridge"
 import { compassAngleToVector, getWindDirectionDisplay, getWindDirectionLabel } from "@/lib/constants"
@@ -51,6 +51,15 @@ export function StructureRenderer({
     if (input.supports.length === 0) return null
     const xs = input.supports.map((s) => s.position.x)
     const ys = input.supports.map((s) => s.position.y)
+    // Outrigger-Endpunkte in Bounding-Box aufnehmen
+    for (const support of input.supports) {
+      const outL = support.outriggerLength ?? 0
+      if (outL > 0) {
+        const dir = getOutriggerBackwardDir(support, input.beams, input.supports)
+        xs.push(support.position.x + dir.x * outL)
+        ys.push(support.position.y + dir.y * outL)
+      }
+    }
     const minX = Math.min(...xs)
     const maxX = Math.max(...xs)
     const minY = Math.min(...ys)
@@ -59,7 +68,7 @@ export function StructureRenderer({
     const height = Math.max(maxY - minY, 1)
     const scale = Math.min((VIEW_WIDTH - PADDING * 2) / width, (VIEW_HEIGHT - PADDING * 2) / height)
     return { minX, minY, scale }
-  }, [input.supports])
+  }, [input.supports, input.beams])
 
   const projectX = useCallback(
     (value: number) => (projection ? PADDING + (value - projection.minX) * projection.scale : 0),
@@ -261,27 +270,25 @@ export function StructureRenderer({
           </line>
         ) : null}
 
-        {/* Outrigger-Arme (gestrichelt, hinter Stützen-Circles) */}
+        {/* Outrigger-Traverse nach hinten (gestrichelt, 1 Ausleger je Stütze) */}
         {input.supports.flatMap((support) => {
           const outL = support.outriggerLength ?? 0
           if (outL <= 0) return []
+          const dir = getOutriggerBackwardDir(support, input.beams, input.supports)
           const cx = projectX(support.position.x)
           const cy = projectY(support.position.y)
-          // Pixel-Länge des Outriggers: Differenz zweier projizierter Weltkoordinaten
-          const px = projectX(support.position.x + outL) - cx
-          const tips = [
-            [cx + px, cy], [cx - px, cy],
-            [cx, cy + px], [cx, cy - px],
-          ] as [number, number][]
-          return tips.map(([tx, ty], i) => (
+          const ex = projectX(support.position.x + dir.x * outL)
+          const ey = projectY(support.position.y + dir.y * outL)
+          return [
             <line
-              key={`${support.id}-out-${i}`}
-              x1={cx} y1={cy} x2={tx} y2={ty}
+              key={`${support.id}-out`}
+              x1={cx} y1={cy} x2={ex} y2={ey}
               stroke="#94a3b8"
-              strokeWidth="2"
+              strokeWidth="2.5"
               strokeDasharray="6 4"
-            />
-          ))
+              strokeLinecap="round"
+            />,
+          ]
         })}
 
         {/* Stützen — mit Pointer-Events für Drag */}

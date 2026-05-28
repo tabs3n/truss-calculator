@@ -3,7 +3,7 @@ import { Fragment } from "react"
 import { getFootProperties } from "@calc-engine/materials/database"
 import { Line, Path, Svg, Text } from "@react-pdf/renderer"
 
-import { getOrderedBeamSupports } from "@/lib/beam-helpers"
+import { getOrderedBeamSupports, getOutriggerBackwardDir } from "@/lib/beam-helpers"
 import type { Beam, CalculationResult, Support } from "@/lib/types-bridge"
 
 /**
@@ -67,6 +67,16 @@ export function PlanView({
       { x: support.position.x - foot.x / 2, y: support.position.y - foot.y / 2 },
       { x: support.position.x + foot.x / 2, y: support.position.y + foot.y / 2 },
     )
+    const outL = support.outriggerLength ?? 0
+    if (outL > 0) {
+      const dir = getOutriggerBackwardDir(support, result.input.beams, result.input.supports)
+      const ex = support.position.x + dir.x * outL
+      const ey = support.position.y + dir.y * outL
+      allWorldPoints.push(
+        { x: ex - foot.x / 2, y: ey - foot.y / 2 },
+        { x: ex + foot.x / 2, y: ey + foot.y / 2 },
+      )
+    }
   }
 
   if (allWorldPoints.length === 0) {
@@ -167,6 +177,46 @@ export function PlanView({
             />
           )
         })
+      })}
+
+      {/* Outrigger-Traverse nach hinten (gestrichelt) */}
+      {result.input.supports.flatMap((support) => {
+        const outL = support.outriggerLength ?? 0
+        if (outL <= 0) return []
+        const dir = getOutriggerBackwardDir(support, result.input.beams, result.input.supports)
+        const a = toScreen(support.position)
+        const b = toScreen({
+          x: support.position.x + dir.x * outL,
+          y: support.position.y + dir.y * outL,
+        })
+        const foot = getFootSizeMeters(support)
+        const hx = foot.x / 2
+        const hy = foot.y / 2
+        const ex = support.position.x + dir.x * outL
+        const ey = support.position.y + dir.y * outL
+        const endCorners: WorldPoint[] = [
+          { x: ex - hx, y: ey - hy },
+          { x: ex + hx, y: ey - hy },
+          { x: ex + hx, y: ey + hy },
+          { x: ex - hx, y: ey + hy },
+        ]
+        return [
+          <Line
+            key={`${support.id}-out`}
+            x1={a.x} y1={a.y}
+            x2={b.x} y2={b.y}
+            stroke="#94a3b8"
+            strokeWidth={1.4}
+            strokeDasharray="5 3"
+          />,
+          <Path
+            key={`${support.id}-out-foot`}
+            d={createClosedPath(endCorners.map(toScreen))}
+            fill="#e2e8f0"
+            stroke="#94a3b8"
+            strokeWidth={0.8}
+          />,
+        ]
       })}
 
       {/* Kippachse des maßgebenden Lastfalls (rot gestrichelt) */}
