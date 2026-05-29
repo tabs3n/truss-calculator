@@ -5,6 +5,7 @@ import { getFrictionCoefficient } from "@truss-calculator/calc-engine"
 import { WindCompass } from "@/components/input/WindCompass"
 import { Tooltip } from "@/components/ui/Tooltip"
 import {
+  BALLAST_TYPE_OPTIONS,
   FRICTION_PRESET_DETAILS,
   FRICTION_PRESET_OPTIONS,
   getHorizontalLoadStandard,
@@ -14,7 +15,7 @@ import {
   WIND_ZONE_OPTIONS,
 } from "@/lib/constants"
 import { TOOLTIP_TEXTS } from "@/lib/tooltip-texts"
-import type { FrictionPreset, SnowConfig, SnowExposure, SnowZone, SoilClass, StructureInput, TerrainCategory, WindZone } from "@/lib/types-bridge"
+import type { BallastType, FrictionPreset, SnowConfig, SnowExposure, SnowZone, SoilClass, StructureInput, TerrainCategory, WindZone } from "@/lib/types-bridge"
 import { cn } from "@/lib/utils"
 import { getWindZoneByPlz } from "@/lib/windzones-by-plz"
 
@@ -235,6 +236,14 @@ export function ProjectForm({
 
   const setDefaultCouplerWll = (defaultCouplerWllKg: number) => {
     onChange({ ...input, defaultCouplerWllKg })
+  }
+
+  const setBallastType = (ballastType: BallastType) => {
+    onChange({ ...input, ballastType })
+  }
+
+  const setCustomBallastUnit = (customBallastUnitKg: number) => {
+    onChange({ ...input, ballastType: "CUSTOM", customBallastUnitKg })
   }
 
   const textWarnings = {
@@ -647,6 +656,64 @@ export function ProjectForm({
             />
             <InlineHint text="Gilt für alle Hängelasten ohne eigenen WLL-Wert (Default 500 kg)." />
           </label>
+        </div>
+
+        {/* ── Ballastart ────────────────────────────────────────── */}
+        <div className="rounded-[1.5rem] border border-border/80 bg-background/60 p-4 md:col-span-2">
+          <p className="flex items-center gap-2 text-sm font-medium">
+            Ballastart
+            <Tooltip text="Bestimmt, in wie viele Einheiten der erforderliche Ballast im Ergebnis und Report umgerechnet wird.">(?)</Tooltip>
+          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Für die Umrechnung des erforderlichen Ballasts in Stückzahl.
+          </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            {BALLAST_TYPE_OPTIONS.map((option) => {
+              const isSelected = (input.ballastType ?? "IBC_WATER") === option.value
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setBallastType(option.value)}
+                  className={cn(
+                    "rounded-2xl border px-4 py-3 text-left transition-colors",
+                    isSelected
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-card hover:bg-muted",
+                  )}
+                >
+                  <span className="block text-sm font-semibold">{option.label}</span>
+                  <span className="mt-1 block text-xs opacity-80">à {option.unitKg.toLocaleString("de-DE")} kg</span>
+                </button>
+              )
+            })}
+            <button
+              type="button"
+              onClick={() => setCustomBallastUnit(input.customBallastUnitKg && input.customBallastUnitKg > 0 ? input.customBallastUnitKg : 100)}
+              className={cn(
+                "rounded-2xl border px-4 py-3 text-left transition-colors",
+                input.ballastType === "CUSTOM"
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-card hover:bg-muted",
+              )}
+            >
+              <span className="block text-sm font-semibold">Benutzerdefiniert</span>
+              <span className="mt-1 block text-xs opacity-80">Eigenes Stückgewicht</span>
+            </button>
+          </div>
+          {input.ballastType === "CUSTOM" ? (
+            <label className="mt-4 block text-sm font-medium">
+              Stückgewicht (kg)
+              <input
+                className={fieldClassName}
+                type="number"
+                min="1"
+                step="5"
+                value={input.customBallastUnitKg ?? ""}
+                onChange={(event) => setCustomBallastUnit(Number(event.target.value))}
+              />
+            </label>
+          ) : null}
         </div>
 
         {/* ── Windlast-Optionen ─────────────────────────────────── */}

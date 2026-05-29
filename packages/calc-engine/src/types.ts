@@ -57,6 +57,13 @@ export type SoilClass =
   | 'SOFT_GROUND'  // weicher Boden / Mutterboden
   | 'CUSTOM'
 
+/** Ballastmedium für die Stückzahl-Umrechnung des erforderlichen Ballasts */
+export type BallastType =
+  | 'IBC_WATER'           // IBC-Wassertank, 1000 kg (1000 l)
+  | 'CONCRETE_BLOCK_1250' // Betongewicht mit Trussaufnahme, 1250 kg
+  | 'FENCE_FOOT_PVC'      // Bauzaunfuß PVC, 25 kg
+  | 'CUSTOM'
+
 export type SnowZone = '1' | '1a' | '2' | '2a' | '3'
 
 export type SnowExposure = 'WINDIG' | 'NORMAL' | 'GESCHUETZT'
@@ -269,6 +276,14 @@ export interface StructureInput {
    * Gilt für alle Hängelasten ohne eigenen couplerWllKg-Wert. Default: 500 kg.
    */
   defaultCouplerWllKg?: number
+
+  /**
+   * Verwendetes Ballastmedium für die Stückzahl-Umrechnung im Ergebnis/Report.
+   * Rein darstellend – beeinflusst die Berechnung nicht. Default: IBC_WATER.
+   */
+  ballastType?: BallastType
+  /** Stückgewicht des Ballastmediums in kg, nur bei ballastType === 'CUSTOM' */
+  customBallastUnitKg?: number
 
   /**
    * DGUV-Dynamikzuschlag (×1.20) auf Windlasten anwenden.

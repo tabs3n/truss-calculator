@@ -1,5 +1,6 @@
 // Public type bridge for the shared calc-engine package.
 export type {
+  BallastType,
   Beam,
   BeamResult,
   BeamSample,

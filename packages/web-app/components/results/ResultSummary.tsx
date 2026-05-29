@@ -1,4 +1,4 @@
-import { getHorizontalLoadStandard, getWindDirectionDisplay } from "@/lib/constants"
+import { formatBallastUnits, getHorizontalLoadStandard, getWindDirectionDisplay } from "@/lib/constants"
 import type { CalculationResult } from "@/lib/types-bridge"
 
 export function ResultSummary({ result }: { result: CalculationResult | null }) {
@@ -55,6 +55,11 @@ export function ResultSummary({ result }: { result: CalculationResult | null }) 
             <p className="mt-2 text-3xl font-semibold">
               {minimumKg.toFixed(0)} kg
             </p>
+            {minimumKg > 0 ? (
+              <p className="mt-1 text-sm font-medium text-foreground">
+                ≈ {formatBallastUnits(minimumKg, result.input.ballastType, result.input.customBallastUnitKg)}
+              </p>
+            ) : null}
             <p className="mt-1 text-xs text-muted-foreground">
               Schwelle für Standsicherheit (loser Ballast, optimal platziert)
             </p>
@@ -75,6 +80,11 @@ export function ResultSummary({ result }: { result: CalculationResult | null }) 
             <p className="mt-2 text-3xl font-semibold">
               {result.requiredBallastTotalKg.toFixed(0)} kg
             </p>
+            {result.requiredBallastTotalKg > 0 ? (
+              <p className="mt-1 text-sm font-medium text-foreground">
+                ≈ {formatBallastUnits(result.requiredBallastTotalKg, result.input.ballastType, result.input.customBallastUnitKg)}
+              </p>
+            ) : null}
             <p className="mt-1 text-xs text-muted-foreground">
               Zusätzlich zum bereits eingetragenen Ballast
             </p>

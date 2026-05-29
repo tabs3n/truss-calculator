@@ -1,4 +1,5 @@
-﻿import type { CalculationResult } from "@/lib/types-bridge"
+﻿import { ballastUnitsNeeded, getBallastShortLabel, getBallastUnitKg } from "@/lib/constants"
+import type { CalculationResult } from "@/lib/types-bridge"
 
 export function BallastTable({ result }: { result: CalculationResult | null }) {
   if (!result) {
@@ -9,22 +10,26 @@ export function BallastTable({ result }: { result: CalculationResult | null }) {
     )
   }
 
+  const unitKg = getBallastUnitKg(result.input.ballastType, result.input.customBallastUnitKg)
+  const unitLabel = getBallastShortLabel(result.input.ballastType, result.input.customBallastUnitKg)
+
   return (
     <section className="rounded-[1.5rem] border border-border/80 bg-card/90 p-5 shadow-sm">
       <div className="mb-4">
         <h2 className="text-xl font-semibold">Ballast je Stütze</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Zeilen mit Zusatzbedarf sind gelb markiert.
+          Stückzahl in {unitLabel} (à {unitKg.toLocaleString("de-DE")} kg). Zeilen mit Zusatzbedarf sind gelb markiert.
         </p>
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[620px] text-sm">
+        <table className="w-full min-w-[680px] text-sm">
           <thead className="text-left text-muted-foreground">
             <tr className="border-b border-border">
               <th className="pb-3 font-medium">Stütze</th>
               <th className="pb-3 font-medium">Vorhanden</th>
               <th className="pb-3 font-medium">Zusatzbedarf</th>
+              <th className="pb-3 font-medium">Stück {unitLabel}</th>
               <th className="pb-3 font-medium">Nach Ergänzung</th>
             </tr>
           </thead>
@@ -40,6 +45,11 @@ export function BallastTable({ result }: { result: CalculationResult | null }) {
                 <td className="py-3">{entry.existingBallastKg.toFixed(0)} kg</td>
                 <td className="py-3 font-semibold">
                   {entry.additionalBallastNeededKg.toFixed(0)} kg
+                </td>
+                <td className="py-3 font-semibold">
+                  {entry.additionalBallastNeededKg > 0
+                    ? `${ballastUnitsNeeded(entry.additionalBallastNeededKg, unitKg)} ×`
+                    : "–"}
                 </td>
                 <td className="py-3">
                   {(entry.existingBallastKg + entry.additionalBallastNeededKg).toFixed(0)} kg

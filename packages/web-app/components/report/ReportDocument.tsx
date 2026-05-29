@@ -25,7 +25,11 @@ import { PlanView } from "@/components/report/PlanView"
 import { VariantsComparison } from "@/components/report/VariantsComparison"
 import type { CalculationResult, ReportData, Support, WindZone } from "@/lib/types-bridge"
 import {
+  ballastUnitsNeeded,
   FOOT_LABELS,
+  formatBallastUnits,
+  getBallastShortLabel,
+  getBallastUnitKg,
   getHorizontalLoadStandard,
   getWindDirectionDisplay,
   TERRAIN_LABELS,
@@ -478,8 +482,16 @@ export function ReportDocument({ data }: { data: ReportData }) {
             <View style={[styles.card, styles.cardGap]}>
               <Text style={styles.muted}>Mindest-Ballast gesamt (Schwelle)</Text>
               <Text>{formatNumber(result.minimumRequiredBallastTotalKg, 0)} kg</Text>
+              {result.minimumRequiredBallastTotalKg > 0 ? (
+                <Text style={{ marginTop: 2 }}>
+                  ≈ {formatBallastUnits(result.minimumRequiredBallastTotalKg, result.input.ballastType, result.input.customBallastUnitKg)}
+                </Text>
+              ) : null}
               <Text style={[styles.muted, { marginTop: 4 }]}>
                 Zusatzbedarf: {formatNumber(result.requiredBallastTotalKg, 0)} kg
+                {result.requiredBallastTotalKg > 0
+                  ? ` (≈ ${formatBallastUnits(result.requiredBallastTotalKg, result.input.ballastType, result.input.customBallastUnitKg)})`
+                  : ""}
               </Text>
             </View>
           </View>
@@ -898,14 +910,21 @@ export function ReportDocument({ data }: { data: ReportData }) {
         <Text style={styles.h2}>Ballast und Normen</Text>
 
         <View style={styles.section}>
+          <Text style={[styles.muted, { marginBottom: 6, fontSize: 9 }]}>
+            Ballastart: {getBallastShortLabel(result.input.ballastType, result.input.customBallastUnitKg)} (à {getBallastUnitKg(result.input.ballastType, result.input.customBallastUnitKg).toLocaleString("de-DE")} kg)
+          </Text>
           <Table
-            headers={["Stütze", "Vorhanden", "Zusatzbedarf", "Nach Ergänzung"]}
-            rows={result.ballastPerSupport.map((entry) => [
-              entry.supportLabel,
-              `${formatNumber(entry.existingBallastKg, 0)} kg`,
-              `${formatNumber(entry.additionalBallastNeededKg, 0)} kg`,
-              `${formatNumber(entry.existingBallastKg + entry.additionalBallastNeededKg, 0)} kg`,
-            ])}
+            headers={["Stütze", "Vorhanden", "Zusatzbedarf", "Stück", "Nach Ergänzung"]}
+            rows={result.ballastPerSupport.map((entry) => {
+              const unitKg = getBallastUnitKg(result.input.ballastType, result.input.customBallastUnitKg)
+              return [
+                entry.supportLabel,
+                `${formatNumber(entry.existingBallastKg, 0)} kg`,
+                `${formatNumber(entry.additionalBallastNeededKg, 0)} kg`,
+                entry.additionalBallastNeededKg > 0 ? `${ballastUnitsNeeded(entry.additionalBallastNeededKg, unitKg)} ×` : "–",
+                `${formatNumber(entry.existingBallastKg + entry.additionalBallastNeededKg, 0)} kg`,
+              ]
+            })}
           />
         </View>
 

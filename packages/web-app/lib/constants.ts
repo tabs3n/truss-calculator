@@ -1,4 +1,4 @@
-﻿import type { FootType, FrictionPreset, SoilClass, TerrainCategory, TrussType, WindSurface } from "./types-bridge"
+﻿import type { BallastType, FootType, FrictionPreset, SoilClass, TerrainCategory, TrussType, WindSurface } from "./types-bridge"
 
 export const COMPANY = {
   name: "Cologne Hunters Licht & Ton Service GmbH",
@@ -64,6 +64,55 @@ export const SOIL_OPTIONS: { value: Exclude<SoilClass, "CUSTOM">; label: string;
 export const SOIL_LABELS: Record<Exclude<SoilClass, "CUSTOM">, string> = Object.fromEntries(
   SOIL_OPTIONS.map((o) => [o.value, o.label]),
 ) as Record<Exclude<SoilClass, "CUSTOM">, string>
+
+/** Ballastmedien mit Stückgewicht für die Umrechnung kg → Stückzahl. */
+export const BALLAST_TYPE_OPTIONS: {
+  value: Exclude<BallastType, "CUSTOM">
+  label: string
+  shortLabel: string
+  unitKg: number
+}[] = [
+  { value: "IBC_WATER", label: "IBC-Wassertank (1000 l)", shortLabel: "IBC", unitKg: 1000 },
+  { value: "CONCRETE_BLOCK_1250", label: "Betongewicht mit Trussaufnahme", shortLabel: "Betongewicht", unitKg: 1250 },
+  { value: "FENCE_FOOT_PVC", label: "Bauzaunfuß PVC", shortLabel: "Bauzaunfuß", unitKg: 25 },
+]
+
+export const DEFAULT_BALLAST_TYPE: BallastType = "IBC_WATER"
+
+/** Stückgewicht [kg] des gewählten Ballastmediums. */
+export function getBallastUnitKg(ballastType: BallastType | undefined, customUnitKg?: number): number {
+  if (ballastType === "CUSTOM") {
+    return customUnitKg && customUnitKg > 0 ? customUnitKg : 1
+  }
+  const option = BALLAST_TYPE_OPTIONS.find((o) => o.value === (ballastType ?? DEFAULT_BALLAST_TYPE))
+  return option?.unitKg ?? 1000
+}
+
+/** Kurzbezeichnung des Ballastmediums. */
+export function getBallastShortLabel(ballastType: BallastType | undefined, customUnitKg?: number): string {
+  if (ballastType === "CUSTOM") return `${customUnitKg ?? 0} kg`
+  const option = BALLAST_TYPE_OPTIONS.find((o) => o.value === (ballastType ?? DEFAULT_BALLAST_TYPE))
+  return option?.shortLabel ?? "Einheit"
+}
+
+/** Anzahl benötigter Ballast-Einheiten (aufgerundet) für ein Gewicht. */
+export function ballastUnitsNeeded(weightKg: number, unitKg: number): number {
+  if (unitKg <= 0 || weightKg <= 0) return 0
+  return Math.ceil(weightKg / unitKg)
+}
+
+/** Formatiert eine Stückzahl-Angabe, z.B. "≈ 2 × Betongewicht (à 1250 kg)". */
+export function formatBallastUnits(
+  weightKg: number,
+  ballastType: BallastType | undefined,
+  customUnitKg?: number,
+): string {
+  const unitKg = getBallastUnitKg(ballastType, customUnitKg)
+  const count = ballastUnitsNeeded(weightKg, unitKg)
+  if (count <= 0) return "–"
+  const short = getBallastShortLabel(ballastType, customUnitKg)
+  return `${count} × ${short} (à ${unitKg.toLocaleString("de-DE")} kg)`
+}
 
 export const WIND_SURFACE_TYPE_LABELS: Record<WindSurface["surfaceType"], string> = {
   LED_WALL: "LED-Wand",
