@@ -120,9 +120,20 @@ export function ResultSummary({ result }: { result: CalculationResult | null }) 
           </div>
         </div>
 
-        {result.errors.length > 0 ? (
+        {result.proofFailures.length > 0 ? (
           <div className="rounded-2xl border border-destructive/30 bg-background/75 p-4">
-            <h3 className="text-sm font-semibold text-destructive">Fehler</h3>
+            <h3 className="text-sm font-semibold text-destructive">Nicht erfüllte Nachweise</h3>
+            <ul className="mt-2 space-y-2 text-sm text-destructive">
+              {result.proofFailures.map((failure) => (
+                <li key={failure}>{failure}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        {result.errors.length > 0 ? (
+          <div className="rounded-2xl border border-destructive/40 bg-destructive/5 p-4">
+            <h3 className="text-sm font-semibold text-destructive">Berechnungsfehler</h3>
             <ul className="mt-2 space-y-2 text-sm text-destructive">
               {result.errors.map((error) => (
                 <li key={error}>{error}</li>

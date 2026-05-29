@@ -455,8 +455,19 @@ export interface CalculationResult {
   /** Warnungen (nicht kritisch, aber hinweispflichtig) */
   warnings: string[]
 
-  /** Fehler (führen zu isOk = false) */
+  /**
+   * Echte Berechnungsfehler: Ausnahmen, fehlende Stützen, ungültige Eingaben,
+   * fehlgeschlagene Teilberechnungen. NICHT für „Nachweis nicht erfüllt".
+   * Ein nicht-leeres errors-Array bedeutet, dass die Berechnung selbst Probleme hatte.
+   */
   errors: string[]
+
+  /**
+   * Nicht erfüllte Nachweise (η > 1, Ballast erforderlich, Abheben, Knicken …).
+   * Das sind KEINE Berechnungsfehler – die Rechnung lief korrekt durch, das
+   * Tragwerk erfüllt aber einen Nachweis nicht. Führt zu overallOk = false.
+   */
+  proofFailures: string[]
 }
 
 // ─────────────────────────────────────────────

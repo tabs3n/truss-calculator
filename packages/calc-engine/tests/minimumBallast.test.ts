@@ -67,6 +67,31 @@ describe('minimumRequiredBallastTotalKg', () => {
   })
 })
 
+describe('errors vs. proofFailures Trennung', () => {
+  it('nicht standsicher (zu wenig Ballast) → proofFailures gefüllt, errors leer', () => {
+    const r = calculate(makeWindyTwoSupport(0))
+    expect(r.overallOk).toBe(false)
+    // Die Rechnung lief fehlerfrei durch:
+    expect(r.errors).toHaveLength(0)
+    // …aber Nachweise sind nicht erfüllt:
+    expect(r.proofFailures.length).toBeGreaterThan(0)
+    expect(r.proofFailures.some(m => /Kippsicherheit|Gleitnachweis/.test(m))).toBe(true)
+  })
+
+  it('echte Eingabefehler landen in errors, nicht in proofFailures', () => {
+    const broken: StructureInput = { ...makeBaseInput(), supports: [], beams: [] }
+    const r = calculate(broken)
+    expect(r.errors).toContain('Mindestens 2 Stützen erforderlich')
+  })
+
+  it('standsicher → beide Listen leer', () => {
+    const r = calculate(makeWindyTwoSupport(9000))
+    expect(r.errors).toHaveLength(0)
+    expect(r.proofFailures).toHaveLength(0)
+    expect(r.overallOk).toBe(true)
+  })
+})
+
 describe('Betonblock-Ballast wird nicht doppelt gezählt', () => {
   function concreteSetup(): StructureInput {
     return {

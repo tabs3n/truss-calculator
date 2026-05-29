@@ -184,7 +184,7 @@ export function useCalculation() {
           overallOk: res.overallOk,
           requiredBallastTotalKg: res.requiredBallastTotalKg,
           governingAngleDeg: res.tipping.governingAngleDeg,
-          errorsCount: res.errors.length,
+          errorsCount: res.errors.length + res.proofFailures.length,
         },
       }
       setHistory((prev) => {

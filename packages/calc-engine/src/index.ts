@@ -262,6 +262,7 @@ function failedCalculationResult(
   input: StructureInput,
   warnings: string[],
   errors: string[],
+  proofFailures: string[] = [],
 ): CalculationResult {
   let frictionCoefficientUsed = 0
   try { frictionCoefficientUsed = getFrictionCoefficient(input.frictionConfig) } catch {}
@@ -290,6 +291,7 @@ function failedCalculationResult(
     calculatedAt: new Date().toISOString(),
     warnings,
     errors,
+    proofFailures,
     designFactors: {
       gammaG: GAMMA_G,
       gammaGinf: GAMMA_G_INF,
@@ -312,6 +314,9 @@ function failedCalculationResult(
 export function calculate(input: StructureInput): CalculationResult {
   const warnings: string[] = []
   const errors: string[] = []
+  // Nicht erfüllte Nachweise (η>1, Ballast, Abheben, Knicken) – getrennt von
+  // echten Berechnungsfehlern, damit Aufrufer beides unterscheiden können.
+  const proofFailures: string[] = []
 
   if (input.supports.length < 2) {
     errors.push('Mindestens 2 Stützen erforderlich')
@@ -654,7 +659,7 @@ export function calculate(input: StructureInput): CalculationResult {
         ...(aggregateUtilization.failureReason ? { failureReason: aggregateUtilization.failureReason } : {}),
       })
       if (!aggregateUtilization.isOk) {
-        errors.push(`Traverse ${beam.id}: ${aggregateUtilization.failureReason}`)
+        proofFailures.push(`Traverse ${beam.id}: ${aggregateUtilization.failureReason}`)
       }
     } catch (error) {
       errors.push(`Traverse ${beam.id}: ${(error as Error).message}`)
@@ -682,7 +687,7 @@ export function calculate(input: StructureInput): CalculationResult {
       isOk = buckling.isOk
       if (!buckling.isOk) {
         failureReason = `Knicken: eta=${bucklingUtilization.toFixed(2)} > 1.0`
-        errors.push(`Stütze ${support.id}: ${failureReason}`)
+        proofFailures.push(`Stütze ${support.id}: ${failureReason}`)
       }
     } catch (error) {
       failureReason = (error as Error).message
@@ -721,7 +726,7 @@ export function calculate(input: StructureInput): CalculationResult {
   )
 
   if (!tipping.governing.isOk) {
-    errors.push(
+    proofFailures.push(
       `Kippsicherheit ${tipping.governingAngleDeg}°: eta=${tipping.governing.utilization.toFixed(2)}, Zusatzballast ${tipping.governing.requiredBallastTotalKg.toFixed(0)} kg`,
     )
   }
@@ -740,7 +745,7 @@ export function calculate(input: StructureInput): CalculationResult {
       input.frictionConfig,
     )
     if (!sliding.isOk) {
-      errors.push(
+      proofFailures.push(
         `Gleitnachweis: Zusatzballast ${Math.max(0, sliding.requiredBallastKg).toFixed(0)} kg erforderlich`,
       )
     }
@@ -830,6 +835,7 @@ export function calculate(input: StructureInput): CalculationResult {
 
   const overallOk =
     errors.length === 0 &&
+    proofFailures.length === 0 &&
     beamResults.every(r => r.isOk) &&
     supportResults.every(r => r.isOk) &&
     tipping.governing.isOk &&
@@ -851,6 +857,7 @@ export function calculate(input: StructureInput): CalculationResult {
     calculatedAt: new Date().toISOString(),
     warnings,
     errors,
+    proofFailures,
     designFactors: {
       gammaG: GAMMA_G,
       gammaGinf: GAMMA_G_INF,
