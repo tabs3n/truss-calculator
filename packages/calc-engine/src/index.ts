@@ -96,28 +96,45 @@ function getBeamSupportIds(beam: Beam): string[] {
 }
 
 /**
- * Sortiert Zwischenstützen einer Multi-Support-Traverse defensiv nach ihrer
- * Projektion auf den Start→Ende-Vektor, sodass die Polylinie monoton ist.
- * Schützt vor inkonsistenten Eingaben (z.B. wenn Zwischenstützen-Reihenfolge
- * nicht der physikalischen Position entspricht).
+ * Sortiert alle Stützen einer Multi-Support-Traverse defensiv entlang ihrer
+ * Haupt-Achse, sodass die Polylinie monoton ist.
+ *
+ * Robust: Die beiden tatsächlichen geometrischen Endpunkte (das Stützenpaar
+ * mit dem größten Abstand) definieren die Achse. Anschließend werden ALLE
+ * Stützen nach ihrer Projektion auf diese Achse sortiert. Das schützt auch
+ * dann vor Zickzack-Geometrie, wenn die übergebene Reihenfolge weder die
+ * Endpunkte korrekt an den Rand stellt noch die Zwischenstützen ordnet.
  */
 function orderSupportsAlongAxis(supports: Support[]): Support[] {
   if (supports.length < 3) return supports
-  const first = supports[0]!
-  const last = supports[supports.length - 1]!
-  const vx = last.position.x - first.position.x
-  const vy = last.position.y - first.position.y
-  const len2 = vx * vx + vy * vy
-  if (len2 === 0) return supports
 
-  const intermediates = supports.slice(1, -1).map(s => {
-    const dx = s.position.x - first.position.x
-    const dy = s.position.y - first.position.y
-    const t = (dx * vx + dy * vy) / len2
-    return { support: s, t }
+  // Endpunkte = Stützenpaar mit größtem Abstand (O(n²), n klein)
+  let endA = supports[0]!
+  let endB = supports[1]!
+  let maxDist2 = -1
+  for (let i = 0; i < supports.length; i++) {
+    for (let j = i + 1; j < supports.length; j++) {
+      const a = supports[i]!
+      const b = supports[j]!
+      const d2 = (b.position.x - a.position.x) ** 2 + (b.position.y - a.position.y) ** 2
+      if (d2 > maxDist2) {
+        maxDist2 = d2
+        endA = a
+        endB = b
+      }
+    }
+  }
+  if (maxDist2 <= 0) return supports
+
+  const vx = endB.position.x - endA.position.x
+  const vy = endB.position.y - endA.position.y
+  const len2 = vx * vx + vy * vy
+
+  return [...supports].sort((s1, s2) => {
+    const t1 = ((s1.position.x - endA.position.x) * vx + (s1.position.y - endA.position.y) * vy) / len2
+    const t2 = ((s2.position.x - endA.position.x) * vx + (s2.position.y - endA.position.y) * vy) / len2
+    return t1 - t2
   })
-  intermediates.sort((a, b) => a.t - b.t)
-  return [first, ...intermediates.map(e => e.support), last]
 }
 
 function resolveBeamGeometry(beam: Beam, supports: Support[]): BeamGeometry | null {
