@@ -24,6 +24,7 @@ export type {
   TippingDirectionResult,
   TippingResult,
   TrussType,
+  ValidationIssue,
   Variant,
   VariantResult,
   VWExportData,

@@ -410,41 +410,6 @@ function getTippingProof(
   }
 }
 
-function getSlidingProof(
-  result: CalculationResult,
-  horizontalLoadProof: ReturnType<typeof getHorizontalLoadProof>,
-  frictionCoefficient: number,
-) {
-  let governingAngleDeg = result.tipping.governingAngleDeg
-  let resultingHorizontalForceKN = horizontalLoadProof.forceKN
-
-  if (result.input.environment === "OUTDOOR" && result.tipping.directions.length > 0) {
-    const maxDirection = result.tipping.directions.reduce((governing, direction) => {
-      const forceKN = getOutdoorDirectionalWindForceKN(result, direction.angleDeg)
-      const governingForceKN = getOutdoorDirectionalWindForceKN(result, governing.angleDeg)
-      return forceKN > governingForceKN ? direction : governing
-    })
-
-    governingAngleDeg = maxDirection.angleDeg
-    resultingHorizontalForceKN = getOutdoorDirectionalWindForceKN(result, governingAngleDeg)
-  }
-
-  const radians = (governingAngleDeg * Math.PI) / 180
-  const forceXKN = resultingHorizontalForceKN * Math.sin(radians)
-  const forceYKN = resultingHorizontalForceKN * Math.cos(radians)
-  const totalVerticalReactionKN = getTotalVerticalReactionKN(result)
-  const requiredVerticalDeficitKN = resultingHorizontalForceKN / frictionCoefficient - totalVerticalReactionKN
-
-  return {
-    governingAngleDeg,
-    forceXKN,
-    forceYKN,
-    resultingHorizontalForceKN,
-    totalVerticalReactionKN,
-    requiredVerticalDeficitKN,
-  }
-}
-
 function Table({
   headers,
   rows,
@@ -483,7 +448,6 @@ export function ReportDocument({ data }: { data: ReportData }) {
   const horizontalLoadStandard = getHorizontalLoadStandard(result.input.environment)
   const horizontalLoadProof = getHorizontalLoadProof(result)
   const tippingProof = getTippingProof(result, horizontalLoadProof)
-  const slidingProof = getSlidingProof(result, horizontalLoadProof, frictionCoefficient)
   const overallStatus = getOverallStatus(result)
   const variantResults = result.overallOk ? [] : calculateVariants(result.input)
 

@@ -28,7 +28,6 @@ export function ElevationRenderer({
   }
 
   const orderedSupports = [...input.supports].sort((a, b) => a.position.x - b.position.x || a.position.y - b.position.y)
-  const supportById = new Map(input.supports.map((support) => [support.id, support]))
   const minX = orderedSupports[0]?.position.x ?? 0
   const maxX = orderedSupports[orderedSupports.length - 1]?.position.x ?? minX + 1
   const width = Math.max(maxX - minX, 1)

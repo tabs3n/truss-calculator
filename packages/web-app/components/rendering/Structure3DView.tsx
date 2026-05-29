@@ -92,6 +92,7 @@ export function Structure3DView({
   const [view,      setView]      = useState<ViewAngles>(DEFAULT_VIEW)
   const [zoom,      setZoom]      = useState(1.0)
   const [showTruss, setShowTruss] = useState(true)   // true = Traverse, false = Linie
+  const [isDragging, setIsDragging] = useState(false)
 
   // Scroll-Zoom (non-passive, damit preventDefault funktioniert)
   useEffect(() => {
@@ -150,6 +151,7 @@ export function Structure3DView({
         startYaw:  view.yaw,
         startPitch: view.pitch,
       }
+      setIsDragging(true)
     },
     [view],
   )
@@ -170,6 +172,7 @@ export function Structure3DView({
     if (!drag || event.pointerId !== drag.pointerId) return
     ;(event.currentTarget as Element).releasePointerCapture?.(event.pointerId)
     dragRef.current = null
+    setIsDragging(false)
   }, [])
 
   if (!bbox || !project || input.supports.length === 0) {
@@ -423,7 +426,7 @@ export function Structure3DView({
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
-        style={{ cursor: dragRef.current ? "grabbing" : "grab" }}
+        style={{ cursor: isDragging ? "grabbing" : "grab" }}
       >
         <defs>
           <pattern id="grid3d" width="20" height="20" patternUnits="userSpaceOnUse">

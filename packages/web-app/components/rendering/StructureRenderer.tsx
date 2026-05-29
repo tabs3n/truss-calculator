@@ -44,6 +44,7 @@ export function StructureRenderer({
   const svgRef = useRef<SVGSVGElement | null>(null)
   const dragRef = useRef<DragState | null>(null)
   const [, forceRender] = useState({})
+  const [draggingId, setDraggingId] = useState<string | null>(null)
   const [hoveredWindAngle, setHoveredWindAngle] = useState<number | null>(null)
 
   // Projektion (basierend auf aktuellem input)
@@ -118,6 +119,7 @@ export function StructureRenderer({
         startWorldX: support.position.x,
         startWorldY: support.position.y,
       }
+      setDraggingId(support.id)
     },
     [onSupportsChange, clientToSvg],
   )
@@ -148,6 +150,7 @@ export function StructureRenderer({
     if (!drag || event.pointerId !== drag.pointerId) return
     ;(event.target as Element).releasePointerCapture?.(event.pointerId)
     dragRef.current = null
+    setDraggingId(null)
   }, [])
 
   if (input.supports.length === 0 || !projection) {
@@ -295,7 +298,7 @@ export function StructureRenderer({
         {input.supports.map((support) => {
           const cx = projectX(support.position.x)
           const cy = projectY(support.position.y)
-          const dragging = dragRef.current?.supportId === support.id
+          const dragging = draggingId === support.id
           // Smarter Textanker: Ränder-Labels nicht clippen
           const nearLeft = cx < 80
           const nearRight = cx > VIEW_WIDTH - 80
@@ -442,7 +445,7 @@ export function StructureRenderer({
 
       {onSupportsChange ? (
         <p className="mt-3 text-xs text-muted-foreground">
-          💡 Stützen ziehen, um Position zu ändern. Wind-Pfeile hover'n zeigt die jeweilige Kippachse.
+          💡 Stützen ziehen, um Position zu ändern. Über Wind-Pfeile fahren zeigt die jeweilige Kippachse.
         </p>
       ) : null}
     </section>

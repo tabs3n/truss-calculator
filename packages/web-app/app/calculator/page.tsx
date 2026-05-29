@@ -10,6 +10,7 @@ import { ConfigImportExport } from "@/components/input/ConfigImportExport"
 import { SupportList } from "@/components/input/SupportList"
 import { TemplateGallery } from "@/components/input/TemplateGallery"
 import { TrussGateWizard } from "@/components/input/TrussGateWizard"
+import { ValidationNotices } from "@/components/input/ValidationNotices"
 import { ReportButton } from "@/components/report/ReportButton"
 import { ElevationRenderer } from "@/components/rendering/ElevationRenderer"
 import { Structure3DView } from "@/components/rendering/Structure3DView"
@@ -177,6 +178,9 @@ export default function CalculatorPage() {
             </div>
             <SupportList supports={input.supports} onChange={updateSupports} />
             <BeamList beams={input.beams} supports={input.supports} onChange={updateBeams} />
+            <div data-print="hide">
+              <ValidationNotices input={input} />
+            </div>
             <div className="grid gap-6 xl:grid-cols-2">
               <StructureRenderer input={input} result={result} onSupportsChange={updateSupports} />
               <ElevationRenderer input={input} result={result} />

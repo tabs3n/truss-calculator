@@ -1,7 +1,7 @@
 ﻿"use client"
 
 import { useState } from "react"
-import { Pencil, Plus, Trash2 } from "lucide-react"
+import { Copy, Pencil, Plus, Trash2 } from "lucide-react"
 
 import { BeamForm } from "@/components/input/BeamForm"
 import { Button } from "@/components/ui/button"
@@ -68,6 +68,23 @@ export function BeamList({
 
   const openEdit = (beam: Beam) => {
     setDraft(beam)
+    setOpen(true)
+  }
+
+  const openDuplicate = (beam: Beam) => {
+    // Neue IDs für die Traverse und alle verschachtelten Elemente, damit
+    // keine ID-Kollisionen mit dem Original entstehen.
+    const copy: Beam = {
+      ...beam,
+      id: crypto.randomUUID(),
+      label: `${beam.label} (Kopie)`,
+      loads: beam.loads.map((load) => ({ ...load, id: crypto.randomUUID() })),
+      windSurfaces: beam.windSurfaces.map((surface) => ({ ...surface, id: crypto.randomUUID() })),
+      ...(beam.distributedLoads
+        ? { distributedLoads: beam.distributedLoads.map((dl) => ({ ...dl, id: crypto.randomUUID() })) }
+        : {}),
+    }
+    setDraft(copy)
     setOpen(true)
   }
 
@@ -142,13 +159,17 @@ export function BeamList({
                 </td>
                 <td className="py-3">
                   <div className="flex justify-end gap-2">
-                    <Button type="button" variant="outline" size="icon" onClick={() => openEdit(beam)}>
+                    <Button type="button" variant="outline" size="icon" title="Bearbeiten" onClick={() => openEdit(beam)}>
                       <Pencil />
+                    </Button>
+                    <Button type="button" variant="outline" size="icon" title="Duplizieren" onClick={() => openDuplicate(beam)}>
+                      <Copy />
                     </Button>
                     <Button
                       type="button"
                       variant="outline"
                       size="icon"
+                      title="Löschen"
                       onClick={() => onChange(beams.filter((item) => item.id !== beam.id))}
                     >
                       <Trash2 />
@@ -175,13 +196,17 @@ export function BeamList({
                 <p className="mt-1 text-sm text-muted-foreground">{TRUSS_LABELS[beam.trussType]}</p>
               </div>
               <div className="flex gap-2">
-                <Button type="button" variant="outline" size="icon" onClick={() => openEdit(beam)}>
+                <Button type="button" variant="outline" size="icon" title="Bearbeiten" onClick={() => openEdit(beam)}>
                   <Pencil />
+                </Button>
+                <Button type="button" variant="outline" size="icon" title="Duplizieren" onClick={() => openDuplicate(beam)}>
+                  <Copy />
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   size="icon"
+                  title="Löschen"
                   onClick={() => onChange(beams.filter((item) => item.id !== beam.id))}
                 >
                   <Trash2 />

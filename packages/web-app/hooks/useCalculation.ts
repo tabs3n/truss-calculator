@@ -111,7 +111,12 @@ export function useCalculation() {
   const hasMountedRef = useRef(false)
 
   // ─── Mount: Draft + History + Live-Pref laden ───────────────────────────
+  // Bewusst per Effect (nicht via useState-Initializer): localStorage ist nur
+  // clientseitig verfügbar, ein Initializer-Read würde beim SSR einen
+  // Hydration-Mismatch erzeugen (Server kennt den Draft nicht). Die State-Updates
+  // beim Mount sind daher zulässig.
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
     const draft = loadDraft()
     if (draft) {
       setInput(draft)
@@ -119,6 +124,7 @@ export function useCalculation() {
     }
     setHistory(loadHistory())
     setLiveCalculationState(loadLivePreference())
+    /* eslint-enable react-hooks/set-state-in-effect */
     hasMountedRef.current = true
   }, [])
 

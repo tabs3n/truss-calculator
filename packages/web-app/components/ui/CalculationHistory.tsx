@@ -41,7 +41,7 @@ export function CalculationHistory({
           Verlauf
         </h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Manuelle „Berechnen"-Klicks werden hier als Snapshot gespeichert (max. 10).
+          Manuelle &bdquo;Berechnen&ldquo;-Klicks werden hier als Snapshot gespeichert (max. 10).
         </p>
       </section>
     )
