@@ -426,6 +426,18 @@ export interface CalculationResult {
   /** Gesamterforderlicher Zusatzballast (max aus Kippen und Gleiten) in kg */
   requiredBallastTotalKg: number
 
+  /**
+   * Absoluter Mindest-Ballast für Standsicherheit in kg – die Schwelle, ab der
+   * Kipp- UND Gleitnachweis gerade erfüllt sind, berechnet OHNE den bereits
+   * eingetragenen losen Ballast (existingBallast) und unter Annahme optimaler
+   * Platzierung auf den Ballaststützen. Fußsystem-Eigengewicht (z.B. Betonblöcke)
+   * ist als ständige Last berücksichtigt.
+   *
+   * Damit sieht die Fachkraft, wie viel loser Ballast (z.B. Wasser im IBC)
+   * mindestens nötig ist – und ob aktuell zu viel oder zu wenig vorgesehen ist.
+   */
+  minimumRequiredBallastTotalKg: number
+
   /** Aufschlüsselung des Zusatzballasts pro Stütze (für Report-Tabelle) */
   ballastPerSupport: {
     supportId: string

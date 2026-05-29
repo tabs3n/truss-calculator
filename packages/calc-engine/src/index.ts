@@ -285,6 +285,7 @@ function failedCalculationResult(
     },
     overallOk: false,
     requiredBallastTotalKg: 0,
+    minimumRequiredBallastTotalKg: 0,
     ballastPerSupport: [],
     calculatedAt: new Date().toISOString(),
     warnings,
@@ -759,6 +760,45 @@ export function calculate(input: StructureInput): CalculationResult {
   const ballastKippen = tipping.governing.requiredBallastTotalKg
   const ballastGleiten = Math.max(0, sliding.requiredBallastKg)
   const requiredBallastTotalKg = Math.max(ballastKippen, ballastGleiten)
+
+  // ── Absoluter Mindest-Ballast (Schwelle, ohne losen Ballast) ─────────────────
+  // Identische Kipp-/Gleit-Rechnung, aber mit Reaktionen OHNE existingBallast.
+  // Ergebnis = wie viel loser Ballast (Wasser/Gewichte) bei optimaler Platzierung
+  // mindestens nötig ist. Fußsystem-Eigengewicht (Betonblöcke) bleibt enthalten.
+  const reactionsEQU_noLoose = new Map(supportVerticalReactionsEQU)
+  let totalPermanentEQU_noLoose_KN = totalPermanentEQU_KN
+  for (const support of input.supports) {
+    const looseBallastEQU_KN = ((support.existingBallast * G) / 1000) * GAMMA_G_INF
+    reactionsEQU_noLoose.set(
+      support.id,
+      (reactionsEQU_noLoose.get(support.id) ?? 0) - looseBallastEQU_KN,
+    )
+    totalPermanentEQU_noLoose_KN -= looseBallastEQU_KN
+  }
+
+  let minimumRequiredBallastTotalKg = 0
+  try {
+    const tippingMin = calculateTippingAllDirections(
+      input.supports,
+      getDesignHorizontalForceKN,
+      horizontalForceHeightM,
+      reactionsEQU_noLoose,
+      input.windMode ?? 'AUTO',
+      input.manualWindDirections,
+    )
+    const slidingMin = checkSliding(
+      totalDestabilizingHorizontalKN,
+      totalPermanentEQU_noLoose_KN,
+      input.frictionConfig,
+    )
+    minimumRequiredBallastTotalKg = Math.max(
+      tippingMin.governing.requiredBallastTotalKg,
+      Math.max(0, slidingMin.requiredBallastKg),
+    )
+  } catch {
+    // Fällt auf den Zusatzbedarf zurück, falls die Min-Rechnung scheitert.
+    minimumRequiredBallastTotalKg = requiredBallastTotalKg
+  }
   const tippingBallastSupportIds = new Set(
     tipping.governing.ballastSupportIds.length > 0
       ? tipping.governing.ballastSupportIds
@@ -773,11 +813,17 @@ export function calculate(input: StructureInput): CalculationResult {
         : 0
       : requiredBallastTotalKg / input.supports.length
 
+    // Vorhandener stabilisierender Ballast = loser Ballast (existingBallast)
+    // + Fußsystem-Eigengewicht, sofern es als Ballast zählt (z.B. Betonblöcke).
+    const footProps = getFootProperties(support.footType)
+    const footBallastKg = footProps.countsAsBallast ? getFootWeightKg(support) : 0
+    const existingBallastKg = support.existingBallast + footBallastKg
+
     return {
       supportId: support.id,
       supportLabel: support.label,
       requiredBallastKg,
-      existingBallastKg: support.existingBallast,
+      existingBallastKg,
       additionalBallastNeededKg: requiredBallastKg,
     }
   })
@@ -800,6 +846,7 @@ export function calculate(input: StructureInput): CalculationResult {
     sliding,
     overallOk,
     requiredBallastTotalKg,
+    minimumRequiredBallastTotalKg,
     ballastPerSupport,
     calculatedAt: new Date().toISOString(),
     warnings,

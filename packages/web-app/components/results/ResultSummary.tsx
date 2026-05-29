@@ -13,6 +13,13 @@ export function ResultSummary({ result }: { result: CalculationResult | null }) 
   const isIndoor = result.input.environment === "INDOOR"
   const horizontalLoadStandard = getHorizontalLoadStandard(result.input.environment)
 
+  // Loser Ballast, der aktuell eingetragen ist (Wasser/Gewichte – ohne Betonblöcke,
+  // die als Fußsystem zählen). Vergleich mit der Mindest-Schwelle zeigt Reserve/Fehlbetrag.
+  const currentLooseBallastKg = result.input.supports.reduce((sum, s) => sum + (s.existingBallast || 0), 0)
+  const minimumKg = result.minimumRequiredBallastTotalKg
+  const ballastDeltaKg = currentLooseBallastKg - minimumKg
+  const hasReserve = ballastDeltaKg >= 0
+
   return (
     <section
       className={`rounded-[1.5rem] border p-6 shadow-sm ${
@@ -44,18 +51,36 @@ export function ResultSummary({ result }: { result: CalculationResult | null }) 
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-2xl border border-white/50 bg-background/80 p-4">
-            <p className="text-sm text-muted-foreground">Erforderlicher Zusatzballast gesamt</p>
+            <p className="text-sm text-muted-foreground">Mindest-Ballast gesamt</p>
+            <p className="mt-2 text-3xl font-semibold">
+              {minimumKg.toFixed(0)} kg
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Schwelle für Standsicherheit (loser Ballast, optimal platziert)
+            </p>
+            {currentLooseBallastKg > 0 || minimumKg > 0 ? (
+              <p
+                className={`mt-2 text-sm font-medium ${
+                  hasReserve ? "text-emerald-700" : "text-destructive"
+                }`}
+              >
+                {hasReserve
+                  ? `✓ ${currentLooseBallastKg.toFixed(0)} kg vorgesehen – ${ballastDeltaKg.toFixed(0)} kg Reserve`
+                  : `✗ ${currentLooseBallastKg.toFixed(0)} kg vorgesehen – ${Math.abs(ballastDeltaKg).toFixed(0)} kg fehlen`}
+              </p>
+            ) : null}
+          </div>
+          <div className="rounded-2xl border border-white/50 bg-background/80 p-4">
+            <p className="text-sm text-muted-foreground">Erforderlicher Zusatzballast</p>
             <p className="mt-2 text-3xl font-semibold">
               {result.requiredBallastTotalKg.toFixed(0)} kg
             </p>
-          </div>
-          <div className="rounded-2xl border border-white/50 bg-background/80 p-4">
-            <p className="text-sm text-muted-foreground">Massgebender Lastfall</p>
-            <p className="mt-2 text-lg font-semibold">
-              {getWindDirectionDisplay(result.tipping.governingAngleDeg)}
+            <p className="mt-1 text-xs text-muted-foreground">
+              Zusätzlich zum bereits eingetragenen Ballast
             </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Gleitballast: {Math.max(0, result.sliding.requiredBallastKg).toFixed(0)} kg
+            <p className="mt-2 text-sm text-muted-foreground">
+              Maßgebend: {getWindDirectionDisplay(result.tipping.governingAngleDeg)} · Gleitballast{" "}
+              {Math.max(0, result.sliding.requiredBallastKg).toFixed(0)} kg
             </p>
           </div>
         </div>

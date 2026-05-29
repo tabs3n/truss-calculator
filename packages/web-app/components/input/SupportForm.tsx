@@ -60,7 +60,10 @@ function normalizeSupport(support: Support): Support {
       baseplateSize: undefined,
       outriggerLength: undefined,
       numberOfConcreteBlocks,
-      existingBallast: numberOfConcreteBlocks * CONCRETE_BLOCK_WEIGHT_KG,
+      // WICHTIG: Das Betonblock-Gewicht wird im calc-engine über das Fußsystem
+      // (getFootWeightKg, countsAsBallast) gezählt. Es darf NICHT zusätzlich in
+      // existingBallast stehen, sonst wird der Ballast doppelt angesetzt.
+      existingBallast: 0,
     }
   }
 
@@ -129,7 +132,8 @@ export function SupportForm({
           ...current,
           footType,
           numberOfConcreteBlocks: nextBlocks,
-          existingBallast: nextBlocks * CONCRETE_BLOCK_WEIGHT_KG,
+          // Blockgewicht zählt über das Fußsystem (countsAsBallast) – nicht hier.
+          existingBallast: 0,
           baseplateSize: undefined,
           outriggerLength: undefined,
         }
@@ -163,7 +167,8 @@ export function SupportForm({
       ...current,
       footType: "CONCRETE_BLOCK_1250",
       numberOfConcreteBlocks: numberOfBlocks,
-      existingBallast: numberOfBlocks * CONCRETE_BLOCK_WEIGHT_KG,
+      // Blockgewicht zählt über das Fußsystem (countsAsBallast) – nicht hier.
+      existingBallast: 0,
     }))
   }
 
