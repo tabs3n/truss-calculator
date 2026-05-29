@@ -48,6 +48,15 @@ export interface FrictionConfig {
   customValue?: number  // nur wenn mode = 'CUSTOM'
 }
 
+/** Untergrundklasse für den Bodenpressungsnachweis (zul. Sohldruck) */
+export type SoilClass =
+  | 'PAVED'        // Beton/Asphalt befestigt
+  | 'PAVERS'       // Verbund-/Betonsteinpflaster
+  | 'GRAVEL'       // verdichteter Schotter/Kies
+  | 'FIRM_GROUND'  // gewachsener Boden, fest
+  | 'SOFT_GROUND'  // weicher Boden / Mutterboden
+  | 'CUSTOM'
+
 export type SnowZone = '1' | '1a' | '2' | '2a' | '3'
 
 export type SnowExposure = 'WINDIG' | 'NORMAL' | 'GESCHUETZT'
@@ -246,6 +255,14 @@ export interface StructureInput {
   frictionConfig: FrictionConfig
 
   /**
+   * Untergrundklasse für den Bodenpressungsnachweis. Default: PAVED (befestigt).
+   * Bestimmt den zulässigen Sohldruck.
+   */
+  soilClass?: SoilClass
+  /** Zulässiger Sohldruck [kN/m²], nur bei soilClass === 'CUSTOM' */
+  customSoilBearingKNm2?: number
+
+  /**
    * DGUV-Dynamikzuschlag (×1.20) auf Windlasten anwenden.
    * Default: true (konservativ). false = DGUV-Faktor nur auf Nutzlasten,
    * da qp bereits Turbulenzdynamik enthält (Iv-Term).
@@ -378,6 +395,24 @@ export interface SlidingResult {
   frictionCoefficientUsed: number
 }
 
+export interface SoilPressureSupportResult {
+  supportId: string
+  /** Aufstandsfläche des Fußsystems [m²] */
+  contactAreaM2: number
+  /** Vorhandener Sohldruck σ = N/A [kN/m²] */
+  pressureKNm2: number
+  utilization: number            // σ / σ_zul, ≤ 1.0 = OK
+  isOk: boolean
+}
+
+export interface SoilPressureResult {
+  /** Zulässiger Sohldruck [kN/m²] */
+  allowableKNm2: number
+  supports: SoilPressureSupportResult[]
+  governingUtilization: number
+  isOk: boolean
+}
+
 /** Verwendete Teilsicherheits- und Lastfaktoren (für Report-Transparenz) */
 export interface DesignFactors {
   /** γG ständige Lasten, ungünstig (STR) */
@@ -416,6 +451,8 @@ export interface CalculationResult {
   supports: SupportResult[]
   tipping: TippingResult
   sliding: SlidingResult
+  /** Bodenpressungsnachweis (Sohldruck je Stütze) */
+  soilPressure: SoilPressureResult
 
   /** Verwendete Bemessungsfaktoren (für Report) */
   designFactors: DesignFactors

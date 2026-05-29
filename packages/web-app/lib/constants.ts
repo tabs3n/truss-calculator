@@ -1,4 +1,4 @@
-﻿import type { FootType, FrictionPreset, TerrainCategory, TrussType, WindSurface } from "./types-bridge"
+﻿import type { FootType, FrictionPreset, SoilClass, TerrainCategory, TrussType, WindSurface } from "./types-bridge"
 
 export const COMPANY = {
   name: "Cologne Hunters Licht & Ton Service GmbH",
@@ -51,6 +51,19 @@ export const TERRAIN_OPTIONS = Object.entries(TERRAIN_LABELS).map(([value, label
 }))
 
 export const WIND_ZONE_OPTIONS = [1, 2, 3, 4] as const
+
+/** Untergrundklassen mit zul. Sohldruck (Orientierungswert) für die Auswahl. */
+export const SOIL_OPTIONS: { value: Exclude<SoilClass, "CUSTOM">; label: string; allowableKNm2: number }[] = [
+  { value: "PAVED", label: "Beton / Asphalt (befestigt)", allowableKNm2: 500 },
+  { value: "PAVERS", label: "Pflaster auf Tragschicht", allowableKNm2: 250 },
+  { value: "GRAVEL", label: "Verdichteter Schotter / Kies", allowableKNm2: 200 },
+  { value: "FIRM_GROUND", label: "Gewachsener Boden, fest", allowableKNm2: 150 },
+  { value: "SOFT_GROUND", label: "Weicher Boden / Wiese", allowableKNm2: 75 },
+]
+
+export const SOIL_LABELS: Record<Exclude<SoilClass, "CUSTOM">, string> = Object.fromEntries(
+  SOIL_OPTIONS.map((o) => [o.value, o.label]),
+) as Record<Exclude<SoilClass, "CUSTOM">, string>
 
 export const WIND_SURFACE_TYPE_LABELS: Record<WindSurface["surfaceType"], string> = {
   LED_WALL: "LED-Wand",

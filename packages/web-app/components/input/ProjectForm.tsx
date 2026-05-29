@@ -9,11 +9,12 @@ import {
   FRICTION_PRESET_OPTIONS,
   getHorizontalLoadStandard,
   getWindDirectionDisplay,
+  SOIL_OPTIONS,
   TERRAIN_OPTIONS,
   WIND_ZONE_OPTIONS,
 } from "@/lib/constants"
 import { TOOLTIP_TEXTS } from "@/lib/tooltip-texts"
-import type { FrictionPreset, SnowConfig, SnowExposure, SnowZone, StructureInput, TerrainCategory, WindZone } from "@/lib/types-bridge"
+import type { FrictionPreset, SnowConfig, SnowExposure, SnowZone, SoilClass, StructureInput, TerrainCategory, WindZone } from "@/lib/types-bridge"
 import { cn } from "@/lib/utils"
 import { getWindZoneByPlz } from "@/lib/windzones-by-plz"
 
@@ -222,6 +223,14 @@ export function ProjectForm({
         customValue,
       },
     })
+  }
+
+  const setSoilClass = (soilClass: SoilClass) => {
+    onChange({ ...input, soilClass })
+  }
+
+  const setCustomSoilBearing = (customSoilBearingKNm2: number) => {
+    onChange({ ...input, soilClass: "CUSTOM", customSoilBearingKNm2 })
   }
 
   const textWarnings = {
@@ -558,6 +567,64 @@ export function ProjectForm({
             <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/80 p-3 text-sm text-amber-800">
               Niedriger Reibwert – mehr Ballast erforderlich!
             </div>
+          ) : null}
+        </div>
+
+        {/* ── Bodenpressung / Untergrundtragfähigkeit ───────────── */}
+        <div className="rounded-[1.5rem] border border-border/80 bg-background/60 p-4 md:col-span-2">
+          <p className="flex items-center gap-2 text-sm font-medium">
+            Untergrundtragfähigkeit (Bodenpressung)
+            <Tooltip text="Zulässiger Sohldruck des Untergrunds. Bestimmt, ob die Last unter den Bodenplatten/Betonblöcken aufgenommen werden kann (DIN EN 1997 / DIN 1054, Orientierungswerte).">(?)</Tooltip>
+          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Orientierungswerte – im Zweifel Bodengutachten maßgebend.
+          </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            {SOIL_OPTIONS.map((option) => {
+              const isSelected = (input.soilClass ?? "PAVED") === option.value
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setSoilClass(option.value)}
+                  className={cn(
+                    "rounded-2xl border px-4 py-3 text-left transition-colors",
+                    isSelected
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-card hover:bg-muted",
+                  )}
+                >
+                  <span className="block text-sm font-semibold">{option.label}</span>
+                  <span className="mt-1 block text-xs opacity-80">zul. σ = {option.allowableKNm2} kN/m²</span>
+                </button>
+              )
+            })}
+            <button
+              type="button"
+              onClick={() => setCustomSoilBearing(input.customSoilBearingKNm2 && input.customSoilBearingKNm2 > 0 ? input.customSoilBearingKNm2 : 150)}
+              className={cn(
+                "rounded-2xl border px-4 py-3 text-left transition-colors",
+                input.soilClass === "CUSTOM"
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-card hover:bg-muted",
+              )}
+            >
+              <span className="block text-sm font-semibold">Benutzerdefiniert</span>
+              <span className="mt-1 block text-xs opacity-80">Eigener Sohldruck</span>
+            </button>
+          </div>
+          {input.soilClass === "CUSTOM" ? (
+            <label className="mt-4 block text-sm font-medium">
+              Zulässiger Sohldruck (kN/m²)
+              <input
+                className={fieldClassName}
+                type="number"
+                min="1"
+                step="10"
+                value={input.customSoilBearingKNm2 ?? ""}
+                onChange={(event) => setCustomSoilBearing(Number(event.target.value))}
+              />
+            </label>
           ) : null}
         </div>
 

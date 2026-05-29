@@ -3,6 +3,7 @@
 export * from './validation'
 export * from './variants'
 export * from './wind/windSurfaceGeometry'
+export * from './soil/soilPressureCheck'
 
 import type {
   Beam,
@@ -10,6 +11,7 @@ import type {
   BeamSample,
   CalculationResult,
   SlidingResult,
+  SoilPressureResult,
   SnowLoadDetails,
   StructureInput,
   Support,
@@ -37,6 +39,7 @@ import { getGoverningIndoorLoad } from './loads/indoorLoads'
 import { calculateSnowLoad } from './loads/snowLoad'
 import { getFootProperties, getFootWeightKg, getTrussProperties } from './materials/database'
 import { checkSliding } from './sliding/slidingCheck'
+import { checkSoilPressure } from './soil/soilPressureCheck'
 import { checkBuckling } from './stability/bucklingCheck'
 import { calculateTippingAllDirections } from './tipping/tippingCheck'
 import { calculateSurfaceWindForce, calculateWindForce, getDragCoefficient, getPeakVelocityPressure, getWindProbabilityFactor } from './wind/windLoad'
@@ -283,6 +286,12 @@ function failedCalculationResult(
       requiredBallastKg: 0,
       isOk: false,
       frictionCoefficientUsed,
+    },
+    soilPressure: {
+      allowableKNm2: 0,
+      supports: [],
+      governingUtilization: 0,
+      isOk: true,
     },
     overallOk: false,
     requiredBallastTotalKg: 0,
@@ -761,6 +770,26 @@ export function calculate(input: StructureInput): CalculationResult {
     }
   }
 
+  // ── Bodenpressungsnachweis (Sohldruck, GEO vereinfacht) ──────────────────────
+  let soilPressure: SoilPressureResult
+  try {
+    soilPressure = checkSoilPressure(
+      input.supports,
+      supportVerticalReactionsSTR,
+      input.soilClass,
+      input.customSoilBearingKNm2,
+    )
+    if (!soilPressure.isOk) {
+      const worst = soilPressure.supports.reduce((a, b) => (b.utilization > a.utilization ? b : a))
+      proofFailures.push(
+        `Bodenpressung: σ=${worst.pressureKNm2.toFixed(0)} kN/m² > zul. ${soilPressure.allowableKNm2.toFixed(0)} kN/m² (η=${worst.utilization.toFixed(2)})`,
+      )
+    }
+  } catch (error) {
+    errors.push(`Bodenpressungsnachweis: ${(error as Error).message}`)
+    soilPressure = { allowableKNm2: 0, supports: [], governingUtilization: 0, isOk: true }
+  }
+
   // ── Maßgebender Ballast ──────────────────────────────────────────────────────
   const ballastKippen = tipping.governing.requiredBallastTotalKg
   const ballastGleiten = Math.max(0, sliding.requiredBallastKg)
@@ -838,6 +867,7 @@ export function calculate(input: StructureInput): CalculationResult {
     proofFailures.length === 0 &&
     beamResults.every(r => r.isOk) &&
     supportResults.every(r => r.isOk) &&
+    soilPressure.isOk &&
     tipping.governing.isOk &&
     sliding.isOk
 
@@ -850,6 +880,7 @@ export function calculate(input: StructureInput): CalculationResult {
     supports: supportResults,
     tipping,
     sliding,
+    soilPressure,
     overallOk,
     requiredBallastTotalKg,
     minimumRequiredBallastTotalKg,

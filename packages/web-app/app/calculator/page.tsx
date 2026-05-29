@@ -19,6 +19,7 @@ import { BallastTable } from "@/components/results/BallastTable"
 import { BeamResults } from "@/components/results/BeamResults"
 import { Recommendations } from "@/components/results/Recommendations"
 import { ResultSummary } from "@/components/results/ResultSummary"
+import { SoilPressureResults } from "@/components/results/SoilPressureResults"
 import { TippingResults } from "@/components/results/TippingResults"
 import { Button } from "@/components/ui/button"
 import { CalculationHistory } from "@/components/ui/CalculationHistory"
@@ -283,6 +284,7 @@ export default function CalculatorPage() {
             <BallastTable result={result} />
             <BeamResults result={result} />
             <TippingResults result={result} />
+            <SoilPressureResults result={result} />
           </aside>
         </div>
       </div>

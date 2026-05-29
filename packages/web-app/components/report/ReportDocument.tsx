@@ -745,6 +745,26 @@ export function ReportDocument({ data }: { data: ReportData }) {
             </Text>
           </View>
 
+          {result.soilPressure && result.soilPressure.supports.length > 0 ? (
+            <View style={styles.formulaCard} wrap={false}>
+              <Text style={styles.formulaHeading}>Bodenpressung (DIN EN 1997-1 / DIN 1054, vereinfacht)</Text>
+              <Text style={styles.formulaLine}>
+                Zulässiger Sohldruck σ_zul = {formatNumber(result.soilPressure.allowableKNm2, 0)} kN/m²
+              </Text>
+              {result.soilPressure.supports.map((entry) => {
+                const label = result.input.supports.find((s) => s.id === entry.supportId)?.label ?? entry.supportId
+                return (
+                  <Text key={entry.supportId} style={styles.formulaLine}>
+                    {label}: σ = N/A = {formatNumber(entry.pressureKNm2, 0)} kN/m² (A = {formatNumber(entry.contactAreaM2, 2)} m²) → η = {formatNumber(entry.utilization)} {entry.isOk ? "≤ 1,0 OK" : "> 1,0 NICHT OK"}
+                  </Text>
+                )
+              })}
+              <Text style={[styles.formulaLine, { color: "#64748b" }]}>
+                Vereinfacht mit Bemessungslast (γG=1,35); Orientierungswerte, im Zweifel Bodengutachten.
+              </Text>
+            </View>
+          ) : null}
+
           {result.beams.map((beamResult) => {
             const beamInput = result.input.beams.find((beam) => beam.id === beamResult.beamId)
             const trussType = beamInput?.trussType
