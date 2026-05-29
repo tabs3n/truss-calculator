@@ -47,7 +47,7 @@ export function LoadForm({
           <Trash2 />
         </Button>
       </div>
-      <div className="mt-4 grid gap-4 md:grid-cols-3">
+      <div className="mt-4 grid gap-4 md:grid-cols-4">
         <label className="block text-sm font-medium">
           Label
           <input
@@ -83,6 +83,22 @@ export function LoadForm({
             onChange={(event) => onChange({ ...load, weight: Number(event.target.value) })}
           />
           {errors.weight ? <p className="mt-2 text-xs text-destructive">{errors.weight}</p> : null}
+        </label>
+        <label className="block text-sm font-medium">
+          Kupplung WLL (kg)
+          <input
+            className={fieldClassName}
+            type="number"
+            min="0"
+            step="10"
+            placeholder="Standard"
+            value={load.couplerWllKg ?? ""}
+            onChange={(event) => {
+              const value = event.target.value
+              onChange({ ...load, couplerWllKg: value === "" ? undefined : Number(value) })
+            }}
+          />
+          <p className="mt-1 text-[11px] text-muted-foreground">Leer = Standardwert aus Projekt.</p>
         </label>
       </div>
     </div>

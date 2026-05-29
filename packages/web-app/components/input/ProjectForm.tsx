@@ -233,6 +233,10 @@ export function ProjectForm({
     onChange({ ...input, soilClass: "CUSTOM", customSoilBearingKNm2 })
   }
 
+  const setDefaultCouplerWll = (defaultCouplerWllKg: number) => {
+    onChange({ ...input, defaultCouplerWllKg })
+  }
+
   const textWarnings = {
     projectName: input.projectName.trim() ? "" : "Projektname fehlt noch.",
     preparedBy: input.preparedBy.trim() ? "" : "Verantwortliche Person eintragen.",
@@ -626,6 +630,23 @@ export function ProjectForm({
               />
             </label>
           ) : null}
+
+          <label className="mt-4 block text-sm font-medium">
+            <span className="flex items-center gap-2">
+              Standard-Tragfähigkeit Kupplung / WLL (kg)
+              <Tooltip text="Tragfähigkeit der Anschlussmittel (Halfcoupler/Schelle) je Hängelast, sofern bei der Last kein eigener Wert gesetzt ist. Standard-Halfcoupler: 340–750 kg.">(?)</Tooltip>
+            </span>
+            <input
+              className={fieldClassName}
+              type="number"
+              min="1"
+              step="10"
+              placeholder="500"
+              value={input.defaultCouplerWllKg ?? ""}
+              onChange={(event) => setDefaultCouplerWll(Number(event.target.value) || 500)}
+            />
+            <InlineHint text="Gilt für alle Hängelasten ohne eigenen WLL-Wert (Default 500 kg)." />
+          </label>
         </div>
 
         {/* ── Windlast-Optionen ─────────────────────────────────── */}

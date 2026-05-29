@@ -4,6 +4,7 @@ export type {
   BeamResult,
   BeamSample,
   CalculationResult,
+  ConnectionResult,
   DesignFactors,
   DistributedLoad,
   FootType,

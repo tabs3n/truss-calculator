@@ -17,6 +17,7 @@ import { Structure3DView } from "@/components/rendering/Structure3DView"
 import { StructureRenderer } from "@/components/rendering/StructureRenderer"
 import { BallastTable } from "@/components/results/BallastTable"
 import { BeamResults } from "@/components/results/BeamResults"
+import { ConnectionResults } from "@/components/results/ConnectionResults"
 import { Recommendations } from "@/components/results/Recommendations"
 import { ResultSummary } from "@/components/results/ResultSummary"
 import { SoilPressureResults } from "@/components/results/SoilPressureResults"
@@ -285,6 +286,7 @@ export default function CalculatorPage() {
             <BeamResults result={result} />
             <TippingResults result={result} />
             <SoilPressureResults result={result} />
+            <ConnectionResults result={result} />
           </aside>
         </div>
       </div>

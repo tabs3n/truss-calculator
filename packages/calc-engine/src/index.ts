@@ -4,12 +4,14 @@ export * from './validation'
 export * from './variants'
 export * from './wind/windSurfaceGeometry'
 export * from './soil/soilPressureCheck'
+export * from './connection/connectionCheck'
 
 import type {
   Beam,
   BeamResult,
   BeamSample,
   CalculationResult,
+  ConnectionResult,
   SlidingResult,
   SoilPressureResult,
   SnowLoadDetails,
@@ -40,6 +42,7 @@ import { calculateSnowLoad } from './loads/snowLoad'
 import { getFootProperties, getFootWeightKg, getTrussProperties } from './materials/database'
 import { checkSliding } from './sliding/slidingCheck'
 import { checkSoilPressure } from './soil/soilPressureCheck'
+import { checkConnections, DEFAULT_COUPLER_WLL_KG, type ChordNodeCheckInput, type CouplerCheckInput } from './connection/connectionCheck'
 import { checkBuckling } from './stability/bucklingCheck'
 import { calculateTippingAllDirections } from './tipping/tippingCheck'
 import { calculateSurfaceWindForce, calculateWindForce, getDragCoefficient, getPeakVelocityPressure, getWindProbabilityFactor } from './wind/windLoad'
@@ -293,6 +296,7 @@ function failedCalculationResult(
       governingUtilization: 0,
       isOk: true,
     },
+    connections: [],
     overallOk: false,
     requiredBallastTotalKg: 0,
     minimumRequiredBallastTotalKg: 0,
@@ -790,6 +794,41 @@ export function calculate(input: StructureInput): CalculationResult {
     soilPressure = { allowableKNm2: 0, supports: [], governingUtilization: 0, isOk: true }
   }
 
+  // ── Verbindungs-/Kupplungsnachweise ──────────────────────────────────────────
+  // (1) Anschlussmittel je Hängelast (WLL), (2) Gurtrohr/Knoten je Stütze (N/4 ≤ Nch,Rd)
+  let connections: ConnectionResult[] = []
+  try {
+    const defaultWll = input.defaultCouplerWllKg && input.defaultCouplerWllKg > 0
+      ? input.defaultCouplerWllKg
+      : DEFAULT_COUPLER_WLL_KG
+    const couplerInputs: CouplerCheckInput[] = input.beams.flatMap(beam =>
+      beam.loads.map(load => ({
+        id: `${beam.id}:${load.id}`,
+        label: `${beam.label} · ${load.label}`,
+        weightKg: load.weight,
+        wllKg: load.couplerWllKg && load.couplerWllKg > 0 ? load.couplerWllKg : defaultWll,
+      })),
+    )
+    const nodeInputs: ChordNodeCheckInput[] = input.supports.map(support => ({
+      id: support.id,
+      label: support.label,
+      trussType: support.trussType,
+      verticalReactionKN: supportVerticalReactionsSTR.get(support.id) ?? 0,
+    }))
+    connections = checkConnections(couplerInputs, nodeInputs)
+    for (const c of connections) {
+      if (!c.isOk) {
+        proofFailures.push(
+          c.kind === 'COUPLER'
+            ? `Kupplung ${c.label}: ${c.actingValue.toFixed(0)} kg > WLL ${c.capacityValue.toFixed(0)} kg (η=${c.utilization.toFixed(2)})`
+            : `Gurtrohr ${c.label}: ${c.actingValue.toFixed(1)} kN > Nch,Rd ${c.capacityValue.toFixed(1)} kN (η=${c.utilization.toFixed(2)})`,
+        )
+      }
+    }
+  } catch (error) {
+    errors.push(`Verbindungsnachweis: ${(error as Error).message}`)
+  }
+
   // ── Maßgebender Ballast ──────────────────────────────────────────────────────
   const ballastKippen = tipping.governing.requiredBallastTotalKg
   const ballastGleiten = Math.max(0, sliding.requiredBallastKg)
@@ -868,6 +907,7 @@ export function calculate(input: StructureInput): CalculationResult {
     beamResults.every(r => r.isOk) &&
     supportResults.every(r => r.isOk) &&
     soilPressure.isOk &&
+    connections.every(c => c.isOk) &&
     tipping.governing.isOk &&
     sliding.isOk
 
@@ -881,6 +921,7 @@ export function calculate(input: StructureInput): CalculationResult {
     tipping,
     sliding,
     soilPressure,
+    connections,
     overallOk,
     requiredBallastTotalKg,
     minimumRequiredBallastTotalKg,

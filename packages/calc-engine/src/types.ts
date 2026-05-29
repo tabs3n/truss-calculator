@@ -117,6 +117,8 @@ export interface HangingLoad {
   label: string              // z.B. "Robe BMFL", "LED-Wand Panel"
   positionAlongBeam: number  // Meter vom linken Auflager
   weight: number             // kg (Nenngewicht, ohne Dynamikfaktor)
+  /** Tragfähigkeit (WLL) des Anschlussmittels/Kupplung in kg. Default: defaultCouplerWllKg */
+  couplerWllKg?: number
 }
 
 /** Streckenlast über einen Abschnitt der Traverse (z.B. Trussbestückung mit Ketten/Kabeln) */
@@ -261,6 +263,12 @@ export interface StructureInput {
   soilClass?: SoilClass
   /** Zulässiger Sohldruck [kN/m²], nur bei soilClass === 'CUSTOM' */
   customSoilBearingKNm2?: number
+
+  /**
+   * Standard-Tragfähigkeit (WLL) der Anschlussmittel/Kupplungen in kg.
+   * Gilt für alle Hängelasten ohne eigenen couplerWllKg-Wert. Default: 500 kg.
+   */
+  defaultCouplerWllKg?: number
 
   /**
    * DGUV-Dynamikzuschlag (×1.20) auf Windlasten anwenden.
@@ -413,6 +421,20 @@ export interface SoilPressureResult {
   isOk: boolean
 }
 
+export interface ConnectionResult {
+  id: string
+  label: string
+  /** COUPLER = Anschlussmittel/Kupplung einer Hängelast, NODE = Gurtrohr/Knoten einer Stütze */
+  kind: 'COUPLER' | 'NODE'
+  /** Einwirkung (kg bei COUPLER, kN bei NODE) */
+  actingValue: number
+  /** Tragfähigkeit (kg bei COUPLER, kN bei NODE) */
+  capacityValue: number
+  unit: 'kg' | 'kN'
+  utilization: number
+  isOk: boolean
+}
+
 /** Verwendete Teilsicherheits- und Lastfaktoren (für Report-Transparenz) */
 export interface DesignFactors {
   /** γG ständige Lasten, ungünstig (STR) */
@@ -453,6 +475,8 @@ export interface CalculationResult {
   sliding: SlidingResult
   /** Bodenpressungsnachweis (Sohldruck je Stütze) */
   soilPressure: SoilPressureResult
+  /** Verbindungs-/Kupplungsnachweise (Anschlussmittel je Last, Gurtrohr je Stütze) */
+  connections: ConnectionResult[]
 
   /** Verwendete Bemessungsfaktoren (für Report) */
   designFactors: DesignFactors

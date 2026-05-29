@@ -765,6 +765,20 @@ export function ReportDocument({ data }: { data: ReportData }) {
             </View>
           ) : null}
 
+          {result.connections && result.connections.length > 0 ? (
+            <View style={styles.formulaCard} wrap={false}>
+              <Text style={styles.formulaHeading}>Verbindungen &amp; Kupplungen</Text>
+              {result.connections.map((c) => (
+                <Text key={`${c.kind}-${c.id}`} style={styles.formulaLine}>
+                  {c.kind === "COUPLER" ? "Kupplung " : "Gurtrohr "}{c.label}: {formatNumber(c.actingValue, c.unit === "kg" ? 0 : 1)} / {formatNumber(c.capacityValue, c.unit === "kg" ? 0 : 1)} {c.unit} → η = {formatNumber(c.utilization)} {c.isOk ? "≤ 1,0 OK" : "> 1,0 NICHT OK"}
+                </Text>
+              ))}
+              <Text style={[styles.formulaLine, { color: "#64748b" }]}>
+                Kupplung: Last × Dyn (1,20) ≤ WLL. Gurtrohr: N/4 ≤ Nch,Rd (Systemstatik).
+              </Text>
+            </View>
+          ) : null}
+
           {result.beams.map((beamResult) => {
             const beamInput = result.input.beams.find((beam) => beam.id === beamResult.beamId)
             const trussType = beamInput?.trussType
