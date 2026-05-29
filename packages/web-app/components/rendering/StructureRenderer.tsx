@@ -162,6 +162,10 @@ export function StructureRenderer({
   }
 
   const supportById = new Map(input.supports.map((support) => [support.id, support]))
+  // Ballast-Verteilungsplan: Zusatzballast je Stütze aus dem Ergebnis
+  const additionalBallastById = new Map(
+    (result?.ballastPerSupport ?? []).map((entry) => [entry.supportId, entry.additionalBallastNeededKg]),
+  )
   const windDirections = result?.tipping.directions ?? []
   const governingAngleDeg = result?.tipping.governingAngleDeg
   const activeAngleDeg = hoveredWindAngle ?? governingAngleDeg
@@ -341,7 +345,20 @@ export function StructureRenderer({
                 >
                   ({support.position.x.toFixed(2)}, {support.position.y.toFixed(2)})
                 </text>
-              ) : null}
+              ) : (() => {
+                const ballast = additionalBallastById.get(support.id) ?? 0
+                if (ballast < 1) return null
+                return (
+                  <text
+                    x={cx}
+                    y={cy + 22}
+                    textAnchor="middle"
+                    className="fill-amber-700 text-[10px] font-bold pointer-events-none"
+                  >
+                    +{ballast.toFixed(0)} kg
+                  </text>
+                )
+              })()}
             </g>
           )
         })}

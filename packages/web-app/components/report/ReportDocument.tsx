@@ -609,7 +609,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
         <Text style={styles.h2}>Grundriss (Draufsicht)</Text>
         <Text style={[styles.muted, { fontSize: 10, marginBottom: 12 }]}>
           Bodenplatten, Stützen, Traversen, alle Windrichtungen — maßgebende Richtung rot fett,
-          Kippachse rot gestrichelt verlängert
+          Kippachse rot gestrichelt verlängert. Orange +kg = Zusatzballast je Stütze.
         </Text>
         <View style={styles.sketchFrame}>
           <PlanView result={result} width={520} height={560} />

@@ -240,9 +240,10 @@ export function PlanView({
         )
       })() : null}
 
-      {/* Stützpunkte */}
+      {/* Stützpunkte + Ballast-Verteilung */}
       {result.input.supports.map((support) => {
         const p = toScreen(support.position)
+        const ballast = result.ballastPerSupport.find((b) => b.supportId === support.id)?.additionalBallastNeededKg ?? 0
         return (
           <Fragment key={support.id}>
             <Path
@@ -252,6 +253,11 @@ export function PlanView({
             <Text x={p.x + 6} y={p.y - 4} style={{ fontSize: 7, fill: "#334155" }}>
               {support.label}
             </Text>
+            {ballast >= 1 ? (
+              <Text x={p.x} y={p.y + 12} style={{ fontSize: 7, fill: "#b45309" }}>
+                +{ballast.toFixed(0)} kg
+              </Text>
+            ) : null}
           </Fragment>
         )
       })}
